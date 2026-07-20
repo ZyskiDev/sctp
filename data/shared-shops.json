@@ -22,5 +22,15 @@
     "status": "approved",
     "createdAt": "2026-07-20T21:00:00.442Z",
     "resolvedAt": "2026-07-20T21:00:13.017Z"
+  },
+  {
+    "id": "c6b8ab45-52cd-4ee6-a6c8-2780cfd40ba9",
+    "username": "LickenTendies",
+    "shops": [
+      "/shop Totoric"
+    ],
+    "status": "pending",
+    "createdAt": "2026-07-20T21:07:51.600Z",
+    "resolvedAt": null
   }
 ]
