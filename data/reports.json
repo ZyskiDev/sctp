@@ -48,5 +48,30 @@
     "status": "denied",
     "createdAt": "2026-07-20T20:14:22.424Z",
     "resolvedAt": "2026-07-20T20:14:50.479Z"
+  },
+  {
+    "id": "f01892ae-fcc7-48e0-9b89-4439dc2c07b5",
+    "listingKey": "firefly|gamelan968|minecraft:stone|stone",
+    "listing": {
+      "itemName": "Stone",
+      "baseItem": "minecraft:stone",
+      "bulk": true,
+      "mixedContents": false,
+      "price": 5,
+      "priceLabel": "5 dia",
+      "stackSize": 64,
+      "amount": 34560,
+      "stacksInStock": 540,
+      "currency": "diamond",
+      "seller": "gamelan968",
+      "world": "Firefly",
+      "position": "1643, 99, 681",
+      "lastSeen": "2026-07-20T19:11:35.900Z"
+    },
+    "reason": "other",
+    "details": "wrong world",
+    "status": "pending",
+    "createdAt": "2026-07-20T20:15:01.834Z",
+    "resolvedAt": null
   }
 ]
