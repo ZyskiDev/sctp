@@ -12642,18 +12642,18 @@
   {
     "itemName": "Gunpowder",
     "baseItem": "minecraft:gunpowder",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 3,
+    "priceLabel": "3 db",
     "stackSize": 64,
-    "amount": 1280,
-    "stacksInStock": 20,
-    "currency": "diamond",
+    "amount": 36288,
+    "stacksInStock": 567,
+    "currency": "diamondblock",
     "seller": "LickenTendies",
     "world": "Honeybee",
-    "position": "1535, 92, 501",
-    "lastSeen": "2026-07-20T19:15:20.504Z"
+    "position": "1535, 91, 501",
+    "lastSeen": "2026-07-20T19:16:50.410Z"
   },
   {
     "itemName": "Crafter",
@@ -13422,5 +13422,21 @@
     "world": "Honeybee",
     "position": "1554, 92, 501",
     "lastSeen": "2026-07-20T19:16:31.020Z"
+  },
+  {
+    "itemName": "Shulker Shell",
+    "baseItem": "minecraft:shulker_shell",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 8,
+    "priceLabel": "8 db",
+    "stackSize": 64,
+    "amount": 38016,
+    "stacksInStock": 594,
+    "currency": "diamondblock",
+    "seller": "LickenTendies",
+    "world": "Honeybee",
+    "position": "1553, 89, 494",
+    "lastSeen": "2026-07-20T19:16:47.658Z"
   }
 ]
