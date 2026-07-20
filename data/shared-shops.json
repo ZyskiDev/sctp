@@ -12,5 +12,15 @@
     "status": "approved",
     "createdAt": "2026-07-20T20:14:14.136Z",
     "resolvedAt": "2026-07-20T20:14:39.870Z"
+  },
+  {
+    "id": "f83d1c59-d1ad-4503-9531-8578adecba71",
+    "username": "Josnas",
+    "shops": [
+      "/shop BlueHowlite"
+    ],
+    "status": "pending",
+    "createdAt": "2026-07-20T21:00:00.442Z",
+    "resolvedAt": null
   }
 ]
