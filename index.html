@@ -250,7 +250,7 @@
 		<div class="header-row">
 			<div class="brand">
 				<h1>Snailcraft Trading Post</h1>
-				<p class="tag">Every shop on the server, in <em>one</em> slow, thorough list.</p>
+				<p class="tag">Every shop on the server, in <em>one</em> list!</p>
 			</div>
 			<button class="upload-cta" id="openUpload">Upload your shop file</button>
 		</div>
@@ -347,7 +347,7 @@
 <div class="modal-backdrop" id="uploadBackdrop">
 	<div class="modal">
 		<h2>Add your shop data</h2>
-		<p>The Shop Logger mod now uploads automatically — this manual option is just a fallback if you'd rather not wait, or don't have auto-upload configured. Upload the <b>.csv</b> or <b>.xlsx</b> export and it's sent to the shared Trading Post. It can take a minute or two to appear here after GitHub Pages rebuilds. Listings for the same seller + item replace older ones automatically. Note: shops <b>selling diamonds or diamond blocks</b> are not listed on this site and will be skipped (diamond/diamond block still work fine as a currency).</p>
+		<p>The Shop Logger mod now uploads automatically — this manual option is just a fallback.</p>
 		<div class="dropzone" id="dropzone">
 			<div>Drag a file here, or <strong>click to browse</strong></div>
 			<input type="file" id="fileInput" accept=".csv,.xlsx" style="display:none;">
@@ -487,9 +487,9 @@
 
 	// ---------------- config ----------------
 	// Set these after deploying the Worker (see trading-post-api/README.md).
-	var DATA_URL = "https://YOUR-USERNAME.github.io/YOUR-REPO/data/listings.json";
-	var API_BASE = "https://YOUR-WORKER-SUBDOMAIN.workers.dev";
-	var API_KEY = "PUT-THE-SAME-SECRET-YOU-SET-WITH-WRANGLER-SECRET-PUT-HERE"; // only used for manual upload, see note in the upload modal
+	var DATA_URL = "https://maxolotled.github.io/sctp/data/listings.json";
+	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
+	var API_KEY = "JjabYIfRtghvBJNoy6857TFVHbjknlMOi6754E5dcfvhgBHNI6b564"; // only used for manual upload, see note in the upload modal
 
 	// ---------------- data loading ----------------
 	async function loadListings(){
