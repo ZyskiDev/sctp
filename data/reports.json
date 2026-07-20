@@ -473,5 +473,30 @@
     "status": "pending",
     "createdAt": "2026-07-20T21:45:38.889Z",
     "resolvedAt": null
+  },
+  {
+    "id": "de1d8b18-3caa-4703-91ff-478e31b5359d",
+    "listingKey": "firefly|westerlund_|minecraft:leather|.･:✧ nessie plushie ✧:･.",
+    "listing": {
+      "itemName": ".･:✧ Nessie Plushie ✧:･.",
+      "baseItem": "minecraft:leather",
+      "bulk": true,
+      "mixedContents": false,
+      "price": 32,
+      "priceLabel": "32 db",
+      "stackSize": 1,
+      "amount": 1,
+      "stacksInStock": 1,
+      "currency": "diamondblock",
+      "seller": "Westerlund_",
+      "world": "Firefly",
+      "position": "-3889, 104, -752",
+      "lastSeen": "2026-07-20T20:35:53.347Z"
+    },
+    "reason": "scam",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-20T21:45:46.815Z",
+    "resolvedAt": null
   }
 ]
