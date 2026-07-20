@@ -4397,7 +4397,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3941, 105, -720",
-    "lastSeen": "2026-07-20T18:20:22.754Z"
+    "lastSeen": "2026-07-20T20:06:41.468Z"
   },
   {
     "itemName": "Netherite Upgrade",
@@ -4413,7 +4413,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3946, 103, -722",
-    "lastSeen": "2026-07-20T18:20:29.702Z"
+    "lastSeen": "2026-07-20T20:06:56.771Z"
   },
   {
     "itemName": "Deepslate Diamond Ore",
@@ -4429,7 +4429,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3941, 105, -719",
-    "lastSeen": "2026-07-20T18:20:25.907Z"
+    "lastSeen": "2026-07-20T20:06:42.971Z"
   },
   {
     "itemName": "Deepslate Gold Ore",
@@ -5501,23 +5501,23 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3937, 104, -721",
-    "lastSeen": "2026-07-20T18:20:17.376Z"
+    "lastSeen": "2026-07-20T20:06:37.548Z"
   },
   {
     "itemName": "TNT",
     "baseItem": "minecraft:tnt",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 4,
-    "priceLabel": "4 dia",
+    "price": 10,
+    "priceLabel": "10 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 3456,
+    "stacksInStock": 54,
+    "currency": "diamondblock",
     "seller": "Slasheryn",
     "world": "Firefly",
-    "position": "-3936, 63, -728",
-    "lastSeen": "2026-07-20T18:25:38.430Z"
+    "position": "-3938, 105, -718",
+    "lastSeen": "2026-07-20T20:06:35.194Z"
   },
   {
     "itemName": "* ʚïɞ Red Lacewing Butterfly ʚïɞ *",
@@ -5533,7 +5533,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 103, -717",
-    "lastSeen": "2026-07-20T18:20:19.712Z"
+    "lastSeen": "2026-07-20T20:06:36.770Z"
   },
   {
     "itemName": "* ʚïɞ Eastern Tiger Swallowtail ʚïɞ *",
@@ -5549,7 +5549,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 103, -717",
-    "lastSeen": "2026-07-20T18:20:19.712Z"
+    "lastSeen": "2026-07-20T20:06:36.770Z"
   },
   {
     "itemName": "* ʚïɞ Purple Emperor Butterfly ʚïɞ *",
@@ -5565,7 +5565,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 103, -717",
-    "lastSeen": "2026-07-20T18:20:19.712Z"
+    "lastSeen": "2026-07-20T20:06:36.770Z"
   },
   {
     "itemName": "* ʚïɞ Blue Morpho Butterfly ʚïɞ *",
@@ -5581,7 +5581,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 103, -717",
-    "lastSeen": "2026-07-20T18:20:19.712Z"
+    "lastSeen": "2026-07-20T20:06:36.770Z"
   },
   {
     "itemName": "*♤☆ Boh Plushie ☆♤*",
@@ -5597,7 +5597,7 @@
     "seller": "WonderAvocado",
     "world": "Firefly",
     "position": "-3939, 103, -719",
-    "lastSeen": "2026-07-20T18:20:20.464Z"
+    "lastSeen": "2026-07-20T20:06:39.146Z"
   },
   {
     "itemName": "*♤☆ Robot Plushie ☆♤*",
@@ -5613,7 +5613,7 @@
     "seller": "WonderAvocado",
     "world": "Firefly",
     "position": "-3939, 103, -719",
-    "lastSeen": "2026-07-20T18:20:20.464Z"
+    "lastSeen": "2026-07-20T20:06:39.146Z"
   },
   {
     "itemName": "Grey Concrete",
@@ -5661,7 +5661,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3940, 104, -724",
-    "lastSeen": "2026-07-20T18:20:25.119Z"
+    "lastSeen": "2026-07-20T20:06:43.697Z"
   },
   {
     "itemName": "Brown Concrete",
@@ -5677,7 +5677,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3941, 104, -724",
-    "lastSeen": "2026-07-20T18:20:26.634Z"
+    "lastSeen": "2026-07-20T20:06:46.872Z"
   },
   {
     "itemName": "Purple Concrete",
@@ -5693,7 +5693,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3942, 104, -725",
-    "lastSeen": "2026-07-20T18:20:27.492Z"
+    "lastSeen": "2026-07-20T20:06:51.472Z"
   },
   {
     "itemName": "Green Concrete",
@@ -5709,7 +5709,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3941, 107, -724",
-    "lastSeen": "2026-07-20T18:20:28.194Z"
+    "lastSeen": "2026-07-20T20:06:50.744Z"
   },
   {
     "itemName": "Lime Concrete",
@@ -5725,7 +5725,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3940, 107, -724",
-    "lastSeen": "2026-07-20T18:20:28.922Z"
+    "lastSeen": "2026-07-20T20:06:49.173Z"
   },
   {
     "itemName": "Magenta Concrete",
@@ -5741,7 +5741,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3943, 104, -726",
-    "lastSeen": "2026-07-20T18:20:30.472Z"
+    "lastSeen": "2026-07-20T20:06:53.880Z"
   },
   {
     "itemName": "Pink Concrete",
@@ -5757,7 +5757,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3944, 104, -727",
-    "lastSeen": "2026-07-20T18:20:31.206Z"
+    "lastSeen": "2026-07-20T20:06:58.320Z"
   },
   {
     "itemName": "Cyan Concrete",
@@ -5773,7 +5773,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3943, 107, -726",
-    "lastSeen": "2026-07-20T18:20:31.989Z"
+    "lastSeen": "2026-07-20T20:06:57.519Z"
   },
   {
     "itemName": "Blue Concrete",
@@ -5789,7 +5789,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3942, 107, -725",
-    "lastSeen": "2026-07-20T18:20:32.756Z"
+    "lastSeen": "2026-07-20T20:06:53.095Z"
   },
   {
     "itemName": "Light Blue Concrete",
@@ -5805,7 +5805,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3944, 107, -727",
-    "lastSeen": "2026-07-20T18:20:33.557Z"
+    "lastSeen": "2026-07-20T20:07:01.668Z"
   },
   {
     "itemName": "Light Grey Stained Glass",
@@ -5837,7 +5837,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3946, 107, -727",
-    "lastSeen": "2026-07-20T18:20:35.123Z"
+    "lastSeen": "2026-07-20T20:07:04.020Z"
   },
   {
     "itemName": "Black Dye",
@@ -5853,7 +5853,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3942, 108, -724",
-    "lastSeen": "2026-07-20T18:20:35.890Z"
+    "lastSeen": "2026-07-20T20:06:54.695Z"
   },
   {
     "itemName": "Green Stained Glass",
@@ -5869,7 +5869,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3947, 107, -727",
-    "lastSeen": "2026-07-20T18:20:36.691Z"
+    "lastSeen": "2026-07-20T20:07:06.294Z"
   },
   {
     "itemName": "Grey Stained Glass",
@@ -5901,7 +5901,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3946, 103, -721",
-    "lastSeen": "2026-07-20T18:20:39.009Z"
+    "lastSeen": "2026-07-20T20:06:59.093Z"
   },
   {
     "itemName": "❀ ❦ Ladybug ❦❀",
@@ -5917,7 +5917,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3946, 103, -721",
-    "lastSeen": "2026-07-20T18:20:39.009Z"
+    "lastSeen": "2026-07-20T20:06:59.093Z"
   },
   {
     "itemName": "❀ ❦ Tarantula ❦❀",
@@ -5933,7 +5933,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3946, 103, -721",
-    "lastSeen": "2026-07-20T18:20:39.009Z"
+    "lastSeen": "2026-07-20T20:06:59.093Z"
   },
   {
     "itemName": "Grey Dye",
@@ -5965,7 +5965,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3939, 107, -723",
-    "lastSeen": "2026-07-20T18:20:40.524Z"
+    "lastSeen": "2026-07-20T20:06:46.027Z"
   },
   {
     "itemName": "Light Grey Dye",
@@ -5997,7 +5997,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3939, 108, -721",
-    "lastSeen": "2026-07-20T18:20:44.142Z"
+    "lastSeen": "2026-07-20T20:06:47.572Z"
   },
   {
     "itemName": "Orange Concrete",
@@ -6013,7 +6013,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 107, -722",
-    "lastSeen": "2026-07-20T18:20:46.792Z"
+    "lastSeen": "2026-07-20T20:06:44.547Z"
   },
   {
     "itemName": "Red Concrete",
@@ -6029,7 +6029,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3937, 107, -721",
-    "lastSeen": "2026-07-20T18:20:49.681Z"
+    "lastSeen": "2026-07-20T20:06:45.320Z"
   },
   {
     "itemName": "Black Wool",
@@ -22606,5 +22606,693 @@
     "world": "Firefly",
     "position": "353, 85, -1603",
     "lastSeen": "2026-07-20T20:05:36.076Z"
+  },
+  {
+    "itemName": "Gray Concrete",
+    "baseItem": "minecraft:gray_concrete",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1408,
+    "stacksInStock": 22,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3938, 104, -722",
+    "lastSeen": "2026-07-20T20:06:38.321Z"
+  },
+  {
+    "itemName": "Light Gray Concrete",
+    "baseItem": "minecraft:light_gray_concrete",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1664,
+    "stacksInStock": 26,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3939, 104, -723",
+    "lastSeen": "2026-07-20T20:06:40.671Z"
+  },
+  {
+    "itemName": "Light Gray Dye",
+    "baseItem": "minecraft:light_gray_dye",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 256,
+    "stacksInStock": 4,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3940, 108, -722",
+    "lastSeen": "2026-07-20T20:06:48.419Z"
+  },
+  {
+    "itemName": "Gray Dye",
+    "baseItem": "minecraft:gray_dye",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 1216,
+    "stacksInStock": 19,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3941, 108, -723",
+    "lastSeen": "2026-07-20T20:06:52.319Z"
+  },
+  {
+    "itemName": "Light Gray Stained Glass",
+    "baseItem": "minecraft:light_gray_stained_glass",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1344,
+    "stacksInStock": 21,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3946, 104, -727",
+    "lastSeen": "2026-07-20T20:06:59.893Z"
+  },
+  {
+    "itemName": "Gray Stained Glass",
+    "baseItem": "minecraft:gray_stained_glass",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1536,
+    "stacksInStock": 24,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3947, 104, -727",
+    "lastSeen": "2026-07-20T20:07:02.418Z"
+  },
+  {
+    "itemName": "Black Stained Glass",
+    "baseItem": "minecraft:black_stained_glass",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1280,
+    "stacksInStock": 20,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3948, 104, -727",
+    "lastSeen": "2026-07-20T20:07:04.792Z"
+  },
+  {
+    "itemName": "Brown Stained Glass",
+    "baseItem": "minecraft:brown_stained_glass",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 704,
+    "stacksInStock": 11,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3948, 107, -727",
+    "lastSeen": "2026-07-20T20:07:07.119Z"
+  },
+  {
+    "itemName": "Pink Terracotta",
+    "baseItem": "minecraft:pink_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 192,
+    "stacksInStock": 3,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3950, 104, -727",
+    "lastSeen": "2026-07-20T20:07:07.870Z"
+  },
+  {
+    "itemName": "Magenta Terracotta",
+    "baseItem": "minecraft:magenta_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1024,
+    "stacksInStock": 16,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3951, 104, -726",
+    "lastSeen": "2026-07-20T20:07:10.193Z"
+  },
+  {
+    "itemName": "Purple Terracotta",
+    "baseItem": "minecraft:purple_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 896,
+    "stacksInStock": 14,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3952, 104, -725",
+    "lastSeen": "2026-07-20T20:07:10.945Z"
+  },
+  {
+    "itemName": "Light Blue Terracotta",
+    "baseItem": "minecraft:light_blue_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1216,
+    "stacksInStock": 19,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3950, 107, -727",
+    "lastSeen": "2026-07-20T20:07:11.669Z"
+  },
+  {
+    "itemName": "Cyan Terracotta",
+    "baseItem": "minecraft:cyan_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 832,
+    "stacksInStock": 13,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3951, 107, -726",
+    "lastSeen": "2026-07-20T20:07:12.444Z"
+  },
+  {
+    "itemName": "Blue Terracotta",
+    "baseItem": "minecraft:blue_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 768,
+    "stacksInStock": 12,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3952, 107, -725",
+    "lastSeen": "2026-07-20T20:07:13.942Z"
+  },
+  {
+    "itemName": "Brown Terracotta",
+    "baseItem": "minecraft:brown_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1152,
+    "stacksInStock": 18,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3953, 104, -724",
+    "lastSeen": "2026-07-20T20:07:14.720Z"
+  },
+  {
+    "itemName": "White Terracotta",
+    "baseItem": "minecraft:white_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 320,
+    "stacksInStock": 5,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3954, 104, -724",
+    "lastSeen": "2026-07-20T20:07:15.469Z"
+  },
+  {
+    "itemName": "Green Terracotta",
+    "baseItem": "minecraft:green_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1152,
+    "stacksInStock": 18,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3953, 107, -724",
+    "lastSeen": "2026-07-20T20:07:16.267Z"
+  },
+  {
+    "itemName": "Light Gray Terracotta",
+    "baseItem": "minecraft:light_gray_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1152,
+    "stacksInStock": 18,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3955, 104, -723",
+    "lastSeen": "2026-07-20T20:07:17.069Z"
+  },
+  {
+    "itemName": "Gray Terracotta",
+    "baseItem": "minecraft:gray_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 960,
+    "stacksInStock": 15,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3956, 104, -722",
+    "lastSeen": "2026-07-20T20:07:18.567Z"
+  },
+  {
+    "itemName": "Yellow Terracotta",
+    "baseItem": "minecraft:yellow_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 512,
+    "stacksInStock": 8,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3955, 107, -723",
+    "lastSeen": "2026-07-20T20:07:19.619Z"
+  },
+  {
+    "itemName": "Purple Dye",
+    "baseItem": "minecraft:purple_dye",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 704,
+    "stacksInStock": 11,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3953, 108, -723",
+    "lastSeen": "2026-07-20T20:07:20.118Z"
+  },
+  {
+    "itemName": "Magenta Dye",
+    "baseItem": "minecraft:magenta_dye",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 1088,
+    "stacksInStock": 17,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3954, 108, -722",
+    "lastSeen": "2026-07-20T20:07:20.894Z"
+  },
+  {
+    "itemName": "Black Terracotta",
+    "baseItem": "minecraft:black_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1408,
+    "stacksInStock": 22,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3957, 104, -721",
+    "lastSeen": "2026-07-20T20:07:21.619Z"
+  },
+  {
+    "itemName": "Orange Terracotta",
+    "baseItem": "minecraft:orange_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1536,
+    "stacksInStock": 24,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3956, 107, -722",
+    "lastSeen": "2026-07-20T20:07:22.416Z"
+  },
+  {
+    "itemName": "Pink Dye",
+    "baseItem": "minecraft:pink_dye",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 1024,
+    "stacksInStock": 16,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3955, 108, -721",
+    "lastSeen": "2026-07-20T20:07:23.217Z"
+  },
+  {
+    "itemName": "Red Terracotta",
+    "baseItem": "minecraft:red_terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 512,
+    "stacksInStock": 8,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3957, 107, -721",
+    "lastSeen": "2026-07-20T20:07:25.216Z"
+  },
+  {
+    "itemName": "Terracotta",
+    "baseItem": "minecraft:terracotta",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1344,
+    "stacksInStock": 21,
+    "currency": "diamond",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3958, 104, -719",
+    "lastSeen": "2026-07-20T20:07:26.819Z"
+  },
+  {
+    "itemName": "Glass",
+    "baseItem": "minecraft:glass",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 64,
+    "amount": 5184,
+    "stacksInStock": 81,
+    "currency": "diamondblock",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 105, -718",
+    "lastSeen": "2026-07-20T20:07:28.372Z"
+  },
+  {
+    "itemName": "White Stained Glass",
+    "baseItem": "minecraft:white_stained_glass",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1472,
+    "stacksInStock": 23,
+    "currency": "diamond",
+    "seller": "WonderAvocado",
+    "world": "Firefly",
+    "position": "-3958, 104, -717",
+    "lastSeen": "2026-07-20T20:07:29.619Z"
+  },
+  {
+    "itemName": "Yellow Stained Glass",
+    "baseItem": "minecraft:yellow_stained_glass",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 576,
+    "stacksInStock": 9,
+    "currency": "diamond",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3958, 107, -719",
+    "lastSeen": "2026-07-20T20:07:30.417Z"
+  },
+  {
+    "itemName": "Orange Stained Glass",
+    "baseItem": "minecraft:orange_stained_glass",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 768,
+    "stacksInStock": 12,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 107, -718",
+    "lastSeen": "2026-07-20T20:07:31.119Z"
+  },
+  {
+    "itemName": "Red Stained Glass",
+    "baseItem": "minecraft:red_stained_glass",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 640,
+    "stacksInStock": 10,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 107, -717",
+    "lastSeen": "2026-07-20T20:07:32.068Z"
+  },
+  {
+    "itemName": "Black Concrete Powder",
+    "baseItem": "minecraft:black_concrete_powder",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 1088,
+    "stacksInStock": 17,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3957, 104, -715",
+    "lastSeen": "2026-07-20T20:07:32.844Z"
+  },
+  {
+    "itemName": "Gray Concrete Powder",
+    "baseItem": "minecraft:gray_concrete_powder",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 768,
+    "stacksInStock": 12,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3956, 104, -714",
+    "lastSeen": "2026-07-20T20:07:33.620Z"
+  },
+  {
+    "itemName": "Red Concrete Powder",
+    "baseItem": "minecraft:red_concrete_powder",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 384,
+    "stacksInStock": 6,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3957, 107, -715",
+    "lastSeen": "2026-07-20T20:07:34.416Z"
+  },
+  {
+    "itemName": "White Concrete Powder",
+    "baseItem": "minecraft:white_concrete_powder",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 960,
+    "stacksInStock": 15,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3954, 104, -712",
+    "lastSeen": "2026-07-20T20:07:40.269Z"
+  },
+  {
+    "itemName": "Orange Concrete Powder",
+    "baseItem": "minecraft:orange_concrete_powder",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 512,
+    "stacksInStock": 8,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3956, 107, -714",
+    "lastSeen": "2026-07-20T20:07:42.617Z"
+  },
+  {
+    "itemName": "Lime Concrete Powder",
+    "baseItem": "minecraft:lime_concrete_powder",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 448,
+    "stacksInStock": 7,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3954, 107, -712",
+    "lastSeen": "2026-07-20T20:07:43.442Z"
+  },
+  {
+    "itemName": "Cyan Dye",
+    "baseItem": "minecraft:cyan_dye",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 256,
+    "stacksInStock": 4,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3954, 108, -714",
+    "lastSeen": "2026-07-20T20:07:44.189Z"
+  },
+  {
+    "itemName": "Green Concrete Powder",
+    "baseItem": "minecraft:green_concrete_powder",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 832,
+    "stacksInStock": 13,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3953, 107, -712",
+    "lastSeen": "2026-07-20T20:07:45.092Z"
+  },
+  {
+    "itemName": "Light Blue Dye",
+    "baseItem": "minecraft:light_blue_dye",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 704,
+    "stacksInStock": 11,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3955, 108, -715",
+    "lastSeen": "2026-07-20T20:07:45.716Z"
+  },
+  {
+    "itemName": "Purple Concrete Powder",
+    "baseItem": "minecraft:purple_concrete_powder",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 640,
+    "stacksInStock": 10,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3952, 104, -711",
+    "lastSeen": "2026-07-20T20:07:46.542Z"
+  },
+  {
+    "itemName": "Blue Dye",
+    "baseItem": "minecraft:blue_dye",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 832,
+    "stacksInStock": 13,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3953, 108, -713",
+    "lastSeen": "2026-07-20T20:07:47.292Z"
   }
 ]
