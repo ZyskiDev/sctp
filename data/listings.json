@@ -493,7 +493,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3843, 65, -797",
-    "lastSeen": "2026-07-20T18:17:25.359Z"
+    "lastSeen": "2026-07-20T19:35:45.136Z"
   },
   {
     "itemName": "Pink Concrete Powder",
@@ -557,7 +557,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3840, 64, -797",
-    "lastSeen": "2026-07-20T18:17:23.810Z"
+    "lastSeen": "2026-07-20T19:35:48.139Z"
   },
   {
     "itemName": "Brown Stained Glass",
@@ -573,7 +573,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3843, 64, -797",
-    "lastSeen": "2026-07-20T18:17:22.993Z"
+    "lastSeen": "2026-07-20T19:35:45.837Z"
   },
   {
     "itemName": "Red Stained Glass",
@@ -589,7 +589,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3840, 66, -797",
-    "lastSeen": "2026-07-20T18:17:26.194Z"
+    "lastSeen": "2026-07-20T19:35:47.440Z"
   },
   {
     "itemName": "Orange Stained Glass",
@@ -605,7 +605,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3840, 67, -797",
-    "lastSeen": "2026-07-20T18:17:29.928Z"
+    "lastSeen": "2026-07-20T19:35:50.344Z"
   },
   {
     "itemName": "Lime Stained Glass",
@@ -621,7 +621,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3838, 65, -797",
-    "lastSeen": "2026-07-20T18:17:29.161Z"
+    "lastSeen": "2026-07-20T19:35:51.096Z"
   },
   {
     "itemName": "Green Stained Glass",
@@ -637,7 +637,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3838, 66, -797",
-    "lastSeen": "2026-07-20T18:17:31.447Z"
+    "lastSeen": "2026-07-20T19:35:52.047Z"
   },
   {
     "itemName": "Blue Stained Glass",
@@ -653,7 +653,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3835, 65, -797",
-    "lastSeen": "2026-07-20T18:17:33.037Z"
+    "lastSeen": "2026-07-20T19:35:54.198Z"
   },
   {
     "itemName": "Purple Stained Glass",
@@ -669,7 +669,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3835, 66, -797",
-    "lastSeen": "2026-07-20T18:17:33.745Z"
+    "lastSeen": "2026-07-20T19:35:55.751Z"
   },
   {
     "itemName": "Magenta Stained Glass",
@@ -685,7 +685,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3835, 67, -797",
-    "lastSeen": "2026-07-20T18:17:36.196Z"
+    "lastSeen": "2026-07-20T19:35:54.899Z"
   },
   {
     "itemName": "Light Blue Stained Glass",
@@ -701,7 +701,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3835, 64, -797",
-    "lastSeen": "2026-07-20T18:17:32.247Z"
+    "lastSeen": "2026-07-20T19:35:53.447Z"
   },
   {
     "itemName": "Black Dye",
@@ -749,7 +749,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3840, 65, -797",
-    "lastSeen": "2026-07-20T18:17:24.609Z"
+    "lastSeen": "2026-07-20T19:35:48.843Z"
   },
   {
     "itemName": "Cyan Stained Glass",
@@ -765,7 +765,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3838, 67, -797",
-    "lastSeen": "2026-07-20T18:17:36.913Z"
+    "lastSeen": "2026-07-20T19:35:52.647Z"
   },
   {
     "itemName": "Light Grey Dye",
@@ -941,7 +941,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3833, 66, -797",
-    "lastSeen": "2026-07-20T18:17:41.014Z"
+    "lastSeen": "2026-07-20T19:35:57.152Z"
   },
   {
     "itemName": "Magenta Dye",
@@ -1069,7 +1069,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3833, 65, -797",
-    "lastSeen": "2026-07-20T18:17:35.329Z"
+    "lastSeen": "2026-07-20T19:35:57.952Z"
   },
   {
     "itemName": "Red Terracotta",
@@ -1266,18 +1266,18 @@
   {
     "itemName": "Empty Map",
     "baseItem": "minecraft:map",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 10,
+    "priceLabel": "10 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 38016,
+    "stacksInStock": 594,
+    "currency": "diamondblock",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3838, 55, -774",
-    "lastSeen": "2026-07-20T18:14:49.378Z"
+    "position": "-3845, 67, -791",
+    "lastSeen": "2026-07-20T19:35:41.331Z"
   },
   {
     "itemName": "Item Frame",
@@ -1293,7 +1293,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 65, -794",
-    "lastSeen": "2026-07-20T18:17:28.443Z"
+    "lastSeen": "2026-07-20T19:35:42.081Z"
   },
   {
     "itemName": "Block of Iron",
@@ -1389,7 +1389,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 64, -789",
-    "lastSeen": "2026-07-20T19:00:58.344Z"
+    "lastSeen": "2026-07-20T19:35:35.169Z"
   },
   {
     "itemName": "Block of Gold",
@@ -2061,7 +2061,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 67, -789",
-    "lastSeen": "2026-07-20T19:01:15.314Z"
+    "lastSeen": "2026-07-20T19:35:37.423Z"
   },
   {
     "itemName": "Grass Block",
@@ -2109,7 +2109,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 65, -789",
-    "lastSeen": "2026-07-20T19:00:59.178Z"
+    "lastSeen": "2026-07-20T19:35:35.921Z"
   },
   {
     "itemName": "Compressed Ice",
@@ -2829,7 +2829,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3838, 64, -797",
-    "lastSeen": "2026-07-20T18:17:22.248Z"
+    "lastSeen": "2026-07-20T19:35:49.595Z"
   },
   {
     "itemName": "Sugar Cane",
@@ -2845,7 +2845,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 64, -794",
-    "lastSeen": "2026-07-20T18:17:27.677Z"
+    "lastSeen": "2026-07-20T19:35:40.629Z"
   },
   {
     "itemName": "Glass",
@@ -2861,7 +2861,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3833, 64, -797",
-    "lastSeen": "2026-07-20T18:17:34.535Z"
+    "lastSeen": "2026-07-20T19:35:56.401Z"
   },
   {
     "itemName": "Terracotta",
@@ -10573,7 +10573,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 66, -789",
-    "lastSeen": "2026-07-20T19:01:01.762Z"
+    "lastSeen": "2026-07-20T19:35:36.622Z"
   },
   {
     "itemName": "Dirt",
@@ -10605,7 +10605,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 64, -791",
-    "lastSeen": "2026-07-20T19:01:03.312Z"
+    "lastSeen": "2026-07-20T19:35:38.323Z"
   },
   {
     "itemName": "Chest",
@@ -13486,5 +13486,117 @@
     "world": "Firefly",
     "position": "-3845, 64, -781",
     "lastSeen": "2026-07-20T19:34:52.403Z"
+  },
+  {
+    "itemName": "Gunpowder",
+    "baseItem": "minecraft:gunpowder",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 dia",
+    "stackSize": 64,
+    "amount": 39744,
+    "stacksInStock": 621,
+    "currency": "diamond",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3845, 66, -791",
+    "lastSeen": "2026-07-20T19:35:39.075Z"
+  },
+  {
+    "itemName": "Leather",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 dia",
+    "stackSize": 64,
+    "amount": 27648,
+    "stacksInStock": 432,
+    "currency": "diamond",
+    "seller": "BlueHowlite",
+    "world": "Firefly",
+    "position": "-3845, 65, -791",
+    "lastSeen": "2026-07-20T19:35:39.926Z"
+  },
+  {
+    "itemName": "Ender Pearl",
+    "baseItem": "minecraft:ender_pearl",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 12,
+    "priceLabel": "12 dia",
+    "stackSize": 16,
+    "amount": 7344,
+    "stacksInStock": 459,
+    "currency": "diamond",
+    "seller": "BlueHowlite",
+    "world": "Firefly",
+    "position": "-3845, 66, -794",
+    "lastSeen": "2026-07-20T19:35:42.881Z"
+  },
+  {
+    "itemName": "Rotten Flesh",
+    "baseItem": "minecraft:rotten_flesh",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 3,
+    "priceLabel": "3 dia",
+    "stackSize": 64,
+    "amount": 39744,
+    "stacksInStock": 621,
+    "currency": "diamond",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3845, 67, -794",
+    "lastSeen": "2026-07-20T19:35:43.632Z"
+  },
+  {
+    "itemName": "Light Gray Stained Glass",
+    "baseItem": "minecraft:light_gray_stained_glass",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 64,
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3843, 67, -797",
+    "lastSeen": "2026-07-20T19:35:44.433Z"
+  },
+  {
+    "itemName": "Gray Stained Glass",
+    "baseItem": "minecraft:gray_stained_glass",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 64,
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3843, 66, -797",
+    "lastSeen": "2026-07-20T19:35:46.589Z"
+  },
+  {
+    "itemName": "Gray Terracotta",
+    "baseItem": "minecraft:gray_terracotta",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 3,
+    "priceLabel": "3 db",
+    "stackSize": 64,
+    "amount": 13824,
+    "stacksInStock": 216,
+    "currency": "diamondblock",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3833, 67, -797",
+    "lastSeen": "2026-07-20T19:35:58.703Z"
   }
 ]
