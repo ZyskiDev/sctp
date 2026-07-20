@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "0e076510-3647-4b10-9a23-2414231c283f",
+    "username": "WonderAvocado",
+    "shops": [
+      "Honeybee:",
+      "/shop wonderavocado",
+      "/shop gamelan968",
+      "Firefly:",
+      "/shop Woolu"
+    ],
+    "status": "pending",
+    "createdAt": "2026-07-20T20:14:14.136Z",
+    "resolvedAt": null
+  }
+]
