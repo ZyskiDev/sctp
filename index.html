@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Snailcraft Trading Post</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+	:root{
+		--bg:#101B14;
+		--panel:#1B2A20;
+		--panel-alt:#22332A;
+		--line:#33453A;
+		--muted:#8FA593;
+		--text:#EAEFE7;
+		--shell:#D9C89A;
+		--shell-dim:#A99A73;
+		--accent:#B7E23D;
+		--accent-dim:#87AE29;
+		--accent-ink:#16210F;
+		--warn:#E2A33D;
+		--radius:10px;
+		--font-display:'Fraunces',serif;
+		--font-body:'Inter',sans-serif;
+		--font-mono:'JetBrains Mono',monospace;
+	}
+	*{box-sizing:border-box;}
+	body{
+		margin:0;
+		background:
+			radial-gradient(1200px 500px at 15% -10%, rgba(183,226,61,0.07), transparent 60%),
+			var(--bg);
+		color:var(--text);
+		font-family:var(--font-body);
+		line-height:1.5;
+	}
+	a{color:var(--accent);}
+	.wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+
+	/* ---------- header ---------- */
+	header.site{
+		border-bottom:1px solid var(--line);
+		padding:28px 0 22px;
+		position:relative;
+		overflow:hidden;
+	}
+	.header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+	.brand h1{
+		font-family:var(--font-display);
+		font-weight:600;
+		font-size:32px;
+		letter-spacing:0.2px;
+		margin:0 0 4px;
+		color:var(--text);
+	}
+	.brand .tag{
+		color:var(--muted);
+		font-size:14.5px;
+		margin:0;
+	}
+	.brand .tag em{color:var(--shell);font-style:normal;}
+	.upload-cta{
+		background:var(--accent);
+		color:var(--accent-ink);
+		border:none;
+		font-family:var(--font-body);
+		font-weight:600;
+		font-size:14.5px;
+		padding:12px 18px;
+		border-radius:999px;
+		cursor:pointer;
+		white-space:nowrap;
+		transition:transform .12s ease, box-shadow .12s ease;
+		box-shadow:0 0 0 rgba(183,226,61,0);
+	}
+	.upload-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(183,226,61,0.18);}
+	.upload-cta:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+
+	.trail-wrap{position:relative;height:26px;margin-top:18px;}
+	.trail-wrap svg{position:absolute;top:8px;left:0;width:100%;height:12px;}
+	.trail-wrap .snail{
+		position:absolute;top:-3px;left:0;
+		font-size:20px;
+		animation:crawl 3.6s ease-in-out 1 both;
+		transform:translateX(0);
+	}
+	@keyframes crawl{
+		0%{left:0%;transform:translateY(0) scaleX(1);}
+		48%{transform:translateY(-3px) scaleX(1);}
+		50%{transform:translateY(-3px) scaleX(-1);}
+		100%{left:calc(100% - 22px);transform:translateY(0) scaleX(-1);}
+	}
+	@media (prefers-reduced-motion: reduce){
+		.trail-wrap .snail{animation:none;left:calc(100% - 22px);transform:scaleX(-1);}
+	}
+
+	/* ---------- search ---------- */
+	.search-band{padding:26px 0 6px;}
+	.search-box{
+		display:flex;gap:10px;
+		background:var(--panel);
+		border:1px solid var(--line);
+		border-radius:14px;
+		padding:6px;
+	}
+	.search-box input{
+		flex:1;background:transparent;border:none;color:var(--text);
+		font-family:var(--font-body);font-size:16px;padding:12px 14px;
+	}
+	.search-box input:focus{outline:none;}
+	.search-box input::placeholder{color:var(--muted);}
+	.search-box button{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:10px;padding:0 20px;font-family:var(--font-body);font-weight:600;cursor:pointer;
+	}
+	.search-box button:hover{border-color:var(--accent-dim);}
+
+	/* ---------- stats ---------- */
+	.stats-band{
+		display:flex;gap:28px;flex-wrap:wrap;
+		padding:16px 2px 22px;color:var(--muted);font-size:13.5px;
+		font-family:var(--font-mono);
+	}
+	.stats-band b{color:var(--shell);font-weight:600;}
+	.stats-band span{white-space:nowrap;}
+
+	/* ---------- layout ---------- */
+	.layout{display:grid;grid-template-columns:230px 1fr;gap:24px;padding-bottom:60px;align-items:start;}
+	@media (max-width:860px){.layout{grid-template-columns:1fr;}}
+
+	.filters{
+		background:var(--panel);border:1px solid var(--line);border-radius:14px;
+		padding:18px 16px;position:sticky;top:16px;
+	}
+	@media (max-width:860px){.filters{position:static;}}
+	.filters h2{
+		font-family:var(--font-display);font-size:15px;font-weight:600;margin:0 0 14px;
+		color:var(--shell);text-transform:uppercase;letter-spacing:.06em;
+	}
+	.f-group{margin-bottom:16px;}
+	.f-group label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+	.f-group select, .f-group input[type=number]{
+		width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:8px 10px;font-family:var(--font-body);font-size:13.5px;
+	}
+	.f-range{display:flex;gap:8px;}
+	.f-reset{
+		width:100%;background:transparent;border:1px dashed var(--line);color:var(--muted);
+		border-radius:8px;padding:9px;font-size:13px;cursor:pointer;margin-top:4px;
+	}
+	.f-reset:hover{color:var(--text);border-color:var(--accent-dim);}
+
+	/* ---------- table ---------- */
+	.table-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+	.table-toolbar{
+		display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+		padding:14px 16px;border-bottom:1px solid var(--line);
+	}
+	.table-toolbar .count{color:var(--muted);font-size:13px;}
+	.table-toolbar button{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;
+	}
+	.table-toolbar button:hover{border-color:var(--accent-dim);}
+	.table-scroll{overflow-x:auto;}
+	table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:900px;}
+	thead th{
+		text-align:left;color:var(--shell);font-weight:600;font-size:11.5px;
+		text-transform:uppercase;letter-spacing:.05em;
+		padding:10px 12px;border-bottom:1px solid var(--line);
+		background:var(--panel-alt);cursor:pointer;white-space:nowrap;
+	}
+	thead th:hover{color:var(--accent);}
+	tbody tr{border-bottom:1px solid var(--line);}
+	tbody tr:hover{background:rgba(183,226,61,0.045);}
+	tbody td{padding:10px 12px;vertical-align:top;white-space:nowrap;}
+	td.item-name{font-weight:600;color:var(--text);white-space:normal;}
+	td.base-item, td.position{font-family:var(--font-mono);color:var(--muted);font-size:12.5px;}
+	td.seller{color:var(--shell);}
+	.badge{
+		display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;
+	}
+	.badge.bulk{background:rgba(183,226,61,0.16);color:var(--accent);}
+	.badge.mixed{background:rgba(226,163,61,0.18);color:var(--warn);}
+	.price-main{font-family:var(--font-mono);font-weight:600;}
+	.price-sub{font-family:var(--font-mono);color:var(--muted);font-size:11.5px;}
+
+	.empty-state, .loading-state{
+		padding:60px 24px;text-align:center;color:var(--muted);
+	}
+	.empty-state h3{color:var(--text);font-family:var(--font-display);font-size:20px;margin:0 0 8px;}
+	.empty-state button{
+		margin-top:14px;background:var(--accent);color:var(--accent-ink);border:none;
+		border-radius:999px;padding:10px 18px;font-weight:600;cursor:pointer;
+	}
+
+	.pagination{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px;color:var(--muted);font-size:13px;}
+	.pagination button{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:6px 12px;cursor:pointer;
+	}
+	.pagination button:disabled{opacity:.4;cursor:not-allowed;}
+
+	/* ---------- modal ---------- */
+	.modal-backdrop{
+		position:fixed;inset:0;background:rgba(8,12,9,0.72);display:none;
+		align-items:center;justify-content:center;z-index:50;padding:20px;
+	}
+	.modal-backdrop.open{display:flex;}
+	.modal{
+		background:var(--panel);border:1px solid var(--line);border-radius:16px;
+		max-width:480px;width:100%;padding:26px;
+	}
+	.modal h2{font-family:var(--font-display);font-size:22px;margin:0 0 6px;}
+	.modal p{color:var(--muted);font-size:13.5px;margin:0 0 18px;}
+	.dropzone{
+		border:1.5px dashed var(--line);border-radius:12px;padding:32px 18px;text-align:center;
+		color:var(--muted);cursor:pointer;transition:border-color .15s ease, background .15s ease;
+	}
+	.dropzone.drag{border-color:var(--accent);background:rgba(183,226,61,0.06);color:var(--text);}
+	.dropzone strong{color:var(--shell);}
+	.modal .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+	.modal .modal-actions button{
+		background:transparent;border:1px solid var(--line);color:var(--muted);
+		border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13.5px;
+	}
+	.modal .modal-actions button:hover{color:var(--text);}
+	.file-status{margin-top:14px;font-size:13px;min-height:20px;}
+	.file-status.ok{color:var(--accent);}
+	.file-status.err{color:#E27D6B;}
+
+	.toast{
+		position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+		background:var(--panel-alt);border:1px solid var(--accent-dim);color:var(--text);
+		padding:12px 20px;border-radius:10px;font-size:13.5px;z-index:60;
+		opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;
+	}
+	.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+	footer.site{padding:20px 0 40px;color:var(--muted);font-size:12.5px;text-align:center;}
+</style>
+</head>
+<body>
+
+<header class="site">
+	<div class="wrap">
+		<div class="header-row">
+			<div class="brand">
+				<h1>Snailcraft Trading Post</h1>
+				<p class="tag">Every shop on the server, in <em>one</em> slow, thorough list.</p>
+			</div>
+			<button class="upload-cta" id="openUpload">Upload your shop file</button>
+		</div>
+		<div class="trail-wrap" aria-hidden="true">
+			<svg viewBox="0 0 400 12" preserveAspectRatio="none">
+				<path d="M0,6 Q 20,0 40,6 T 80,6 T 120,6 T 160,6 T 200,6 T 240,6 T 280,6 T 320,6 T 360,6 T 400,6"
+					fill="none" stroke="var(--accent-dim)" stroke-width="1.5" stroke-dasharray="3 5" opacity="0.55"/>
+			</svg>
+			<span class="snail">🐌</span>
+		</div>
+	</div>
+</header>
+
+<div class="wrap">
+	<div class="search-band">
+		<div class="search-box">
+			<input id="searchInput" type="text" placeholder="Search an item, base item, or seller — e.g. diamond, netherite, Steve…" autocomplete="off">
+			<button id="clearSearch" type="button">Clear</button>
+		</div>
+	</div>
+
+	<div class="stats-band" id="statsBand">
+		<span>loading listings…</span>
+	</div>
+
+	<div class="layout">
+		<aside class="filters">
+			<h2>Filters</h2>
+
+			<div class="f-group">
+				<label for="fCurrency">Currency</label>
+				<select id="fCurrency"><option value="">All currencies</option></select>
+			</div>
+
+			<div class="f-group">
+				<label for="fBulk">Listing type</label>
+				<select id="fBulk">
+					<option value="">All listings</option>
+					<option value="bulk">Bulk (shulker) only</option>
+					<option value="single">Non-bulk only</option>
+				</select>
+			</div>
+
+			<div class="f-group">
+				<label>Price per stack</label>
+				<div class="f-range">
+					<input type="number" id="fPriceMin" placeholder="min" min="0">
+					<input type="number" id="fPriceMax" placeholder="max" min="0">
+				</div>
+			</div>
+
+			<div class="f-group">
+				<label for="fMinStock">Minimum in stock</label>
+				<input type="number" id="fMinStock" placeholder="e.g. 64" min="0">
+			</div>
+
+			<div class="f-group">
+				<label for="fSort">Sort by</label>
+				<select id="fSort">
+					<option value="recent">Most recently updated</option>
+					<option value="price-asc">Price per stack ↑</option>
+					<option value="price-desc">Price per stack ↓</option>
+					<option value="stock-desc">Amount in stock ↓</option>
+					<option value="item-az">Item name A→Z</option>
+					<option value="seller-az">Seller A→Z</option>
+				</select>
+			</div>
+
+			<button class="f-reset" id="resetFilters" type="button">Reset all filters</button>
+		</aside>
+
+		<section class="table-card">
+			<div class="table-toolbar">
+				<span class="count" id="resultCount">—</span>
+				<button id="exportBtn" type="button">Export filtered as CSV</button>
+			</div>
+			<div id="tableArea">
+				<div class="loading-state">Fetching the shared listing… one moment.</div>
+			</div>
+			<div class="pagination" id="pagination" style="display:none;">
+				<button id="prevPage">← Prev</button>
+				<span id="pageIndicator">Page 1 of 1</span>
+				<button id="nextPage">Next →</button>
+			</div>
+		</section>
+	</div>
+</div>
+
+<footer class="site">
+	Community-maintained · data comes from players' own Shop Logger exports · nothing here is verified by server staff
+</footer>
+
+<!-- upload modal -->
+<div class="modal-backdrop" id="uploadBackdrop">
+	<div class="modal">
+		<h2>Add your shop data</h2>
+		<p>The Shop Logger mod now uploads automatically — this manual option is just a fallback if you'd rather not wait, or don't have auto-upload configured. Upload the <b>.csv</b> or <b>.xlsx</b> export and it's sent to the shared Trading Post. It can take a minute or two to appear here after GitHub Pages rebuilds. Listings for the same seller + item replace older ones automatically. Note: shops <b>selling diamonds or diamond blocks</b> are not listed on this site and will be skipped (diamond/diamond block still work fine as a currency).</p>
+		<div class="dropzone" id="dropzone">
+			<div>Drag a file here, or <strong>click to browse</strong></div>
+			<input type="file" id="fileInput" accept=".csv,.xlsx" style="display:none;">
+		</div>
+		<div class="file-status" id="fileStatus"></div>
+		<div class="modal-actions">
+			<button id="closeUpload" type="button">Close</button>
+		</div>
+	</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+	"use strict";
+
+	// ---------------- state ----------------
+	var allListings = [];   // merged master list
+	var filtered = [];
+	var page = 1;
+	var PAGE_SIZE = 50;
+	var sortKey = "recent";
+
+	// ---------------- helpers ----------------
+	function normHeader(h){
+		return String(h||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+	}
+
+	var HEADER_MAP = {
+		itemname:"itemName",
+		baseitem:"baseItem",
+		bulk:"bulk",
+		priceperitem:"pricePerItem",
+		price:"pricePerItem",
+		priceperstack:"pricePerStack",
+		priceper64:"pricePerStack",
+		stacksize:"stackSize",
+		amountinstock:"amount",
+		amount:"amount",
+		stacksinstock:"stacksInStock",
+		currency:"currency",
+		seller:"seller",
+		position:"position",
+		lastseen:"lastSeen",
+		mixedcontents:"mixedContents"
+	};
+
+	function toBool(v){
+		var s = String(v||"").trim().toLowerCase();
+		return s === "yes" || s === "true" || s === "1";
+	}
+	function toNum(v){
+		var n = parseFloat(v);
+		return isNaN(n) ? 0 : n;
+	}
+
+	// Shops that *sell* diamonds or diamond blocks are excluded from this site
+	// entirely — never ingested on upload, and stripped from anything already
+	// in shared storage. Diamond/diamond block as a CURRENCY is unaffected.
+	var BANNED_ITEMS = ["minecraft:diamond","minecraft:diamond_block","diamond","diamondblock"];
+	function isBannedItem(baseItem, itemName){
+		var normBase = String(baseItem||"").toLowerCase().replace(/[^a-z:_]/g,"");
+		var normName = String(itemName||"").toLowerCase().replace(/[^a-z]/g,"");
+		return BANNED_ITEMS.indexOf(normBase) !== -1 || BANNED_ITEMS.indexOf(normName) !== -1;
+	}
+
+	function normalizeRow(raw){
+		var row = {};
+		Object.keys(raw).forEach(function(k){
+			var mapped = HEADER_MAP[normHeader(k)];
+			if(mapped) row[mapped] = raw[k];
+		});
+
+		var itemName = String(row.itemName||"").trim();
+		var baseItem = String(row.baseItem||"").trim();
+		var seller = String(row.seller||"").trim();
+		if(!itemName || !seller) return null; // not a usable row
+
+		if(isBannedItem(baseItem, itemName)) return null; // shops selling diamonds/diamond blocks are excluded site-wide
+
+		var currency = String(row.currency||"").trim() || "unknown";
+
+		var stackSize = toNum(row.stackSize) || 64;
+		var pricePerItem = toNum(row.pricePerItem);
+		var pricePerStack = row.pricePerStack !== undefined ? toNum(row.pricePerStack) : pricePerItem * stackSize;
+		var amount = toNum(row.amount);
+		var stacksInStock = row.stacksInStock !== undefined ? toNum(row.stacksInStock) : Math.round((amount/stackSize)*100)/100;
+
+		return {
+			itemName: itemName,
+			baseItem: baseItem || "—",
+			bulk: toBool(row.bulk),
+			mixedContents: toBool(row.mixedContents),
+			pricePerItem: pricePerItem,
+			pricePerStack: pricePerStack,
+			stackSize: stackSize,
+			amount: amount,
+			stacksInStock: stacksInStock,
+			currency: currency,
+			seller: seller,
+			position: String(row.position||"").trim(),
+			lastSeen: String(row.lastSeen||"").trim(),
+			_uploadedAt: Date.now()
+		};
+	}
+
+	function rowKey(r){
+		return (r.seller+"|"+r.baseItem+"|"+r.itemName).toLowerCase();
+	}
+
+	function rowTimestamp(r){
+		var t = Date.parse(r.lastSeen);
+		return isNaN(t) ? r._uploadedAt : t;
+	}
+
+	// Merging now happens server-side in the Worker (see trading-post-api/worker.js) —
+	// the website no longer needs its own merge logic.
+
+	function relTime(iso){
+		var t = Date.parse(iso);
+		if(isNaN(t)) return "unknown";
+		var diff = Date.now() - t;
+		var m = Math.floor(diff/60000);
+		if(m < 1) return "just now";
+		if(m < 60) return m+"m ago";
+		var h = Math.floor(m/60);
+		if(h < 24) return h+"h ago";
+		var d = Math.floor(h/24);
+		if(d < 30) return d+"d ago";
+		return new Date(t).toLocaleDateString();
+	}
+
+	function fmtNum(n){
+		return Number(n).toLocaleString();
+	}
+
+	// ---------------- config ----------------
+	// Set these after deploying the Worker (see trading-post-api/README.md).
+	var DATA_URL = "https://YOUR-USERNAME.github.io/YOUR-REPO/data/listings.json";
+	var API_BASE = "https://YOUR-WORKER-SUBDOMAIN.workers.dev";
+	var API_KEY = "PUT-THE-SAME-SECRET-YOU-SET-WITH-WRANGLER-SECRET-PUT-HERE"; // only used for manual upload, see note in the upload modal
+
+	// ---------------- data loading ----------------
+	async function loadListings(){
+		try {
+			var res = await fetch(DATA_URL + "?t=" + Date.now()); // cache-bust so new commits show up promptly
+			if(res.ok){
+				allListings = await res.json();
+			} else {
+				allListings = [];
+			}
+		} catch(e){
+			allListings = [];
+		}
+
+		// Client-side safety net only — the Worker already refuses to commit these.
+		allListings = allListings.filter(function(r){ return !isBannedItem(r.baseItem, r.itemName); });
+
+		applyFilters();
+	}
+
+	// Manual upload goes through the same Worker the mod uses. Note: API_KEY
+	// lives in this page's source, so it's a spam deterrent, not real
+	// security — the Worker's GitHub token is what's actually protected.
+	async function uploadRows(rows){
+		var res = await fetch(API_BASE + "/listings", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"Authorization": "Bearer " + API_KEY
+			},
+			body: JSON.stringify({ rows: rows })
+		});
+		var data = await res.json();
+		if(!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+		return data;
+	}
+
+	// ---------------- filtering / rendering ----------------
+	function populateCurrencyOptions(){
+		var sel = document.getElementById("fCurrency");
+		var current = sel.value;
+		var currencies = Array.from(new Set(allListings.map(function(r){return r.currency;}))).sort();
+		sel.innerHTML = '<option value="">All currencies</option>' +
+			currencies.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join("");
+		sel.value = current;
+	}
+
+	function esc(s){
+		return String(s).replace(/[&<>"']/g, function(c){
+			return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+		});
+	}
+
+	function applyFilters(){
+		var q = document.getElementById("searchInput").value.trim().toLowerCase();
+		var currency = document.getElementById("fCurrency").value;
+		var bulkMode = document.getElementById("fBulk").value;
+		var priceMin = document.getElementById("fPriceMin").value;
+		var priceMax = document.getElementById("fPriceMax").value;
+		var minStock = document.getElementById("fMinStock").value;
+		sortKey = document.getElementById("fSort").value;
+
+		populateCurrencyOptions();
+		document.getElementById("fCurrency").value = currency;
+
+		filtered = allListings.filter(function(r){
+			if(q){
+				var hay = (r.itemName+" "+r.baseItem+" "+r.seller).toLowerCase();
+				if(hay.indexOf(q) === -1) return false;
+			}
+			if(currency && r.currency !== currency) return false;
+			if(bulkMode === "bulk" && !r.bulk) return false;
+			if(bulkMode === "single" && r.bulk) return false;
+			if(priceMin !== "" && r.pricePerStack < parseFloat(priceMin)) return false;
+			if(priceMax !== "" && r.pricePerStack > parseFloat(priceMax)) return false;
+			if(minStock !== "" && r.amount < parseFloat(minStock)) return false;
+			return true;
+		});
+
+		filtered.sort(function(a,b){
+			switch(sortKey){
+				case "price-asc": return a.pricePerStack - b.pricePerStack;
+				case "price-desc": return b.pricePerStack - a.pricePerStack;
+				case "stock-desc": return b.amount - a.amount;
+				case "item-az": return a.itemName.localeCompare(b.itemName);
+				case "seller-az": return a.seller.localeCompare(b.seller);
+				default: return rowTimestamp(b) - rowTimestamp(a);
+			}
+		});
+
+		page = 1;
+		renderAll();
+	}
+
+	function renderStats(){
+		var band = document.getElementById("statsBand");
+		if(allListings.length === 0){
+			band.innerHTML = "<span>No listings yet.</span>";
+			return;
+		}
+		var sellers = new Set(allListings.map(function(r){return r.seller;})).size;
+		var items = new Set(allListings.map(function(r){return r.baseItem;})).size;
+		var newest = allListings.reduce(function(max,r){return Math.max(max, rowTimestamp(r));}, 0);
+		band.innerHTML =
+			'<span><b>'+fmtNum(allListings.length)+'</b> listings</span>' +
+			'<span><b>'+fmtNum(sellers)+'</b> sellers</span>' +
+			'<span><b>'+fmtNum(items)+'</b> distinct items</span>' +
+			'<span>updated <b>'+relTime(new Date(newest).toISOString())+'</b></span>';
+	}
+
+	function renderTable(){
+		var area = document.getElementById("tableArea");
+		var pag = document.getElementById("pagination");
+		document.getElementById("resultCount").textContent = fmtNum(filtered.length)+" result"+(filtered.length===1?"":"s");
+
+		if(filtered.length === 0){
+			pag.style.display = "none";
+			if(allListings.length === 0){
+				area.innerHTML =
+					'<div class="empty-state"><h3>Nobody has uploaded a shop file yet</h3>'+
+					'<p>Be the first — export your Shop Logger data and add it here.</p>'+
+					'<button id="emptyUploadBtn">Upload your shop file</button></div>';
+				document.getElementById("emptyUploadBtn").addEventListener("click", openUpload);
+			} else {
+				area.innerHTML = '<div class="empty-state"><h3>No listings match those filters</h3><p>Try widening your price range or clearing the search.</p></div>';
+			}
+			return;
+		}
+
+		var totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+		if(page > totalPages) page = totalPages;
+		var start = (page-1)*PAGE_SIZE;
+		var pageRows = filtered.slice(start, start+PAGE_SIZE);
+
+		var html = '<div class="table-scroll"><table><thead><tr>'+
+			'<th data-k="item-az">Item</th>'+
+			'<th data-k="item-az">Base item</th>'+
+			'<th>Type</th>'+
+			'<th data-k="price-desc">Price / item</th>'+
+			'<th data-k="price-desc">Price / stack</th>'+
+			'<th data-k="stock-desc">In stock</th>'+
+			'<th>Currency</th>'+
+			'<th data-k="seller-az">Seller</th>'+
+			'<th>Position</th>'+
+			'<th data-k="recent">Last seen</th>'+
+			'</tr></thead><tbody>';
+
+		pageRows.forEach(function(r){
+			html += '<tr>'+
+				'<td class="item-name">'+esc(r.itemName)+'</td>'+
+				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
+				'<td>'+
+					(r.bulk ? '<span class="badge bulk">Bulk</span>' : '')+
+					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '')+
+				'</td>'+
+				'<td><span class="price-main">'+fmtNum(r.pricePerItem)+'</span></td>'+
+				'<td><span class="price-main">'+fmtNum(r.pricePerStack)+'</span><br><span class="price-sub">'+r.stackSize+'/stack</span></td>'+
+				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' stacks</span></td>'+
+				'<td>'+esc(r.currency)+'</td>'+
+				'<td class="seller">'+esc(r.seller)+'</td>'+
+				'<td class="position">'+esc(r.position)+'</td>'+
+				'<td>'+relTime(r.lastSeen)+'</td>'+
+				'</tr>';
+		});
+		html += '</tbody></table></div>';
+		area.innerHTML = html;
+
+		pag.style.display = "flex";
+		document.getElementById("pageIndicator").textContent = "Page "+page+" of "+totalPages;
+		document.getElementById("prevPage").disabled = page <= 1;
+		document.getElementById("nextPage").disabled = page >= totalPages;
+
+		area.querySelectorAll("thead th[data-k]").forEach(function(th){
+			th.addEventListener("click", function(){
+				document.getElementById("fSort").value = th.getAttribute("data-k");
+				applyFilters();
+			});
+		});
+	}
+
+	function renderAll(){
+		renderStats();
+		renderTable();
+	}
+
+	// ---------------- toast ----------------
+	var toastTimer = null;
+	function showToast(msg){
+		var t = document.getElementById("toast");
+		t.textContent = msg;
+		t.classList.add("show");
+		clearTimeout(toastTimer);
+		toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 3800);
+	}
+
+	// ---------------- upload modal ----------------
+	function openUpload(){
+		document.getElementById("uploadBackdrop").classList.add("open");
+		document.getElementById("fileStatus").textContent = "";
+		document.getElementById("fileStatus").className = "file-status";
+	}
+	function closeUpload(){
+		document.getElementById("uploadBackdrop").classList.remove("open");
+	}
+
+	function handleFile(file){
+		var statusEl = document.getElementById("fileStatus");
+		statusEl.className = "file-status";
+		statusEl.textContent = "Reading "+file.name+"…";
+
+		var name = file.name.toLowerCase();
+		if(name.endsWith(".csv")){
+			var reader = new FileReader();
+			reader.onload = function(e){
+				try {
+					var parsed = Papa.parse(e.target.result, {header:true, skipEmptyLines:true});
+					ingestRows(parsed.data, statusEl);
+				} catch(err){
+					statusEl.className = "file-status err";
+					statusEl.textContent = "Couldn't read that CSV — is it the Shop Logger export?";
+				}
+			};
+			reader.readAsText(file);
+		} else if(name.endsWith(".xlsx")){
+			var reader2 = new FileReader();
+			reader2.onload = function(e){
+				try {
+					var wb = XLSX.read(new Uint8Array(e.target.result), {type:"array"});
+					var sheet = wb.Sheets[wb.SheetNames[0]];
+					var rows = XLSX.utils.sheet_to_json(sheet, {defval:""});
+					ingestRows(rows, statusEl);
+				} catch(err){
+					statusEl.className = "file-status err";
+					statusEl.textContent = "Couldn't read that Excel file — is it the Shop Logger export?";
+				}
+			};
+			reader2.readAsArrayBuffer(file);
+		} else {
+			statusEl.className = "file-status err";
+			statusEl.textContent = "Please upload a .csv or .xlsx file.";
+		}
+	}
+
+	async function ingestRows(rawRows, statusEl){
+		var normalized = rawRows.map(normalizeRow).filter(Boolean);
+		if(normalized.length === 0){
+			statusEl.className = "file-status err";
+			statusEl.textContent = "No usable rows found — check the file has Item Name / Seller columns.";
+			return;
+		}
+		statusEl.className = "file-status";
+		statusEl.textContent = "Uploading "+normalized.length+" rows…";
+		try {
+			var result = await uploadRows(normalized);
+			statusEl.className = "file-status ok";
+			statusEl.textContent = "Added "+result.added+" new, updated "+result.updated+" listings. The site will pick them up shortly after GitHub Pages rebuilds.";
+			showToast("Sent to Trading Post: "+result.added+" new, "+result.updated+" refreshed.");
+			// Don't reload immediately — GitHub Pages needs a moment to rebuild
+			// after the commit, so an instant re-fetch would still show stale data.
+		} catch(err){
+			statusEl.className = "file-status err";
+			statusEl.textContent = "Upload failed: "+err.message;
+		}
+	}
+
+	function exportFilteredCsv(){
+		if(filtered.length === 0){ showToast("Nothing to export with the current filters."); return; }
+		var headers = ["Item Name","Base Item","Bulk","Mixed Contents","Price Per Item","Price Per Stack","Stack Size","Amount In Stock","Stacks In Stock","Currency","Seller","Position","Last Seen"];
+		var lines = [headers.join(",")];
+		filtered.forEach(function(r){
+			var vals = [r.itemName, r.baseItem, r.bulk?"Yes":"No", r.mixedContents?"Yes":"No", r.pricePerItem, r.pricePerStack, r.stackSize, r.amount, r.stacksInStock, r.currency, r.seller, r.position, r.lastSeen];
+			lines.push(vals.map(function(v){
+				var s = String(v);
+				return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+			}).join(","));
+		});
+		var blob = new Blob([lines.join("\n")], {type:"text/csv"});
+		var url = URL.createObjectURL(blob);
+		var a = document.createElement("a");
+		a.href = url; a.download = "snailcraft-trading-post-export.csv";
+		document.body.appendChild(a); a.click(); document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	}
+
+	// ---------------- wiring ----------------
+	document.getElementById("openUpload").addEventListener("click", openUpload);
+	document.getElementById("closeUpload").addEventListener("click", closeUpload);
+	document.getElementById("uploadBackdrop").addEventListener("click", function(e){
+		if(e.target === this) closeUpload();
+	});
+	document.addEventListener("keydown", function(e){
+		if(e.key === "Escape") closeUpload();
+	});
+
+	var dropzone = document.getElementById("dropzone");
+	var fileInput = document.getElementById("fileInput");
+	dropzone.addEventListener("click", function(){ fileInput.click(); });
+	fileInput.addEventListener("change", function(){
+		if(fileInput.files[0]) handleFile(fileInput.files[0]);
+	});
+	["dragenter","dragover"].forEach(function(evt){
+		dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.add("drag"); });
+	});
+	["dragleave","drop"].forEach(function(evt){
+		dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.remove("drag"); });
+	});
+	dropzone.addEventListener("drop", function(e){
+		var f = e.dataTransfer.files[0];
+		if(f) handleFile(f);
+	});
+
+	document.getElementById("searchInput").addEventListener("input", applyFilters);
+	document.getElementById("clearSearch").addEventListener("click", function(){
+		document.getElementById("searchInput").value = "";
+		applyFilters();
+	});
+	["fCurrency","fBulk","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
+		document.getElementById(id).addEventListener("change", applyFilters);
+		document.getElementById(id).addEventListener("input", applyFilters);
+	});
+	document.getElementById("resetFilters").addEventListener("click", function(){
+		document.getElementById("searchInput").value = "";
+		document.getElementById("fCurrency").value = "";
+		document.getElementById("fBulk").value = "";
+		document.getElementById("fPriceMin").value = "";
+		document.getElementById("fPriceMax").value = "";
+		document.getElementById("fMinStock").value = "";
+		document.getElementById("fSort").value = "recent";
+		applyFilters();
+	});
+	document.getElementById("prevPage").addEventListener("click", function(){ page--; renderTable(); });
+	document.getElementById("nextPage").addEventListener("click", function(){ page++; renderTable(); });
+	document.getElementById("exportBtn").addEventListener("click", exportFilteredCsv);
+
+	loadListings();
+	setInterval(loadListings, 2 * 60 * 1000); // data updates on its own now — pick it up without a manual refresh
+})();
+</script>
+</body>
+</html>
