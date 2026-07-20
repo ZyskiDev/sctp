@@ -45,8 +45,8 @@
     },
     "reason": "inappropriate",
     "details": "Licken2",
-    "status": "pending",
+    "status": "denied",
     "createdAt": "2026-07-20T20:14:22.424Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-20T20:14:50.479Z"
   }
 ]
