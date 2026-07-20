@@ -70,9 +70,9 @@
     },
     "reason": "other",
     "details": "wrong world",
-    "status": "pending",
+    "status": "edited",
     "createdAt": "2026-07-20T20:15:01.834Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-20T20:16:00.159Z"
   },
   {
     "id": "898c0af6-b588-446e-86db-1124c866e899",
