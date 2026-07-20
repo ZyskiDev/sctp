@@ -28882,18 +28882,18 @@
   {
     "itemName": "Block of Iron",
     "baseItem": "minecraft:iron_block",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 64,
-    "priceLabel": "64 ironblock",
+    "price": 3,
+    "priceLabel": "3 db",
     "stackSize": 64,
-    "amount": 704,
-    "stacksInStock": 11,
-    "currency": "ironblock",
+    "amount": 38016,
+    "stacksInStock": 594,
+    "currency": "diamondblock",
     "seller": "AtheistElfie",
     "world": "Firefly",
-    "position": "-3919, 103, -622",
-    "lastSeen": "2026-07-20T20:25:47.266Z"
+    "position": "-3919, 101, -628",
+    "lastSeen": "2026-07-20T20:32:31.114Z"
   },
   {
     "itemName": "Block of Emerald",
@@ -29197,7 +29197,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3924, 100, -622",
-    "lastSeen": "2026-07-20T20:25:37.893Z"
+    "lastSeen": "2026-07-20T20:32:29.536Z"
   },
   {
     "itemName": "The Giant Sea Sheep",
@@ -29213,7 +29213,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3924, 100, -622",
-    "lastSeen": "2026-07-20T20:25:37.893Z"
+    "lastSeen": "2026-07-20T20:32:29.536Z"
   },
   {
     "itemName": "Block of Gold",
@@ -29261,7 +29261,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3924, 100, -621",
-    "lastSeen": "2026-07-20T20:25:44.916Z"
+    "lastSeen": "2026-07-20T20:32:28.739Z"
   },
   {
     "itemName": "☄♬ South's Headphones ♬☄",
@@ -29277,7 +29277,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3924, 100, -621",
-    "lastSeen": "2026-07-20T20:25:44.916Z"
+    "lastSeen": "2026-07-20T20:32:28.739Z"
   },
   {
     "itemName": "◊◇✧ Lumi's Cuddly Scarf ✧◇◊",
@@ -29293,7 +29293,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3924, 100, -621",
-    "lastSeen": "2026-07-20T20:25:44.916Z"
+    "lastSeen": "2026-07-20T20:32:28.739Z"
   },
   {
     "itemName": "Netherite Ingot",
@@ -29373,7 +29373,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 98, -615",
-    "lastSeen": "2026-07-20T20:25:53.468Z"
+    "lastSeen": "2026-07-20T20:32:27.238Z"
   },
   {
     "itemName": "Waxed Oxidized Chiseled Copper",
@@ -29405,7 +29405,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Weathered Copper",
@@ -29421,7 +29421,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Oxidized Cut Copper",
@@ -29437,7 +29437,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Exposed Cut Copper",
@@ -29453,7 +29453,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Cut Copper Slab",
@@ -29469,7 +29469,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Oxidized Cut Copper Stairs",
@@ -29485,7 +29485,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Cut Copper",
@@ -29501,7 +29501,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Copper Grate",
@@ -29517,7 +29517,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Oxidized Copper",
@@ -29533,7 +29533,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Waxed Exposed Cut Copper Slab",
@@ -29549,7 +29549,7 @@
     "seller": "AtheistElfie",
     "world": "Firefly",
     "position": "-3928, 93, -620",
-    "lastSeen": "2026-07-20T20:25:59.240Z"
+    "lastSeen": "2026-07-20T20:32:24.990Z"
   },
   {
     "itemName": "Yellow Glazed Terracotta",
@@ -31886,5 +31886,261 @@
     "world": "Firefly",
     "position": "-3912, 62, -623",
     "lastSeen": "2026-07-20T20:31:50.211Z"
+  },
+  {
+    "itemName": "Deepslate Diamond Ore",
+    "baseItem": "minecraft:deepslate_diamond_ore",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 5,
+    "priceLabel": "5 dia",
+    "stackSize": 2,
+    "amount": 54,
+    "stacksInStock": 27,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3905, 105, -749",
+    "lastSeen": "2026-07-20T20:32:51.660Z"
+  },
+  {
+    "itemName": "Item Frame",
+    "baseItem": "minecraft:item_frame",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 3,
+    "priceLabel": "3 dia",
+    "stackSize": 64,
+    "amount": 192,
+    "stacksInStock": 3,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3902, 105, -755",
+    "lastSeen": "2026-07-20T20:32:46.435Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_wait",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 4,
+    "stacksInStock": 4,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_blocks",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_strad",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 3,
+    "stacksInStock": 3,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_ward",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_mellohi",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 3,
+    "stacksInStock": 3,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_13",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 3,
+    "stacksInStock": 3,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_11",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_stal",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_far",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_mall",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 3,
+    "stacksInStock": 3,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_chirp",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-20T20:32:47.909Z"
+  },
+  {
+    "itemName": "Podzol",
+    "baseItem": "minecraft:podzol",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 64,
+    "priceLabel": "64 netheriteblock",
+    "stackSize": 8,
+    "amount": 8,
+    "stacksInStock": 1,
+    "currency": "netheriteblock",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3896, 105, -755",
+    "lastSeen": "2026-07-20T20:32:49.735Z"
+  },
+  {
+    "itemName": "Dirt",
+    "baseItem": "minecraft:dirt",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 64,
+    "priceLabel": "64 netheriteblock",
+    "stackSize": 64,
+    "amount": 64,
+    "stacksInStock": 1,
+    "currency": "netheriteblock",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3896, 105, -755",
+    "lastSeen": "2026-07-20T20:32:49.735Z"
+  },
+  {
+    "itemName": "♡ Spider Plushie ♡",
+    "baseItem": "minecraft:leather",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 4,
+    "stacksInStock": 4,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3896, 105, -749",
+    "lastSeen": "2026-07-20T20:32:50.835Z"
   }
 ]
