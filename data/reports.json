@@ -123,5 +123,30 @@
     "status": "pending",
     "createdAt": "2026-07-20T20:15:10.779Z",
     "resolvedAt": null
+  },
+  {
+    "id": "9d1a463b-d357-4dfd-a437-104e8b89d1ac",
+    "listingKey": "firefly|gamelan968|minecraft:deepslate_diamond_ore|deepslate diamond ore",
+    "listing": {
+      "itemName": "Deepslate Diamond Ore",
+      "baseItem": "minecraft:deepslate_diamond_ore",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 5,
+      "priceLabel": "5 dia",
+      "stackSize": 2,
+      "amount": 54,
+      "stacksInStock": 27,
+      "currency": "diamond",
+      "seller": "gamelan968",
+      "world": "Firefly",
+      "position": "1632, 99, 688",
+      "lastSeen": "2026-07-20T19:11:24.113Z"
+    },
+    "reason": "other",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-20T20:15:14.611Z",
+    "resolvedAt": null
   }
 ]
