@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trading Post — Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<style>
+	:root{
+		--bg:#101B14; --panel:#1B2A20; --panel-alt:#22332A; --line:#33453A;
+		--muted:#8FA593; --text:#EAEFE7; --shell:#D9C89A;
+		--accent:#B7E23D; --accent-dim:#87AE29; --accent-ink:#16210F;
+		--warn:#E2A33D; --danger:#E27D6B; --info:#8C93E8;
+		--font-body:'Segoe UI',Arial,sans-serif; --font-mono:'Consolas',monospace;
+	}
+	*{box-sizing:border-box;}
+	body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.5;}
+	.wrap{max-width:900px;margin:0 auto;padding:32px 20px 60px;}
+	h1{font-size:22px;margin:0 0 4px;}
+	.sub{color:var(--muted);font-size:13.5px;margin:0 0 24px;}
+	h2{font-size:16px;color:var(--shell);text-transform:uppercase;letter-spacing:.05em;margin:32px 0 12px;}
+	.login{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;max-width:360px;margin:60px auto;}
+	.login input{
+		width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:10px;font-size:14px;margin:10px 0;
+	}
+	.login button, .card button{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:8px 14px;font-size:13.5px;cursor:pointer;
+	}
+	.login button{background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;width:100%;}
+	.err{color:var(--danger);font-size:13px;min-height:18px;margin-top:6px;}
+	.hidden{display:none;}
+
+	.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;}
+	.card .row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
+	.card .title{font-weight:600;}
+	.card .meta{color:var(--muted);font-size:12.5px;margin-top:4px;}
+	.card .details{margin-top:8px;font-size:13.5px;background:var(--panel-alt);border-radius:8px;padding:8px 10px;}
+	.card .actions{display:flex;gap:8px;flex-wrap:wrap;}
+	.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;margin-left:6px;}
+	.badge.approved{background:rgba(183,226,61,0.16);color:var(--accent);}
+	.badge.denied{background:rgba(226,125,107,0.16);color:var(--danger);}
+	.badge.edited{background:rgba(140,147,232,0.18);color:var(--info);}
+	.badge.pending{background:rgba(226,163,61,0.18);color:var(--warn);}
+
+	.approve{color:var(--accent);border-color:var(--accent-dim);}
+	.deny{color:var(--danger);border-color:var(--danger);}
+	.change{color:var(--info);border-color:var(--info);}
+
+	.edit-form{display:none;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;}
+	.edit-form.open{display:flex;}
+	.edit-form select, .edit-form input{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:6px;padding:6px 8px;font-size:13px;
+	}
+	.edit-form input{flex:1;min-width:140px;}
+
+	.empty{color:var(--muted);font-size:13.5px;padding:12px 0;}
+	details{margin-top:20px;}
+	summary{cursor:pointer;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+	<h1>Trading Post — Admin</h1>
+	<p class="sub">Not linked from the site. Review reports and shared-shop requests here.</p>
+
+	<div class="login" id="loginBox">
+		<label for="adminKeyInput">Admin key</label>
+		<input type="password" id="adminKeyInput" placeholder="Paste your ADMIN_KEY">
+		<button id="loginBtn" type="button">Log in</button>
+		<div class="err" id="loginErr"></div>
+	</div>
+
+	<div id="panel" class="hidden">
+		<h2>Pending reports</h2>
+		<div id="reportsPending"></div>
+
+		<h2>Pending shared-shop requests</h2>
+		<div id="requestsPending"></div>
+
+		<details>
+			<summary>Resolved reports</summary>
+			<div id="reportsResolved" style="margin-top:12px;"></div>
+		</details>
+		<details>
+			<summary>Resolved shared-shop requests</summary>
+			<div id="requestsResolved" style="margin-top:12px;"></div>
+		</details>
+	</div>
+</div>
+
+<script>
+(function(){
+	"use strict";
+
+	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
+	var EDITABLE_FIELDS = ["itemName","baseItem","price","priceLabel","stackSize","amount","stacksInStock","currency","seller","world","position"];
+
+	var adminKey = sessionStorage.getItem("shoplogger_admin_key") || "";
+	var reports = [];
+	var requests = [];
+
+	function esc(s){
+		return String(s).replace(/[&<>"']/g, function(c){
+			return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+		});
+	}
+
+	async function api(path, options){
+		options = options || {};
+		options.headers = Object.assign({ "Authorization": "Bearer " + adminKey }, options.headers || {});
+		var res = await fetch(API_BASE + path, options);
+		var data = await res.json();
+		if(!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+		return data;
+	}
+
+	async function login(){
+		var input = document.getElementById("adminKeyInput");
+		var errEl = document.getElementById("loginErr");
+		adminKey = input.value.trim();
+		if(!adminKey){ errEl.textContent = "Enter a key."; return; }
+		errEl.textContent = "Checking…";
+		try {
+			await refresh();
+			sessionStorage.setItem("shoplogger_admin_key", adminKey);
+			document.getElementById("loginBox").classList.add("hidden");
+			document.getElementById("panel").classList.remove("hidden");
+		} catch(err){
+			errEl.textContent = "Wrong key, or the Worker isn't reachable: " + err.message;
+			adminKey = "";
+		}
+	}
+
+	async function refresh(){
+		reports = await api("/admin/reports");
+		requests = await api("/admin/shared-shop-requests");
+		render();
+	}
+
+	function render(){
+		renderReports();
+		renderRequests();
+	}
+
+	function renderReports(){
+		var pending = reports.filter(function(r){ return r.status === "pending"; }).reverse();
+		var resolved = reports.filter(function(r){ return r.status !== "pending"; }).reverse();
+
+		document.getElementById("reportsPending").innerHTML = pending.length
+			? pending.map(reportCard).join("")
+			: '<div class="empty">No pending reports.</div>';
+		document.getElementById("reportsResolved").innerHTML = resolved.length
+			? resolved.map(reportCard).join("")
+			: '<div class="empty">Nothing resolved yet.</div>';
+
+		document.querySelectorAll(".report-approve").forEach(function(b){
+			b.addEventListener("click", function(){ resolveReport(b.getAttribute("data-id"), "approve"); });
+		});
+		document.querySelectorAll(".report-deny").forEach(function(b){
+			b.addEventListener("click", function(){ resolveReport(b.getAttribute("data-id"), "deny"); });
+		});
+		document.querySelectorAll(".report-change-toggle").forEach(function(b){
+			b.addEventListener("click", function(){
+				document.getElementById("edit-" + b.getAttribute("data-id")).classList.toggle("open");
+			});
+		});
+		document.querySelectorAll(".report-change-submit").forEach(function(b){
+			b.addEventListener("click", function(){
+				var id = b.getAttribute("data-id");
+				var field = document.getElementById("field-" + id).value;
+				var value = document.getElementById("value-" + id).value;
+				resolveReport(id, "edit", field, value);
+			});
+		});
+	}
+
+	function reportCard(r){
+		var l = r.listing || {};
+		var fieldOptions = EDITABLE_FIELDS.map(function(f){ return '<option value="'+f+'">'+f+'</option>'; }).join("");
+		var body = r.status === "pending"
+			? '<div class="actions">'+
+				'<button class="approve report-approve" data-id="'+r.id+'" type="button">Approve (delete listing)</button>'+
+				'<button class="change report-change-toggle" data-id="'+r.id+'" type="button">Change one field</button>'+
+				'<button class="deny report-deny" data-id="'+r.id+'" type="button">Deny</button>'+
+			  '</div>'+
+			  '<div class="edit-form" id="edit-'+r.id+'">'+
+				'<select id="field-'+r.id+'">'+fieldOptions+'</select>'+
+				'<input type="text" id="value-'+r.id+'" placeholder="new value">'+
+				'<button class="change report-change-submit" data-id="'+r.id+'" type="button">Apply</button>'+
+			  '</div>'
+			: '<span class="badge '+r.status+'">'+r.status+'</span>';
+
+		return '<div class="card">'+
+			'<div class="row">'+
+				'<div>'+
+					'<div class="title">'+esc(l.itemName||"(unknown item)")+' — '+esc(l.seller||"?")+' ('+esc(l.world||"?")+')</div>'+
+					'<div class="meta">reason: '+esc(r.reason)+' &middot; reported '+esc(r.createdAt)+'</div>'+
+				'</div>'+
+			'</div>'+
+			(r.details ? '<div class="details">'+esc(r.details)+'</div>' : '')+
+			'<div style="margin-top:10px;">'+body+'</div>'+
+		'</div>';
+	}
+
+	async function resolveReport(id, action, field, value){
+		try {
+			var body = { id: id, action: action };
+			if(action === "edit"){ body.field = field; body.value = value; }
+			await api("/admin/reports/resolve", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+			await refresh();
+		} catch(err){
+			alert("Failed: " + err.message);
+		}
+	}
+
+	function renderRequests(){
+		var pending = requests.filter(function(r){ return r.status === "pending"; }).reverse();
+		var resolved = requests.filter(function(r){ return r.status !== "pending"; }).reverse();
+
+		document.getElementById("requestsPending").innerHTML = pending.length
+			? pending.map(requestCard).join("")
+			: '<div class="empty">No pending requests.</div>';
+		document.getElementById("requestsResolved").innerHTML = resolved.length
+			? resolved.map(requestCard).join("")
+			: '<div class="empty">Nothing resolved yet.</div>';
+
+		document.querySelectorAll(".req-approve").forEach(function(b){
+			b.addEventListener("click", function(){ resolveRequest(b.getAttribute("data-id"), "approve"); });
+		});
+		document.querySelectorAll(".req-deny").forEach(function(b){
+			b.addEventListener("click", function(){ resolveRequest(b.getAttribute("data-id"), "deny"); });
+		});
+	}
+
+	function requestCard(r){
+		var actions = r.status === "pending"
+			? '<div class="actions">'+
+				'<button class="approve req-approve" data-id="'+r.id+'" type="button">Approve</button>'+
+				'<button class="deny req-deny" data-id="'+r.id+'" type="button">Deny</button>'+
+			  '</div>'
+			: '<span class="badge '+r.status+'">'+r.status+'</span>';
+
+		return '<div class="card">'+
+			'<div class="title">'+esc(r.username)+'</div>'+
+			'<div class="meta">shops: '+esc(r.shops.join(", "))+' &middot; requested '+esc(r.createdAt)+'</div>'+
+			'<div style="margin-top:10px;">'+actions+'</div>'+
+		'</div>';
+	}
+
+	async function resolveRequest(id, action){
+		try {
+			await api("/admin/shared-shop-requests/resolve", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, action:action }) });
+			await refresh();
+		} catch(err){
+			alert("Failed: " + err.message);
+		}
+	}
+
+	document.getElementById("loginBtn").addEventListener("click", login);
+	document.getElementById("adminKeyInput").addEventListener("keydown", function(e){
+		if(e.key === "Enter") login();
+	});
+
+	if(adminKey){
+		refresh().then(function(){
+			document.getElementById("loginBox").classList.add("hidden");
+			document.getElementById("panel").classList.remove("hidden");
+		}).catch(function(){
+			adminKey = "";
+			sessionStorage.removeItem("shoplogger_admin_key");
+		});
+	}
+})();
+</script>
+</body>
+</html>
