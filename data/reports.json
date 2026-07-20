@@ -298,5 +298,30 @@
     "status": "pending",
     "createdAt": "2026-07-20T21:44:21.797Z",
     "resolvedAt": null
+  },
+  {
+    "id": "a9a3728c-c7f9-4492-bc70-a3b26233c844",
+    "listingKey": "firefly|westerlund_|minecraft:black_stained_glass_pane|black stained glass pane",
+    "listing": {
+      "itemName": "Black Stained Glass Pane",
+      "baseItem": "minecraft:black_stained_glass_pane",
+      "bulk": true,
+      "mixedContents": false,
+      "price": 32,
+      "priceLabel": "32 db",
+      "stackSize": 1,
+      "amount": 14,
+      "stacksInStock": 14,
+      "currency": "diamondblock",
+      "seller": "Westerlund_",
+      "world": "Firefly",
+      "position": "-3889, 104, -752",
+      "lastSeen": "2026-07-20T20:35:53.347Z"
+    },
+    "reason": "scam",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-20T21:44:25.286Z",
+    "resolvedAt": null
   }
 ]
