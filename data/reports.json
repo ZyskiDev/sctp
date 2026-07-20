@@ -98,5 +98,30 @@
     "status": "pending",
     "createdAt": "2026-07-20T20:15:07.232Z",
     "resolvedAt": null
+  },
+  {
+    "id": "7ec68f1c-eb5c-40ad-bbee-b39b8a8fea6f",
+    "listingKey": "firefly|gamelan968|minecraft:cobbled_deepslate|cobbled deepslate",
+    "listing": {
+      "itemName": "Cobbled Deepslate",
+      "baseItem": "minecraft:cobbled_deepslate",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 1,
+      "priceLabel": "1 dia",
+      "stackSize": 64,
+      "amount": 1728,
+      "stacksInStock": 27,
+      "currency": "diamond",
+      "seller": "gamelan968",
+      "world": "Firefly",
+      "position": "1630, 99, 679",
+      "lastSeen": "2026-07-20T19:11:31.231Z"
+    },
+    "reason": "other",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-20T20:15:10.779Z",
+    "resolvedAt": null
   }
 ]
