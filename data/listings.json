@@ -1053,7 +1053,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3830, 65, -797",
-    "lastSeen": "2026-07-20T18:17:43.798Z"
+    "lastSeen": "2026-07-20T19:34:45.343Z"
   },
   {
     "itemName": "Brown Terracotta",
@@ -1085,7 +1085,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3830, 66, -797",
-    "lastSeen": "2026-07-20T18:17:44.481Z"
+    "lastSeen": "2026-07-20T19:34:46.994Z"
   },
   {
     "itemName": "Orange Terracotta",
@@ -1101,7 +1101,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3830, 67, -797",
-    "lastSeen": "2026-07-20T18:17:45.998Z"
+    "lastSeen": "2026-07-20T19:34:46.244Z"
   },
   {
     "itemName": "Lime Terracotta",
@@ -1117,7 +1117,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3828, 65, -797",
-    "lastSeen": "2026-07-20T18:17:46.848Z"
+    "lastSeen": "2026-07-20T19:34:42.390Z"
   },
   {
     "itemName": "Green Terracotta",
@@ -1133,7 +1133,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3828, 66, -797",
-    "lastSeen": "2026-07-20T18:17:50.939Z"
+    "lastSeen": "2026-07-20T19:34:43.092Z"
   },
   {
     "itemName": "Yellow Terracotta",
@@ -1149,7 +1149,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3828, 64, -797",
-    "lastSeen": "2026-07-20T18:17:45.198Z"
+    "lastSeen": "2026-07-20T19:34:41.637Z"
   },
   {
     "itemName": "Light Blue Terracotta",
@@ -1165,7 +1165,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3825, 65, -797",
-    "lastSeen": "2026-07-20T18:17:52.466Z"
+    "lastSeen": "2026-07-20T19:34:35.432Z"
   },
   {
     "itemName": "Blue Terracotta",
@@ -1181,7 +1181,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3828, 67, -797",
-    "lastSeen": "2026-07-20T18:17:55.617Z"
+    "lastSeen": "2026-07-20T19:34:43.893Z"
   },
   {
     "itemName": "Purple Terracotta",
@@ -1197,7 +1197,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3825, 66, -797",
-    "lastSeen": "2026-07-20T18:17:53.250Z"
+    "lastSeen": "2026-07-20T19:34:36.132Z"
   },
   {
     "itemName": "Magenta Terracotta",
@@ -1213,7 +1213,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3825, 67, -797",
-    "lastSeen": "2026-07-20T18:17:54.085Z"
+    "lastSeen": "2026-07-20T19:34:36.833Z"
   },
   {
     "itemName": "Pink Terracotta",
@@ -1229,7 +1229,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3822, 64, -794",
-    "lastSeen": "2026-07-20T18:17:54.884Z"
+    "lastSeen": "2026-07-20T19:34:32.425Z"
   },
   {
     "itemName": "Cyan Terracotta",
@@ -1245,7 +1245,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3825, 64, -797",
-    "lastSeen": "2026-07-20T18:17:51.738Z"
+    "lastSeen": "2026-07-20T19:34:34.579Z"
   },
   {
     "itemName": "Chest",
@@ -1426,18 +1426,18 @@
   {
     "itemName": "Bone Block",
     "baseItem": "minecraft:bone_block",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 dia",
+    "priceLabel": "1 db",
     "stackSize": 64,
-    "amount": 1664,
-    "stacksInStock": 26,
-    "currency": "diamond",
+    "amount": 41472,
+    "stacksInStock": 648,
+    "currency": "diamondblock",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3845, 56, -776",
-    "lastSeen": "2026-07-20T18:14:57.207Z"
+    "position": "-3845, 66, -784",
+    "lastSeen": "2026-07-20T19:34:53.958Z"
   },
   {
     "itemName": "Block of Resin",
@@ -1517,7 +1517,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3843, 66, -774",
-    "lastSeen": "2026-07-20T18:18:13.489Z"
+    "lastSeen": "2026-07-20T19:35:24.937Z"
   },
   {
     "itemName": "Warped Stem",
@@ -1533,7 +1533,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3843, 67, -774",
-    "lastSeen": "2026-07-20T18:18:15.056Z"
+    "lastSeen": "2026-07-20T19:35:25.689Z"
   },
   {
     "itemName": "Soul Soil",
@@ -1773,7 +1773,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 64, -786",
-    "lastSeen": "2026-07-20T19:00:57.563Z"
+    "lastSeen": "2026-07-20T19:34:54.811Z"
   },
   {
     "itemName": "Deepslate",
@@ -1949,7 +1949,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 65, -786",
-    "lastSeen": "2026-07-20T19:01:00.994Z"
+    "lastSeen": "2026-07-20T19:34:55.561Z"
   },
   {
     "itemName": "Packed Mud",
@@ -2077,7 +2077,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 67, -786",
-    "lastSeen": "2026-07-20T19:01:16.064Z"
+    "lastSeen": "2026-07-20T19:34:57.815Z"
   },
   {
     "itemName": "Red Sandstone",
@@ -2194,18 +2194,18 @@
   {
     "itemName": "Mycelium",
     "baseItem": "minecraft:mycelium",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 dia",
+    "priceLabel": "1 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 43200,
+    "stacksInStock": 675,
+    "currency": "diamondblock",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3838, 57, -797",
-    "lastSeen": "2026-07-20T18:15:51.853Z"
+    "position": "-3845, 67, -784",
+    "lastSeen": "2026-07-20T19:34:56.362Z"
   },
   {
     "itemName": "Pale Moss Block",
@@ -2397,7 +2397,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 65, -779",
-    "lastSeen": "2026-07-20T18:18:16.555Z"
+    "lastSeen": "2026-07-20T19:35:28.742Z"
   },
   {
     "itemName": "Oak Log",
@@ -2413,7 +2413,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 64, -776",
-    "lastSeen": "2026-07-20T18:18:10.355Z"
+    "lastSeen": "2026-07-20T19:35:26.439Z"
   },
   {
     "itemName": "Spruce Log",
@@ -2429,7 +2429,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 65, -776",
-    "lastSeen": "2026-07-20T18:18:12.671Z"
+    "lastSeen": "2026-07-20T19:35:27.992Z"
   },
   {
     "itemName": "Mangrove Log",
@@ -2445,23 +2445,23 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 66, -779",
-    "lastSeen": "2026-07-20T18:18:17.309Z"
+    "lastSeen": "2026-07-20T19:35:29.444Z"
   },
   {
     "itemName": "Pale Oak Log",
     "baseItem": "minecraft:pale_oak_log",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 7,
+    "priceLabel": "7 dia",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
+    "amount": 46656,
+    "stacksInStock": 729,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3822, 54, -789",
-    "lastSeen": "2026-07-20T19:07:15.840Z"
+    "position": "-3843, 65, -774",
+    "lastSeen": "2026-07-20T19:35:24.137Z"
   },
   {
     "itemName": "Birch Log",
@@ -2509,7 +2509,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 67, -779",
-    "lastSeen": "2026-07-20T18:18:18.341Z"
+    "lastSeen": "2026-07-20T19:35:30.245Z"
   },
   {
     "itemName": "Jungle Log",
@@ -2877,7 +2877,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3822, 65, -794",
-    "lastSeen": "2026-07-20T18:18:03.370Z"
+    "lastSeen": "2026-07-20T19:34:33.176Z"
   },
   {
     "itemName": "Acacia Log",
@@ -2893,7 +2893,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 64, -779",
-    "lastSeen": "2026-07-20T18:18:09.588Z"
+    "lastSeen": "2026-07-20T19:34:53.206Z"
   },
   {
     "itemName": "Block of Bamboo",
@@ -2909,7 +2909,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3843, 64, -774",
-    "lastSeen": "2026-07-20T18:18:11.138Z"
+    "lastSeen": "2026-07-20T19:35:23.437Z"
   },
   {
     "itemName": "Birch Log",
@@ -2925,7 +2925,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 66, -776",
-    "lastSeen": "2026-07-20T18:18:14.288Z"
+    "lastSeen": "2026-07-20T19:35:27.191Z"
   },
   {
     "itemName": "RipSneldon",
@@ -2973,7 +2973,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3840, 104, -776",
-    "lastSeen": "2026-07-20T18:18:46.324Z"
+    "lastSeen": "2026-07-20T19:34:20.591Z"
   },
   {
     "itemName": "◇◈ Snake Sword Texture ◈◇",
@@ -2989,7 +2989,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3841, 104, -776",
-    "lastSeen": "2026-07-20T18:18:47.141Z"
+    "lastSeen": "2026-07-20T19:34:21.342Z"
   },
   {
     "itemName": "+༻⋆ Safety Vest ⋆༺+",
@@ -3005,7 +3005,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3842, 104, -776",
-    "lastSeen": "2026-07-20T18:18:47.847Z"
+    "lastSeen": "2026-07-20T19:34:22.092Z"
   },
   {
     "itemName": "🕸 ✧ Attunement: Halloween Announcer ✧ 🕸",
@@ -3021,7 +3021,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3842, 104, -776",
-    "lastSeen": "2026-07-20T18:18:47.847Z"
+    "lastSeen": "2026-07-20T19:34:22.092Z"
   },
   {
     "itemName": "⊰⋘⊰ Stargazer's Grace ⊱⋙⊱",
@@ -3037,7 +3037,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3843, 104, -776",
-    "lastSeen": "2026-07-20T18:18:48.664Z"
+    "lastSeen": "2026-07-20T19:34:19.840Z"
   },
   {
     "itemName": "Roached's Skittles Brew Coffee",
@@ -10589,7 +10589,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 66, -786",
-    "lastSeen": "2026-07-20T19:01:02.594Z"
+    "lastSeen": "2026-07-20T19:34:56.962Z"
   },
   {
     "itemName": "Blaze Rod",
@@ -10621,7 +10621,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 64, -784",
-    "lastSeen": "2026-07-20T19:01:04.061Z"
+    "lastSeen": "2026-07-20T19:34:50.953Z"
   },
   {
     "itemName": "*۞ SPAWNER CRATE KEY ۞*",
@@ -13438,5 +13438,53 @@
     "world": "Honeybee",
     "position": "1553, 89, 494",
     "lastSeen": "2026-07-20T19:16:47.658Z"
+  },
+  {
+    "itemName": "Light Gray Terracotta",
+    "baseItem": "minecraft:light_gray_terracotta",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 3,
+    "priceLabel": "3 db",
+    "stackSize": 64,
+    "amount": 32832,
+    "stacksInStock": 513,
+    "currency": "diamondblock",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3830, 64, -797",
+    "lastSeen": "2026-07-20T19:34:44.592Z"
+  },
+  {
+    "itemName": "Block of Redstone",
+    "baseItem": "minecraft:redstone_block",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 64,
+    "amount": 31104,
+    "stacksInStock": 486,
+    "currency": "diamondblock",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3845, 65, -784",
+    "lastSeen": "2026-07-20T19:34:51.753Z"
+  },
+  {
+    "itemName": "Sandstone",
+    "baseItem": "minecraft:sandstone",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 64,
+    "amount": 39744,
+    "stacksInStock": 621,
+    "currency": "diamondblock",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3845, 64, -781",
+    "lastSeen": "2026-07-20T19:34:52.403Z"
   }
 ]
