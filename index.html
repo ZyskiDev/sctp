@@ -236,6 +236,44 @@
 	.file-status.ok{color:var(--accent);}
 	.file-status.err{color:#E27D6B;}
 
+	.reason-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+	.reason-list label{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;}
+	.modal textarea, .modal input[type=text]{
+		width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:8px 10px;font-family:var(--font-body);font-size:13.5px;
+	}
+	.modal input[type=text]{margin-bottom:10px;}
+	.modal textarea{resize:vertical;min-height:70px;}
+	.modal label.field-label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+	.modal .modal-actions button.primary{background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;}
+	.modal .modal-actions button.danger{color:#E27D6B;border-color:#E27D6B;}
+
+	.report-btn{
+		background:transparent;border:1px solid var(--line);color:var(--muted);
+		border-radius:8px;padding:4px 10px;font-size:11.5px;cursor:pointer;white-space:nowrap;
+	}
+	.report-btn:hover{color:#E27D6B;border-color:#E27D6B;}
+
+	.info-icon{
+		display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;
+		border-radius:50%;background:var(--info);color:var(--accent-ink);font-size:10px;font-weight:700;
+		cursor:help;margin-left:6px;position:relative;vertical-align:middle;
+	}
+	.info-icon .tooltip{
+		display:none;position:absolute;bottom:130%;left:50%;transform:translateX(-50%);
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		padding:8px 10px;border-radius:8px;font-size:12px;font-weight:400;white-space:normal;
+		width:220px;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,0.35);
+	}
+	.info-icon:hover .tooltip, .info-icon:focus .tooltip{display:block;}
+
+	.shared-shop-cta{text-align:center;padding:8px 0 28px;}
+	.shared-shop-cta button{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:999px;padding:10px 20px;font-size:13.5px;cursor:pointer;
+	}
+	.shared-shop-cta button:hover{border-color:var(--info);color:var(--info);}
+
 	.toast{
 		position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
 		background:var(--panel-alt);border:1px solid var(--accent-dim);color:var(--text);
@@ -345,6 +383,10 @@
 			</div>
 		</section>
 	</div>
+
+	<div class="shared-shop-cta">
+		<button id="openSharedShopRequest" type="button">Request a shared shop note</button>
+	</div>
 </div>
 
 <footer class="site">
@@ -363,6 +405,45 @@
 		<div class="file-status" id="fileStatus"></div>
 		<div class="modal-actions">
 			<button id="closeUpload" type="button">Close</button>
+		</div>
+	</div>
+</div>
+
+<!-- report modal -->
+<div class="modal-backdrop" id="reportBackdrop">
+	<div class="modal">
+		<h2>Report this listing</h2>
+		<p id="reportListingLabel"></p>
+		<div class="reason-list">
+			<label><input type="radio" name="reportReason" value="scam"> Scam / didn't deliver as advertised</label>
+			<label><input type="radio" name="reportReason" value="wrong_info"> Wrong price or stock</label>
+			<label><input type="radio" name="reportReason" value="shop_gone"> Shop no longer exists</label>
+			<label><input type="radio" name="reportReason" value="inappropriate"> Inappropriate name or content</label>
+			<label><input type="radio" name="reportReason" value="other"> Other</label>
+		</div>
+		<label class="field-label" for="reportDetails">Details (optional)</label>
+		<textarea id="reportDetails" maxlength="500" placeholder="Anything else the site owner should know…"></textarea>
+		<div class="file-status" id="reportStatus"></div>
+		<div class="modal-actions">
+			<button id="closeReport" type="button">Cancel</button>
+			<button id="submitReport" class="primary" type="button">Submit report</button>
+		</div>
+	</div>
+</div>
+
+<!-- shared-shop request modal -->
+<div class="modal-backdrop" id="sharedShopBackdrop">
+	<div class="modal">
+		<h2>Request a shared shop note</h2>
+		<p>If you sell in more than one shop, an approved note lets buyers know — a small info icon will show up next to your name on any of your listings.</p>
+		<label class="field-label" for="sharedShopUsername">Your username</label>
+		<input type="text" id="sharedShopUsername" placeholder="e.g. Steve" maxlength="32">
+		<label class="field-label" for="sharedShopList">Other shops you sell in (one per line)</label>
+		<textarea id="sharedShopList" placeholder="/shop diamond&#10;/shop netherite&#10;..."></textarea>
+		<div class="file-status" id="sharedShopStatus"></div>
+		<div class="modal-actions">
+			<button id="closeSharedShop" type="button">Cancel</button>
+			<button id="submitSharedShop" class="primary" type="button">Submit request</button>
 		</div>
 	</div>
 </div>
@@ -469,8 +550,10 @@
 		};
 	}
 
+	// Must match worker.js's rowKey() exactly — this is how report approvals
+	// find the right listing to remove/edit.
 	function rowKey(r){
-		return (r.seller+"|"+r.baseItem+"|"+r.itemName).toLowerCase();
+		return (r.world+"|"+r.seller+"|"+r.baseItem+"|"+r.itemName).toLowerCase();
 	}
 
 	function rowTimestamp(r){
@@ -502,8 +585,12 @@
 	// ---------------- config ----------------
 	// Set these after deploying the Worker (see trading-post-api/README.md).
 	var DATA_URL = "https://maxolotled.github.io/sctp/data/listings.json";
+	var SHARED_SHOPS_URL = "https://maxolotled.github.io/sctp/data/shared-shops-approved.json";
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
-	var API_KEY = "JjabYIfRtghvBJNoy6857TFVHbjknlMOi6754E5dcfvhgBHNI6b564"; // only used for manual upload, see note in the upload modal
+	var API_KEY = "JjabYIfRtghvBJNoy6857TFVHbjknlMOi6754E5dcfvhgBHNI6b564"; // only used for manual upload / reports / requests, see notes in each modal
+
+	// seller (lowercased) -> array of shop names, from approved shared-shop requests
+	var sharedShopsBySeller = {};
 
 	// ---------------- data loading ----------------
 	async function loadListings(){
@@ -520,6 +607,17 @@
 
 		// Client-side safety net only — the Worker already refuses to commit these.
 		allListings = allListings.filter(function(r){ return !isBannedItem(r.baseItem, r.itemName); });
+
+		try {
+			var shopsRes = await fetch(SHARED_SHOPS_URL + "?t=" + Date.now());
+			var approved = shopsRes.ok ? await shopsRes.json() : [];
+			sharedShopsBySeller = {};
+			approved.forEach(function(entry){
+				sharedShopsBySeller[String(entry.username||"").toLowerCase()] = entry.shops || [];
+			});
+		} catch(e){
+			sharedShopsBySeller = {};
+		}
 
 		applyFilters();
 	}
@@ -636,9 +734,14 @@
 			'<th>World</th>'+
 			'<th>Position</th>'+
 			'<th data-k="recent">Last seen</th>'+
+			'<th></th>'+
 			'</tr></thead><tbody>';
 
-		pageRows.forEach(function(r){
+		pageRows.forEach(function(r, idx){
+			var shops = sharedShopsBySeller[String(r.seller||"").toLowerCase()];
+			var infoIcon = shops && shops.length
+				? '<span class="info-icon" tabindex="0">i<span class="tooltip">This user might sell in the following shops: '+esc(shops.join(", "))+'</span></span>'
+				: '';
 			html += '<tr>'+
 				'<td class="item-name">'+esc(r.itemName)+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
@@ -648,10 +751,11 @@
 				'</td>'+
 				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+r.stackSize+'</span></td>'+
 				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' stacks</span></td>'+
-				'<td class="seller">'+esc(r.seller)+'</td>'+
+				'<td class="seller">'+esc(r.seller)+infoIcon+'</td>'+
 				'<td>'+esc(r.world)+'</td>'+
 				'<td class="position">'+esc(r.position)+'</td>'+
 				'<td>'+relTime(r.lastSeen)+'</td>'+
+				'<td><button class="report-btn" type="button" data-row-idx="'+idx+'">Report</button></td>'+
 				'</tr>';
 		});
 		html += '</tbody></table></div>';
@@ -666,6 +770,12 @@
 			th.addEventListener("click", function(){
 				document.getElementById("fSort").value = th.getAttribute("data-k");
 				applyFilters();
+			});
+		});
+
+		area.querySelectorAll(".report-btn").forEach(function(btn){
+			btn.addEventListener("click", function(){
+				openReport(pageRows[Number(btn.getAttribute("data-row-idx"))]);
 			});
 		});
 	}
@@ -755,6 +865,103 @@
 		}
 	}
 
+	// ---------------- report modal ----------------
+	var reportTarget = null;
+
+	function openReport(row){
+		reportTarget = row;
+		document.getElementById("reportListingLabel").textContent =
+			row.itemName + " — sold by " + row.seller + " (" + row.world + ")";
+		document.querySelectorAll('input[name="reportReason"]').forEach(function(r){ r.checked = false; });
+		document.getElementById("reportDetails").value = "";
+		var statusEl = document.getElementById("reportStatus");
+		statusEl.textContent = "";
+		statusEl.className = "file-status";
+		document.getElementById("reportBackdrop").classList.add("open");
+	}
+	function closeReport(){
+		document.getElementById("reportBackdrop").classList.remove("open");
+	}
+
+	async function submitReport(){
+		var statusEl = document.getElementById("reportStatus");
+		var selected = document.querySelector('input[name="reportReason"]:checked');
+		if(!selected){
+			statusEl.className = "file-status err";
+			statusEl.textContent = "Pick a reason first.";
+			return;
+		}
+		statusEl.className = "file-status";
+		statusEl.textContent = "Sending…";
+		try {
+			var res = await fetch(API_BASE + "/reports", {
+				method: "POST",
+				headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+				body: JSON.stringify({
+					listingKey: rowKey(reportTarget),
+					listing: reportTarget,
+					reason: selected.value,
+					details: document.getElementById("reportDetails").value.trim()
+				})
+			});
+			var data = await res.json();
+			if(!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+			showToast("Report sent — thanks for flagging it.");
+			closeReport();
+		} catch(err){
+			statusEl.className = "file-status err";
+			statusEl.textContent = "Couldn't send report: " + err.message;
+		}
+	}
+
+	// ---------------- shared-shop request modal ----------------
+	function openSharedShopRequest(){
+		document.getElementById("sharedShopUsername").value = "";
+		document.getElementById("sharedShopList").value = "";
+		var statusEl = document.getElementById("sharedShopStatus");
+		statusEl.textContent = "";
+		statusEl.className = "file-status";
+		document.getElementById("sharedShopBackdrop").classList.add("open");
+	}
+	function closeSharedShopRequest(){
+		document.getElementById("sharedShopBackdrop").classList.remove("open");
+	}
+
+	async function submitSharedShopRequest(){
+		var statusEl = document.getElementById("sharedShopStatus");
+		var username = document.getElementById("sharedShopUsername").value.trim();
+		var shops = document.getElementById("sharedShopList").value
+			.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
+
+		if(!username){
+			statusEl.className = "file-status err";
+			statusEl.textContent = "Enter your username.";
+			return;
+		}
+		if(shops.length === 0){
+			statusEl.className = "file-status err";
+			statusEl.textContent = "List at least one shop.";
+			return;
+		}
+
+		statusEl.className = "file-status";
+		statusEl.textContent = "Sending…";
+		try {
+			var res = await fetch(API_BASE + "/shared-shop-requests", {
+				method: "POST",
+				headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+				body: JSON.stringify({ username: username, shops: shops })
+			});
+			var data = await res.json();
+			if(!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+			showToast("Request sent — the site owner will review it.");
+			closeSharedShopRequest();
+		} catch(err){
+			statusEl.className = "file-status err";
+			statusEl.textContent = "Couldn't send request: " + err.message;
+		}
+	}
+
 	function exportFilteredCsv(){
 		if(filtered.length === 0){ showToast("Nothing to export with the current filters."); return; }
 		var headers = ["Item Name","Base Item","Bulk","Mixed Contents","Price","Stack Size","Amount In Stock","Stacks In Stock","Seller","World","Position","Last Seen"];
@@ -779,8 +986,22 @@
 	document.getElementById("uploadBackdrop").addEventListener("click", function(e){
 		if(e.target === this) closeUpload();
 	});
+
+	document.getElementById("closeReport").addEventListener("click", closeReport);
+	document.getElementById("submitReport").addEventListener("click", submitReport);
+	document.getElementById("reportBackdrop").addEventListener("click", function(e){
+		if(e.target === this) closeReport();
+	});
+
+	document.getElementById("openSharedShopRequest").addEventListener("click", openSharedShopRequest);
+	document.getElementById("closeSharedShop").addEventListener("click", closeSharedShopRequest);
+	document.getElementById("submitSharedShop").addEventListener("click", submitSharedShopRequest);
+	document.getElementById("sharedShopBackdrop").addEventListener("click", function(e){
+		if(e.target === this) closeSharedShopRequest();
+	});
+
 	document.addEventListener("keydown", function(e){
-		if(e.key === "Escape") closeUpload();
+		if(e.key === "Escape"){ closeUpload(); closeReport(); closeSharedShopRequest(); }
 	});
 
 	var dropzone = document.getElementById("dropzone");
