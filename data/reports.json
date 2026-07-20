@@ -295,9 +295,9 @@
     },
     "reason": "scam",
     "details": "",
-    "status": "pending",
+    "status": "denied",
     "createdAt": "2026-07-20T21:44:21.797Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-20T21:45:00.588Z"
   },
   {
     "id": "a9a3728c-c7f9-4492-bc70-a3b26233c844",
