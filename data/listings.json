@@ -2450,18 +2450,18 @@
   {
     "itemName": "Pale Oak Log",
     "baseItem": "minecraft:pale_oak_log",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1728,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3843, 65, -774",
-    "lastSeen": "2026-07-20T18:18:11.938Z"
+    "position": "-3822, 54, -789",
+    "lastSeen": "2026-07-20T19:07:15.840Z"
   },
   {
     "itemName": "Birch Log",
@@ -2557,7 +2557,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 54, -784",
-    "lastSeen": "2026-07-20T18:16:22.246Z"
+    "lastSeen": "2026-07-20T19:07:15.023Z"
   },
   {
     "itemName": "Stripped Spruce Log",
