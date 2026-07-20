@@ -170,8 +170,8 @@
     },
     "reason": "shop_gone",
     "details": "",
-    "status": "pending",
+    "status": "denied",
     "createdAt": "2026-07-20T20:51:13.097Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-20T21:00:42.799Z"
   }
 ]
