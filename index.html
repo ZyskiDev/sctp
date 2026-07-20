@@ -22,6 +22,7 @@
 		--accent-dim:#87AE29;
 		--accent-ink:#16210F;
 		--warn:#E2A33D;
+		--info:#8C93E8;
 		--radius:10px;
 		--font-display:'Fraunces',serif;
 		--font-body:'Inter',sans-serif;
@@ -186,6 +187,7 @@
 		display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;
 	}
 	.badge.bulk{background:rgba(183,226,61,0.16);color:var(--accent);}
+	.badge.single{background:rgba(140,147,232,0.18);color:var(--info);}
 	.badge.mixed{background:rgba(226,163,61,0.18);color:var(--warn);}
 	.price-main{font-family:var(--font-mono);font-weight:600;}
 	.price-sub{font-family:var(--font-mono);color:var(--muted);font-size:11.5px;}
@@ -281,11 +283,6 @@
 	<div class="layout">
 		<aside class="filters">
 			<h2>Filters</h2>
-
-			<div class="f-group">
-				<label for="fCurrency">Currency</label>
-				<select id="fCurrency"><option value="">All currencies</option></select>
-			</div>
 
 			<div class="f-group">
 				<label for="fBulk">Listing type</label>
@@ -534,15 +531,6 @@
 	}
 
 	// ---------------- filtering / rendering ----------------
-	function populateCurrencyOptions(){
-		var sel = document.getElementById("fCurrency");
-		var current = sel.value;
-		var currencies = Array.from(new Set(allListings.map(function(r){return r.currency;}))).sort();
-		sel.innerHTML = '<option value="">All currencies</option>' +
-			currencies.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join("");
-		sel.value = current;
-	}
-
 	function esc(s){
 		return String(s).replace(/[&<>"']/g, function(c){
 			return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
@@ -551,22 +539,17 @@
 
 	function applyFilters(){
 		var q = document.getElementById("searchInput").value.trim().toLowerCase();
-		var currency = document.getElementById("fCurrency").value;
 		var bulkMode = document.getElementById("fBulk").value;
 		var priceMin = document.getElementById("fPriceMin").value;
 		var priceMax = document.getElementById("fPriceMax").value;
 		var minStock = document.getElementById("fMinStock").value;
 		sortKey = document.getElementById("fSort").value;
 
-		populateCurrencyOptions();
-		document.getElementById("fCurrency").value = currency;
-
 		filtered = allListings.filter(function(r){
 			if(q){
 				var hay = (r.itemName+" "+r.baseItem+" "+r.seller).toLowerCase();
 				if(hay.indexOf(q) === -1) return false;
 			}
-			if(currency && r.currency !== currency) return false;
 			if(bulkMode === "bulk" && !r.bulk) return false;
 			if(bulkMode === "single" && r.bulk) return false;
 			if(priceMin !== "" && r.price < parseFloat(priceMin)) return false;
@@ -636,7 +619,6 @@
 			'<th>Type</th>'+
 			'<th data-k="price-desc">Price</th>'+
 			'<th data-k="stock-desc">In stock</th>'+
-			'<th>Currency</th>'+
 			'<th data-k="seller-az">Seller</th>'+
 			'<th>Position</th>'+
 			'<th data-k="recent">Last seen</th>'+
@@ -647,12 +629,11 @@
 				'<td class="item-name">'+esc(r.itemName)+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
 				'<td>'+
-					(r.bulk ? '<span class="badge bulk">Bulk</span>' : '')+
+					(r.bulk ? '<span class="badge bulk">Bulk</span>' : '<span class="badge single">Single</span>')+
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '')+
 				'</td>'+
 				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+r.stackSize+'</span></td>'+
 				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' stacks</span></td>'+
-				'<td>'+esc(r.currency)+'</td>'+
 				'<td class="seller">'+esc(r.seller)+'</td>'+
 				'<td class="position">'+esc(r.position)+'</td>'+
 				'<td>'+relTime(r.lastSeen)+'</td>'+
@@ -761,10 +742,10 @@
 
 	function exportFilteredCsv(){
 		if(filtered.length === 0){ showToast("Nothing to export with the current filters."); return; }
-		var headers = ["Item Name","Base Item","Bulk","Mixed Contents","Price","Stack Size","Amount In Stock","Stacks In Stock","Currency","Seller","Position","Last Seen"];
+		var headers = ["Item Name","Base Item","Bulk","Mixed Contents","Price","Stack Size","Amount In Stock","Stacks In Stock","Seller","Position","Last Seen"];
 		var lines = [headers.join(",")];
 		filtered.forEach(function(r){
-			var vals = [r.itemName, r.baseItem, r.bulk?"Yes":"No", r.mixedContents?"Yes":"No", r.priceLabel, r.stackSize, r.amount, r.stacksInStock, r.currency, r.seller, r.position, r.lastSeen];
+			var vals = [r.itemName, r.baseItem, r.bulk?"Yes":"No", r.mixedContents?"Yes":"No", r.priceLabel, r.stackSize, r.amount, r.stacksInStock, r.seller, r.position, r.lastSeen];
 			lines.push(vals.map(function(v){
 				var s = String(v);
 				return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
@@ -809,13 +790,12 @@
 		document.getElementById("searchInput").value = "";
 		applyFilters();
 	});
-	["fCurrency","fBulk","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
+	["fBulk","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 		document.getElementById(id).addEventListener("input", applyFilters);
 	});
 	document.getElementById("resetFilters").addEventListener("click", function(){
 		document.getElementById("searchInput").value = "";
-		document.getElementById("fCurrency").value = "";
 		document.getElementById("fBulk").value = "";
 		document.getElementById("fPriceMin").value = "";
 		document.getElementById("fPriceMax").value = "";
