@@ -63,6 +63,7 @@
 	}
 	.brand .tag em{color:var(--shell);font-style:normal;}
 	.upload-cta{
+		display:inline-block;
 		background:var(--accent);
 		color:var(--accent-ink);
 		border:none;
@@ -73,6 +74,7 @@
 		border-radius:999px;
 		cursor:pointer;
 		white-space:nowrap;
+		text-decoration:none;
 		transition:transform .12s ease, box-shadow .12s ease;
 		box-shadow:0 0 0 rgba(183,226,61,0);
 	}
@@ -252,7 +254,7 @@
 				<h1>Snailcraft Trading Post</h1>
 				<p class="tag">Every shop on the server, in <em>one</em> list!</p>
 			</div>
-			<button class="upload-cta" id="openUpload">Upload your shop file</button>
+			<a class="upload-cta" id="downloadMod" href="shoplogger-1.0.0.jar" download="shoplogger-1.0.0.jar">Download mod</a>
 		</div>
 		<div class="trail-wrap" aria-hidden="true">
 			<svg viewBox="0 0 400 12" preserveAspectRatio="none">
@@ -295,7 +297,7 @@
 			</div>
 
 			<div class="f-group">
-				<label>Price per stack</label>
+				<label>Price</label>
 				<div class="f-range">
 					<input type="number" id="fPriceMin" placeholder="min" min="0">
 					<input type="number" id="fPriceMax" placeholder="max" min="0">
@@ -311,8 +313,8 @@
 				<label for="fSort">Sort by</label>
 				<select id="fSort">
 					<option value="recent">Most recently updated</option>
-					<option value="price-asc">Price per stack ↑</option>
-					<option value="price-desc">Price per stack ↓</option>
+					<option value="price-asc">Price ↑</option>
+					<option value="price-desc">Price ↓</option>
 					<option value="stock-desc">Amount in stock ↓</option>
 					<option value="item-az">Item name A→Z</option>
 					<option value="seller-az">Seller A→Z</option>
@@ -381,10 +383,8 @@
 		itemname:"itemName",
 		baseitem:"baseItem",
 		bulk:"bulk",
-		priceperitem:"pricePerItem",
-		price:"pricePerItem",
-		priceperstack:"pricePerStack",
-		priceper64:"pricePerStack",
+		price:"priceLabel",
+		pricelabel:"priceLabel",
 		stacksize:"stackSize",
 		amountinstock:"amount",
 		amount:"amount",
@@ -395,6 +395,12 @@
 		lastseen:"lastSeen",
 		mixedcontents:"mixedContents"
 	};
+
+	// Pulls the leading number out of a price label like "2 dia" or "1.5 db".
+	function parsePriceLabel(label){
+		var m = String(label||"").match(/-?[\d.]+/);
+		return m ? parseFloat(m[0]) : 0;
+	}
 
 	function toBool(v){
 		var s = String(v||"").trim().toLowerCase();
@@ -432,8 +438,8 @@
 		var currency = String(row.currency||"").trim() || "unknown";
 
 		var stackSize = toNum(row.stackSize) || 64;
-		var pricePerItem = toNum(row.pricePerItem);
-		var pricePerStack = row.pricePerStack !== undefined ? toNum(row.pricePerStack) : pricePerItem * stackSize;
+		var priceLabel = String(row.priceLabel||"").trim();
+		var price = parsePriceLabel(priceLabel);
 		var amount = toNum(row.amount);
 		var stacksInStock = row.stacksInStock !== undefined ? toNum(row.stacksInStock) : Math.round((amount/stackSize)*100)/100;
 
@@ -442,8 +448,8 @@
 			baseItem: baseItem || "—",
 			bulk: toBool(row.bulk),
 			mixedContents: toBool(row.mixedContents),
-			pricePerItem: pricePerItem,
-			pricePerStack: pricePerStack,
+			price: price,
+			priceLabel: priceLabel || (fmtNum(price)+" "+currency),
 			stackSize: stackSize,
 			amount: amount,
 			stacksInStock: stacksInStock,
@@ -563,16 +569,16 @@
 			if(currency && r.currency !== currency) return false;
 			if(bulkMode === "bulk" && !r.bulk) return false;
 			if(bulkMode === "single" && r.bulk) return false;
-			if(priceMin !== "" && r.pricePerStack < parseFloat(priceMin)) return false;
-			if(priceMax !== "" && r.pricePerStack > parseFloat(priceMax)) return false;
+			if(priceMin !== "" && r.price < parseFloat(priceMin)) return false;
+			if(priceMax !== "" && r.price > parseFloat(priceMax)) return false;
 			if(minStock !== "" && r.amount < parseFloat(minStock)) return false;
 			return true;
 		});
 
 		filtered.sort(function(a,b){
 			switch(sortKey){
-				case "price-asc": return a.pricePerStack - b.pricePerStack;
-				case "price-desc": return b.pricePerStack - a.pricePerStack;
+				case "price-asc": return a.price - b.price;
+				case "price-desc": return b.price - a.price;
 				case "stock-desc": return b.amount - a.amount;
 				case "item-az": return a.itemName.localeCompare(b.itemName);
 				case "seller-az": return a.seller.localeCompare(b.seller);
@@ -628,8 +634,7 @@
 			'<th data-k="item-az">Item</th>'+
 			'<th data-k="item-az">Base item</th>'+
 			'<th>Type</th>'+
-			'<th data-k="price-desc">Price / item</th>'+
-			'<th data-k="price-desc">Price / stack</th>'+
+			'<th data-k="price-desc">Price</th>'+
 			'<th data-k="stock-desc">In stock</th>'+
 			'<th>Currency</th>'+
 			'<th data-k="seller-az">Seller</th>'+
@@ -645,8 +650,7 @@
 					(r.bulk ? '<span class="badge bulk">Bulk</span>' : '')+
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '')+
 				'</td>'+
-				'<td><span class="price-main">'+fmtNum(r.pricePerItem)+'</span></td>'+
-				'<td><span class="price-main">'+fmtNum(r.pricePerStack)+'</span><br><span class="price-sub">'+r.stackSize+'/stack</span></td>'+
+				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+r.stackSize+'</span></td>'+
 				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' stacks</span></td>'+
 				'<td>'+esc(r.currency)+'</td>'+
 				'<td class="seller">'+esc(r.seller)+'</td>'+
@@ -757,10 +761,10 @@
 
 	function exportFilteredCsv(){
 		if(filtered.length === 0){ showToast("Nothing to export with the current filters."); return; }
-		var headers = ["Item Name","Base Item","Bulk","Mixed Contents","Price Per Item","Price Per Stack","Stack Size","Amount In Stock","Stacks In Stock","Currency","Seller","Position","Last Seen"];
+		var headers = ["Item Name","Base Item","Bulk","Mixed Contents","Price","Stack Size","Amount In Stock","Stacks In Stock","Currency","Seller","Position","Last Seen"];
 		var lines = [headers.join(",")];
 		filtered.forEach(function(r){
-			var vals = [r.itemName, r.baseItem, r.bulk?"Yes":"No", r.mixedContents?"Yes":"No", r.pricePerItem, r.pricePerStack, r.stackSize, r.amount, r.stacksInStock, r.currency, r.seller, r.position, r.lastSeen];
+			var vals = [r.itemName, r.baseItem, r.bulk?"Yes":"No", r.mixedContents?"Yes":"No", r.priceLabel, r.stackSize, r.amount, r.stacksInStock, r.currency, r.seller, r.position, r.lastSeen];
 			lines.push(vals.map(function(v){
 				var s = String(v);
 				return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
@@ -775,7 +779,6 @@
 	}
 
 	// ---------------- wiring ----------------
-	document.getElementById("openUpload").addEventListener("click", openUpload);
 	document.getElementById("closeUpload").addEventListener("click", closeUpload);
 	document.getElementById("uploadBackdrop").addEventListener("click", function(e){
 		if(e.target === this) closeUpload();
