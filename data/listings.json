@@ -5506,18 +5506,18 @@
   {
     "itemName": "TNT",
     "baseItem": "minecraft:tnt",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 10,
-    "priceLabel": "10 db",
+    "price": 4,
+    "priceLabel": "4 dia",
     "stackSize": 64,
-    "amount": 3456,
-    "stacksInStock": 54,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "Slasheryn",
     "world": "Firefly",
-    "position": "-3938, 105, -718",
-    "lastSeen": "2026-07-20T20:16:25.032Z"
+    "position": "-3936, 63, -728",
+    "lastSeen": "2026-07-20T20:19:29.566Z"
   },
   {
     "itemName": "* ʚïɞ Red Lacewing Butterfly ʚïɞ *",
@@ -8285,7 +8285,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 63, -709",
-    "lastSeen": "2026-07-20T18:25:06.106Z"
+    "lastSeen": "2026-07-20T20:19:02.396Z"
   },
   {
     "itemName": "Waxed Weathered Copper Bulb",
@@ -8301,7 +8301,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 65, -709",
-    "lastSeen": "2026-07-20T18:25:06.892Z"
+    "lastSeen": "2026-07-20T20:19:05.568Z"
   },
   {
     "itemName": "Lantern",
@@ -8317,7 +8317,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 63, -710",
-    "lastSeen": "2026-07-20T18:25:07.673Z"
+    "lastSeen": "2026-07-20T20:19:03.970Z"
   },
   {
     "itemName": "Soul Torch",
@@ -8333,7 +8333,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 63, -711",
-    "lastSeen": "2026-07-20T18:25:08.456Z"
+    "lastSeen": "2026-07-20T20:19:04.744Z"
   },
   {
     "itemName": "Torch",
@@ -8349,7 +8349,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 63, -712",
-    "lastSeen": "2026-07-20T18:25:09.223Z"
+    "lastSeen": "2026-07-20T20:19:08.867Z"
   },
   {
     "itemName": "Soul Campfire",
@@ -8365,7 +8365,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 63, -713",
-    "lastSeen": "2026-07-20T18:25:09.974Z"
+    "lastSeen": "2026-07-20T20:19:11.547Z"
   },
   {
     "itemName": "Copper Chest",
@@ -8381,7 +8381,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 65, -712",
-    "lastSeen": "2026-07-20T18:25:10.740Z"
+    "lastSeen": "2026-07-20T20:19:09.568Z"
   },
   {
     "itemName": "Campfire",
@@ -8397,7 +8397,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 63, -714",
-    "lastSeen": "2026-07-20T18:25:11.490Z"
+    "lastSeen": "2026-07-20T20:19:11.794Z"
   },
   {
     "itemName": "White Banner",
@@ -8407,13 +8407,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 27,
-    "stacksInStock": 27,
+    "amount": 13,
+    "stacksInStock": 13,
     "currency": "diamond",
     "seller": "Woolu",
     "world": "Firefly",
-    "position": "-3958, 62, -716",
-    "lastSeen": "2026-07-20T18:26:11.088Z"
+    "position": "-3936, 62, -720",
+    "lastSeen": "2026-07-20T20:19:20.994Z"
   },
   {
     "itemName": "Black Banner",
@@ -8423,13 +8423,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 27,
-    "stacksInStock": 27,
+    "amount": 26,
+    "stacksInStock": 26,
     "currency": "diamond",
     "seller": "Woolu",
     "world": "Firefly",
-    "position": "-3958, 63, -716",
-    "lastSeen": "2026-07-20T18:26:11.873Z"
+    "position": "-3936, 63, -720",
+    "lastSeen": "2026-07-20T20:19:20.218Z"
   },
   {
     "itemName": "Copper Chain",
@@ -8445,7 +8445,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 65, -713",
-    "lastSeen": "2026-07-20T18:25:13.891Z"
+    "lastSeen": "2026-07-20T20:19:14.894Z"
   },
   {
     "itemName": "Waxed Copper Bulb",
@@ -8461,7 +8461,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 65, -711",
-    "lastSeen": "2026-07-20T18:25:14.675Z"
+    "lastSeen": "2026-07-20T20:19:07.993Z"
   },
   {
     "itemName": "Copper Bulb",
@@ -8477,7 +8477,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 65, -711",
-    "lastSeen": "2026-07-20T18:25:14.675Z"
+    "lastSeen": "2026-07-20T20:19:07.993Z"
   },
   {
     "itemName": "Copper Bars",
@@ -8493,7 +8493,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 65, -714",
-    "lastSeen": "2026-07-20T18:25:15.508Z"
+    "lastSeen": "2026-07-20T20:19:12.544Z"
   },
   {
     "itemName": "Waxed Exposed Copper Bulb",
@@ -8509,7 +8509,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 65, -710",
-    "lastSeen": "2026-07-20T18:25:16.226Z"
+    "lastSeen": "2026-07-20T20:19:06.370Z"
   },
   {
     "itemName": "Item Frame",
@@ -8525,7 +8525,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 62, -723",
-    "lastSeen": "2026-07-20T18:25:31.396Z"
+    "lastSeen": "2026-07-20T20:19:21.892Z"
   },
   {
     "itemName": "Painting",
@@ -8541,7 +8541,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 62, -724",
-    "lastSeen": "2026-07-20T18:25:32.163Z"
+    "lastSeen": "2026-07-20T20:19:22.541Z"
   },
   {
     "itemName": "Decorated Pot",
@@ -8573,7 +8573,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 63, -725",
-    "lastSeen": "2026-07-20T18:25:33.762Z"
+    "lastSeen": "2026-07-20T20:19:23.369Z"
   },
   {
     "itemName": "Loom",
@@ -8589,7 +8589,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3936, 63, -727",
-    "lastSeen": "2026-07-20T18:25:34.546Z"
+    "lastSeen": "2026-07-20T20:19:26.443Z"
   },
   {
     "itemName": "Flower Pot",
@@ -8605,7 +8605,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 64, -726",
-    "lastSeen": "2026-07-20T18:25:35.364Z"
+    "lastSeen": "2026-07-20T20:19:25.793Z"
   },
   {
     "itemName": "Anvil",
@@ -8621,7 +8621,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3936, 64, -725",
-    "lastSeen": "2026-07-20T18:25:36.096Z"
+    "lastSeen": "2026-07-20T20:19:24.095Z"
   },
   {
     "itemName": "Bell",
@@ -8653,7 +8653,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 64, -729",
-    "lastSeen": "2026-07-20T18:25:39.181Z"
+    "lastSeen": "2026-07-20T20:19:28.767Z"
   },
   {
     "itemName": "Smoker",
@@ -8669,7 +8669,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3939, 63, -729",
-    "lastSeen": "2026-07-20T18:25:40.765Z"
+    "lastSeen": "2026-07-20T20:19:27.993Z"
   },
   {
     "itemName": "Furnace",
@@ -8685,7 +8685,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3940, 63, -729",
-    "lastSeen": "2026-07-20T18:25:41.535Z"
+    "lastSeen": "2026-07-20T20:19:31.817Z"
   },
   {
     "itemName": "Crafting Table",
@@ -8701,7 +8701,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3941, 63, -729",
-    "lastSeen": "2026-07-20T18:25:42.265Z"
+    "lastSeen": "2026-07-20T20:19:33.392Z"
   },
   {
     "itemName": "Brewing Stand",
@@ -8717,7 +8717,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3940, 64, -729",
-    "lastSeen": "2026-07-20T18:25:43.098Z"
+    "lastSeen": "2026-07-20T20:19:32.593Z"
   },
   {
     "itemName": "Armour Stand",
@@ -8749,7 +8749,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3942, 63, -729",
-    "lastSeen": "2026-07-20T18:25:44.566Z"
+    "lastSeen": "2026-07-20T20:19:34.967Z"
   },
   {
     "itemName": "Stonecutter",
@@ -8765,7 +8765,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3939, 64, -729",
-    "lastSeen": "2026-07-20T18:25:45.332Z"
+    "lastSeen": "2026-07-20T20:19:31.067Z"
   },
   {
     "itemName": "Composter",
@@ -8781,7 +8781,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3942, 64, -729",
-    "lastSeen": "2026-07-20T18:25:46.133Z"
+    "lastSeen": "2026-07-20T20:19:35.717Z"
   },
   {
     "itemName": "Smithing Table",
@@ -8797,7 +8797,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3943, 63, -729",
-    "lastSeen": "2026-07-20T18:25:46.916Z"
+    "lastSeen": "2026-07-20T20:19:36.493Z"
   },
   {
     "itemName": "Grindstone",
@@ -8813,7 +8813,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3943, 64, -729",
-    "lastSeen": "2026-07-20T18:25:47.649Z"
+    "lastSeen": "2026-07-20T20:19:37.292Z"
   },
   {
     "itemName": "Oak Fence",
@@ -8829,7 +8829,7 @@
     "seller": "WonderAvocado",
     "world": "Firefly",
     "position": "-3945, 62, -729",
-    "lastSeen": "2026-07-20T18:25:49.266Z"
+    "lastSeen": "2026-07-20T20:19:38.020Z"
   },
   {
     "itemName": "Birch Fence",
@@ -8845,7 +8845,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3946, 62, -729",
-    "lastSeen": "2026-07-20T18:25:51.768Z"
+    "lastSeen": "2026-07-20T20:19:38.795Z"
   },
   {
     "itemName": "Spruce Fence",
@@ -8861,7 +8861,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3947, 62, -729",
-    "lastSeen": "2026-07-20T18:25:52.501Z"
+    "lastSeen": "2026-07-20T20:19:41.167Z"
   },
   {
     "itemName": "Dark Oak Fence",
@@ -8877,7 +8877,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3948, 62, -729",
-    "lastSeen": "2026-07-20T18:25:53.285Z"
+    "lastSeen": "2026-07-20T20:19:41.916Z"
   },
   {
     "itemName": "Acacia Fence",
@@ -8893,7 +8893,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3949, 62, -729",
-    "lastSeen": "2026-07-20T18:25:54.101Z"
+    "lastSeen": "2026-07-20T20:19:43.443Z"
   },
   {
     "itemName": "Oak Fence Gate",
@@ -8909,7 +8909,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3952, 62, -729",
-    "lastSeen": "2026-07-20T18:25:55.634Z"
+    "lastSeen": "2026-07-20T20:17:55.401Z"
   },
   {
     "itemName": "Birch Fence Gate",
@@ -8925,7 +8925,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3953, 62, -729",
-    "lastSeen": "2026-07-20T18:25:56.435Z"
+    "lastSeen": "2026-07-20T20:17:56.125Z"
   },
   {
     "itemName": "Dark Oak Fence Gate",
@@ -8941,7 +8941,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3955, 62, -729",
-    "lastSeen": "2026-07-20T18:25:57.185Z"
+    "lastSeen": "2026-07-20T20:17:59.926Z"
   },
   {
     "itemName": "Spruce Fence Gate",
@@ -8957,7 +8957,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3954, 62, -729",
-    "lastSeen": "2026-07-20T18:25:57.968Z"
+    "lastSeen": "2026-07-20T20:17:58.449Z"
   },
   {
     "itemName": "Acacia Fence Gate",
@@ -8973,7 +8973,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3956, 62, -729",
-    "lastSeen": "2026-07-20T18:25:58.719Z"
+    "lastSeen": "2026-07-20T20:18:01.498Z"
   },
   {
     "itemName": "Oak Trapdoor",
@@ -8989,7 +8989,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3958, 62, -727",
-    "lastSeen": "2026-07-20T18:26:00.285Z"
+    "lastSeen": "2026-07-20T20:18:04.600Z"
   },
   {
     "itemName": "Birch Trapdoor",
@@ -9005,7 +9005,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3958, 62, -726",
-    "lastSeen": "2026-07-20T18:26:01.003Z"
+    "lastSeen": "2026-07-20T20:18:05.423Z"
   },
   {
     "itemName": "Spruce Trapdoor",
@@ -9021,7 +9021,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3958, 62, -725",
-    "lastSeen": "2026-07-20T18:26:01.786Z"
+    "lastSeen": "2026-07-20T20:18:07.722Z"
   },
   {
     "itemName": "Dark Oak Trapdoor",
@@ -9037,7 +9037,7 @@
     "seller": "WonderAvocado",
     "world": "Firefly",
     "position": "-3958, 62, -724",
-    "lastSeen": "2026-07-20T18:26:02.569Z"
+    "lastSeen": "2026-07-20T20:18:09.298Z"
   },
   {
     "itemName": "Acacia Trapdoor",
@@ -9053,7 +9053,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3958, 62, -723",
-    "lastSeen": "2026-07-20T18:26:03.286Z"
+    "lastSeen": "2026-07-20T20:18:11.823Z"
   },
   {
     "itemName": "White Banner",
@@ -9069,7 +9069,7 @@
     "seller": "WonderAvocado",
     "world": "Firefly",
     "position": "-3958, 62, -718",
-    "lastSeen": "2026-07-20T18:26:07.937Z"
+    "lastSeen": "2026-07-20T20:18:19.673Z"
   },
   {
     "itemName": "Black Banner",
@@ -9085,7 +9085,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3958, 63, -717",
-    "lastSeen": "2026-07-20T18:26:10.289Z"
+    "lastSeen": "2026-07-20T20:18:20.472Z"
   },
   {
     "itemName": "Powered Rail",
@@ -9101,7 +9101,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3958, 63, -714",
-    "lastSeen": "2026-07-20T18:26:12.622Z"
+    "lastSeen": "2026-07-20T20:18:23.473Z"
   },
   {
     "itemName": "Activator Rail",
@@ -9117,7 +9117,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3958, 63, -713",
-    "lastSeen": "2026-07-20T18:26:13.355Z"
+    "lastSeen": "2026-07-20T20:18:26.045Z"
   },
   {
     "itemName": "Detector Rail",
@@ -9181,7 +9181,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3958, 63, -709",
-    "lastSeen": "2026-07-20T18:26:17.324Z"
+    "lastSeen": "2026-07-20T20:18:30.747Z"
   },
   {
     "itemName": "Daylight Detector",
@@ -9229,7 +9229,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3958, 65, -711",
-    "lastSeen": "2026-07-20T18:26:19.674Z"
+    "lastSeen": "2026-07-20T20:18:30.021Z"
   },
   {
     "itemName": "Iron Bars",
@@ -9293,7 +9293,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3955, 63, -707",
-    "lastSeen": "2026-07-20T18:26:23.124Z"
+    "lastSeen": "2026-07-20T20:18:32.998Z"
   },
   {
     "itemName": "Dispenser",
@@ -9309,7 +9309,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3954, 63, -707",
-    "lastSeen": "2026-07-20T18:26:23.975Z"
+    "lastSeen": "2026-07-20T20:18:33.771Z"
   },
   {
     "itemName": "Redstone Comparator",
@@ -9325,7 +9325,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3953, 63, -707",
-    "lastSeen": "2026-07-20T18:26:24.793Z"
+    "lastSeen": "2026-07-20T20:18:34.572Z"
   },
   {
     "itemName": "Piston",
@@ -9341,7 +9341,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3955, 64, -707",
-    "lastSeen": "2026-07-20T18:26:28.725Z"
+    "lastSeen": "2026-07-20T20:18:37.696Z"
   },
   {
     "itemName": "Redstone Torch",
@@ -9357,7 +9357,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3951, 63, -707",
-    "lastSeen": "2026-07-20T18:26:29.443Z"
+    "lastSeen": "2026-07-20T20:18:39.222Z"
   },
   {
     "itemName": "Acacia Shelf",
@@ -9373,7 +9373,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3949, 62, -707",
-    "lastSeen": "2026-07-20T18:26:32.844Z"
+    "lastSeen": "2026-07-20T20:18:40.846Z"
   },
   {
     "itemName": "Birch Shelf",
@@ -9389,7 +9389,7 @@
     "seller": "WonderAvocado",
     "world": "Firefly",
     "position": "-3946, 62, -707",
-    "lastSeen": "2026-07-20T18:26:35.295Z"
+    "lastSeen": "2026-07-20T20:18:45.470Z"
   },
   {
     "itemName": "Oak Shelf",
@@ -9405,7 +9405,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3945, 62, -707",
-    "lastSeen": "2026-07-20T18:26:35.995Z"
+    "lastSeen": "2026-07-20T20:18:46.998Z"
   },
   {
     "itemName": "Cherry Shelf",
@@ -9421,7 +9421,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3947, 65, -707",
-    "lastSeen": "2026-07-20T18:26:36.811Z"
+    "lastSeen": "2026-07-20T20:18:44.696Z"
   },
   {
     "itemName": "Crimson Shelf",
@@ -9437,7 +9437,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3949, 65, -707",
-    "lastSeen": "2026-07-20T18:26:39.129Z"
+    "lastSeen": "2026-07-20T20:18:41.572Z"
   },
   {
     "itemName": "Jungle Shelf",
@@ -9453,7 +9453,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3945, 65, -707",
-    "lastSeen": "2026-07-20T18:26:39.963Z"
+    "lastSeen": "2026-07-20T20:18:47.720Z"
   },
   {
     "itemName": "Dark Oak Leaves",
@@ -25790,5 +25790,629 @@
     "world": "Firefly",
     "position": "-3935, 71, -708",
     "lastSeen": "2026-07-20T20:17:45.874Z"
+  },
+  {
+    "itemName": "Bamboo Fence Gate",
+    "baseItem": "minecraft:bamboo_fence_gate",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 960,
+    "stacksInStock": 15,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3953, 65, -729",
+    "lastSeen": "2026-07-20T20:17:57.703Z"
+  },
+  {
+    "itemName": "Cherry Fence Gate",
+    "baseItem": "minecraft:cherry_fence_gate",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 960,
+    "stacksInStock": 15,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3954, 65, -729",
+    "lastSeen": "2026-07-20T20:17:59.202Z"
+  },
+  {
+    "itemName": "Mangrove Fence Gate",
+    "baseItem": "minecraft:mangrove_fence_gate",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 960,
+    "stacksInStock": 15,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3955, 65, -729",
+    "lastSeen": "2026-07-20T20:18:00.723Z"
+  },
+  {
+    "itemName": "Jungle Fence Gate",
+    "baseItem": "minecraft:jungle_fence_gate",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 960,
+    "stacksInStock": 15,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3956, 65, -729",
+    "lastSeen": "2026-07-20T20:18:02.279Z"
+  },
+  {
+    "itemName": "Pale Oak Trapdoor",
+    "baseItem": "minecraft:pale_oak_trapdoor",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 128,
+    "stacksInStock": 2,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 65, -727",
+    "lastSeen": "2026-07-20T20:18:06.122Z"
+  },
+  {
+    "itemName": "Bamboo Trapdoor",
+    "baseItem": "minecraft:bamboo_trapdoor",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1152,
+    "stacksInStock": 18,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 65, -726",
+    "lastSeen": "2026-07-20T20:18:06.874Z"
+  },
+  {
+    "itemName": "Cherry Trapdoor",
+    "baseItem": "minecraft:cherry_trapdoor",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 1152,
+    "stacksInStock": 18,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 65, -725",
+    "lastSeen": "2026-07-20T20:18:08.473Z"
+  },
+  {
+    "itemName": "Mangrove Trapdoor",
+    "baseItem": "minecraft:mangrove_trapdoor",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 960,
+    "stacksInStock": 15,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 65, -724",
+    "lastSeen": "2026-07-20T20:18:10.076Z"
+  },
+  {
+    "itemName": "Jungle Trapdoor",
+    "baseItem": "minecraft:jungle_trapdoor",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 960,
+    "stacksInStock": 15,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 65, -723",
+    "lastSeen": "2026-07-20T20:18:12.573Z"
+  },
+  {
+    "itemName": "Stone Button 1s",
+    "baseItem": "minecraft:stone_button",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 ironblock",
+    "stackSize": 64,
+    "amount": 512,
+    "stacksInStock": 8,
+    "currency": "ironblock",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 65, -714",
+    "lastSeen": "2026-07-20T20:18:24.172Z"
+  },
+  {
+    "itemName": "Stone Pressure Plate ≥1s",
+    "baseItem": "minecraft:stone_pressure_plate",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 ironblock",
+    "stackSize": 64,
+    "amount": 896,
+    "stacksInStock": 14,
+    "currency": "ironblock",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 65, -713",
+    "lastSeen": "2026-07-20T20:18:26.827Z"
+  },
+  {
+    "itemName": "Detector Rail ≥1s",
+    "baseItem": "minecraft:detector_rail",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 832,
+    "stacksInStock": 13,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 63, -712",
+    "lastSeen": "2026-07-20T20:18:27.622Z"
+  },
+  {
+    "itemName": "Tripwire Hook ≥0.5s",
+    "baseItem": "minecraft:tripwire_hook",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 ironblock",
+    "stackSize": 64,
+    "amount": 128,
+    "stacksInStock": 2,
+    "currency": "ironblock",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3958, 63, -710",
+    "lastSeen": "2026-07-20T20:18:29.171Z"
+  },
+  {
+    "itemName": "Target 0.4s,1s",
+    "baseItem": "minecraft:target",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 64,
+    "amount": 256,
+    "stacksInStock": 4,
+    "currency": "diamondblock",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3956, 63, -707",
+    "lastSeen": "2026-07-20T20:18:31.523Z"
+  },
+  {
+    "itemName": "Ward Armor Trim",
+    "baseItem": "minecraft:ward_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 12,
+    "stacksInStock": 12,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3943, 64, -707",
+    "lastSeen": "2026-07-20T20:18:49.372Z"
+  },
+  {
+    "itemName": "Wild Armor Trim",
+    "baseItem": "minecraft:wild_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 3,
+    "stacksInStock": 3,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3943, 62, -707",
+    "lastSeen": "2026-07-20T20:18:50.124Z"
+  },
+  {
+    "itemName": "Tide Armor Trim",
+    "baseItem": "minecraft:tide_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3942, 63, -707",
+    "lastSeen": "2026-07-20T20:18:50.920Z"
+  },
+  {
+    "itemName": "Spire Armor Trim",
+    "baseItem": "minecraft:spire_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3942, 64, -707",
+    "lastSeen": "2026-07-20T20:18:51.698Z"
+  },
+  {
+    "itemName": "Vex Armor Trim",
+    "baseItem": "minecraft:vex_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3942, 62, -707",
+    "lastSeen": "2026-07-20T20:18:52.494Z"
+  },
+  {
+    "itemName": "Silence Armor Trim",
+    "baseItem": "minecraft:silence_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3941, 63, -707",
+    "lastSeen": "2026-07-20T20:18:53.222Z"
+  },
+  {
+    "itemName": "Shaper Armor Trim",
+    "baseItem": "minecraft:shaper_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 4,
+    "stacksInStock": 4,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3941, 64, -707",
+    "lastSeen": "2026-07-20T20:18:54.069Z"
+  },
+  {
+    "itemName": "Snout Armor Trim",
+    "baseItem": "minecraft:snout_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 8,
+    "stacksInStock": 8,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3941, 62, -707",
+    "lastSeen": "2026-07-20T20:18:54.770Z"
+  },
+  {
+    "itemName": "Rib Armor Trim",
+    "baseItem": "minecraft:rib_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3940, 63, -707",
+    "lastSeen": "2026-07-20T20:18:55.547Z"
+  },
+  {
+    "itemName": "Flow Armor Trim",
+    "baseItem": "minecraft:flow_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 9,
+    "stacksInStock": 9,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3939, 63, -707",
+    "lastSeen": "2026-07-20T20:18:57.095Z"
+  },
+  {
+    "itemName": "Eye Armor Trim",
+    "baseItem": "minecraft:eye_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 5,
+    "stacksInStock": 5,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3939, 64, -707",
+    "lastSeen": "2026-07-20T20:18:57.869Z"
+  },
+  {
+    "itemName": "Sentry Armor Trim",
+    "baseItem": "minecraft:sentry_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 3,
+    "stacksInStock": 3,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3940, 62, -707",
+    "lastSeen": "2026-07-20T20:18:59.394Z"
+  },
+  {
+    "itemName": "Coast Armor Trim",
+    "baseItem": "minecraft:coast_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 15,
+    "stacksInStock": 15,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3938, 63, -707",
+    "lastSeen": "2026-07-20T20:19:00.119Z"
+  },
+  {
+    "itemName": "Bolt Armor Trim",
+    "baseItem": "minecraft:bolt_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 5,
+    "stacksInStock": 5,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3938, 64, -707",
+    "lastSeen": "2026-07-20T20:19:00.868Z"
+  },
+  {
+    "itemName": "Dune Armor Trim",
+    "baseItem": "minecraft:dune_armor_trim_smithing_template",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "Slasheryn",
+    "world": "Firefly",
+    "position": "-3938, 62, -707",
+    "lastSeen": "2026-07-20T20:19:01.619Z"
+  },
+  {
+    "itemName": "Lightning Rod 0.4s",
+    "baseItem": "minecraft:lightning_rod",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 192,
+    "stacksInStock": 3,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3936, 63, -708",
+    "lastSeen": "2026-07-20T20:19:03.196Z"
+  },
+  {
+    "itemName": "Waxed Exposed Lightning Rod",
+    "baseItem": "minecraft:waxed_exposed_lightning_rod",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 64,
+    "stacksInStock": 1,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3936, 63, -708",
+    "lastSeen": "2026-07-20T20:19:03.196Z"
+  },
+  {
+    "itemName": "Waxed Oxidized Lightning Rod",
+    "baseItem": "minecraft:waxed_oxidized_lightning_rod",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 64,
+    "stacksInStock": 1,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3936, 63, -708",
+    "lastSeen": "2026-07-20T20:19:03.196Z"
+  },
+  {
+    "itemName": "Waxed Oxidized Copper Bulb",
+    "baseItem": "minecraft:waxed_oxidized_copper_bulb",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 5,
+    "priceLabel": "5 dia",
+    "stackSize": 64,
+    "amount": 704,
+    "stacksInStock": 11,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3936, 65, -708",
+    "lastSeen": "2026-07-20T20:19:07.343Z"
+  },
+  {
+    "itemName": "§fDecorated Pot",
+    "baseItem": "minecraft:decorated_pot",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 3,
+    "priceLabel": "3 dia",
+    "stackSize": 64,
+    "amount": 256,
+    "stacksInStock": 4,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3936, 63, -726",
+    "lastSeen": "2026-07-20T20:19:24.895Z"
+  },
+  {
+    "itemName": "Armor Stand",
+    "baseItem": "minecraft:armor_stand",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 16,
+    "amount": 320,
+    "stacksInStock": 20,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3941, 64, -729",
+    "lastSeen": "2026-07-20T20:19:34.167Z"
+  },
+  {
+    "itemName": "Bamboo Fence",
+    "baseItem": "minecraft:bamboo_fence",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 896,
+    "stacksInStock": 14,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3946, 65, -729",
+    "lastSeen": "2026-07-20T20:19:40.320Z"
+  },
+  {
+    "itemName": "Cherry Fence",
+    "baseItem": "minecraft:cherry_fence",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 896,
+    "stacksInStock": 14,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3947, 65, -729",
+    "lastSeen": "2026-07-20T20:19:42.693Z"
+  },
+  {
+    "itemName": "Mangrove Fence",
+    "baseItem": "minecraft:mangrove_fence",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 768,
+    "stacksInStock": 12,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3948, 65, -729",
+    "lastSeen": "2026-07-20T20:19:44.193Z"
+  },
+  {
+    "itemName": "Jungle Fence",
+    "baseItem": "minecraft:jungle_fence",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 dia",
+    "stackSize": 64,
+    "amount": 896,
+    "stacksInStock": 14,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3949, 65, -729",
+    "lastSeen": "2026-07-20T20:19:44.941Z"
   }
 ]
