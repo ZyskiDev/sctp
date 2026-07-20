@@ -1261,23 +1261,23 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3838, 54, -774",
-    "lastSeen": "2026-07-20T18:14:48.622Z"
+    "lastSeen": "2026-07-20T19:38:09.332Z"
   },
   {
     "itemName": "Empty Map",
     "baseItem": "minecraft:map",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 10,
-    "priceLabel": "10 db",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 38016,
-    "stacksInStock": 594,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3845, 67, -791",
-    "lastSeen": "2026-07-20T19:35:41.331Z"
+    "position": "-3838, 55, -774",
+    "lastSeen": "2026-07-20T19:38:13.086Z"
   },
   {
     "itemName": "Item Frame",
@@ -1309,7 +1309,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3840, 54, -774",
-    "lastSeen": "2026-07-20T18:14:50.988Z"
+    "lastSeen": "2026-07-20T19:38:10.082Z"
   },
   {
     "itemName": "Block of Redstone",
@@ -1325,7 +1325,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3840, 55, -774",
-    "lastSeen": "2026-07-20T18:14:51.756Z"
+    "lastSeen": "2026-07-20T19:38:10.832Z"
   },
   {
     "itemName": "Bookshelf",
@@ -1341,7 +1341,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3843, 54, -774",
-    "lastSeen": "2026-07-20T18:14:52.506Z"
+    "lastSeen": "2026-07-20T19:38:13.837Z"
   },
   {
     "itemName": "Chiselled Bookshelf",
@@ -1373,23 +1373,23 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 54, -776",
-    "lastSeen": "2026-07-20T18:14:54.056Z"
+    "lastSeen": "2026-07-20T19:38:16.142Z"
   },
   {
     "itemName": "Obsidian",
     "baseItem": "minecraft:obsidian",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 5,
-    "priceLabel": "5 db",
-    "stackSize": 64,
-    "amount": 3456,
-    "stacksInStock": 54,
-    "currency": "diamondblock",
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 32,
+    "amount": 608,
+    "stacksInStock": 19,
+    "currency": "diamond",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3845, 64, -789",
-    "lastSeen": "2026-07-20T19:35:35.169Z"
+    "position": "-3843, 56, -774",
+    "lastSeen": "2026-07-20T19:38:14.589Z"
   },
   {
     "itemName": "Block of Gold",
@@ -1405,7 +1405,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3840, 56, -774",
-    "lastSeen": "2026-07-20T18:14:55.641Z"
+    "lastSeen": "2026-07-20T19:38:11.583Z"
   },
   {
     "itemName": "Magma Block",
@@ -1421,23 +1421,23 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 55, -776",
-    "lastSeen": "2026-07-20T18:14:56.356Z"
+    "lastSeen": "2026-07-20T19:38:16.891Z"
   },
   {
     "itemName": "Bone Block",
     "baseItem": "minecraft:bone_block",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 41472,
-    "stacksInStock": 648,
-    "currency": "diamondblock",
+    "amount": 1664,
+    "stacksInStock": 26,
+    "currency": "diamond",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3845, 66, -784",
-    "lastSeen": "2026-07-20T19:34:53.958Z"
+    "position": "-3845, 56, -776",
+    "lastSeen": "2026-07-20T19:38:18.342Z"
   },
   {
     "itemName": "Block of Resin",
@@ -1453,7 +1453,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3840, 57, -774",
-    "lastSeen": "2026-07-20T18:14:57.940Z"
+    "lastSeen": "2026-07-20T19:38:12.335Z"
   },
   {
     "itemName": "Block of Quartz",
@@ -1469,7 +1469,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 54, -779",
-    "lastSeen": "2026-07-20T18:14:59.891Z"
+    "lastSeen": "2026-07-20T19:38:20.595Z"
   },
   {
     "itemName": "Netherrack",
@@ -1485,7 +1485,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 55, -779",
-    "lastSeen": "2026-07-20T18:15:00.658Z"
+    "lastSeen": "2026-07-20T19:38:21.346Z"
   },
   {
     "itemName": "Soul Sand",
@@ -1501,39 +1501,39 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 56, -779",
-    "lastSeen": "2026-07-20T18:15:01.425Z"
+    "lastSeen": "2026-07-20T19:38:19.843Z"
   },
   {
     "itemName": "Crimson Stem",
     "baseItem": "minecraft:crimson_stem",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1472,
+    "stacksInStock": 23,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3843, 66, -774",
-    "lastSeen": "2026-07-20T19:35:24.937Z"
+    "position": "-3845, 54, -781",
+    "lastSeen": "2026-07-20T19:38:24.402Z"
   },
   {
     "itemName": "Warped Stem",
     "baseItem": "minecraft:warped_stem",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1472,
+    "stacksInStock": 23,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3843, 67, -774",
-    "lastSeen": "2026-07-20T19:35:25.689Z"
+    "position": "-3845, 55, -781",
+    "lastSeen": "2026-07-20T19:38:23.600Z"
   },
   {
     "itemName": "Soul Soil",
@@ -1549,7 +1549,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 57, -779",
-    "lastSeen": "2026-07-20T18:15:03.675Z"
+    "lastSeen": "2026-07-20T19:38:19.193Z"
   },
   {
     "itemName": "Glowstone",
@@ -1565,7 +1565,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 57, -776",
-    "lastSeen": "2026-07-20T18:15:04.458Z"
+    "lastSeen": "2026-07-20T19:38:17.592Z"
   },
   {
     "itemName": "Purpur Block",
@@ -1581,7 +1581,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 56, -781",
-    "lastSeen": "2026-07-20T18:15:07.428Z"
+    "lastSeen": "2026-07-20T19:38:22.949Z"
   },
   {
     "itemName": "Crimson Nylium",
@@ -1597,7 +1597,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 57, -781",
-    "lastSeen": "2026-07-20T18:15:08.226Z"
+    "lastSeen": "2026-07-20T19:38:22.149Z"
   },
   {
     "itemName": "Basalt",
@@ -1613,7 +1613,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 54, -784",
-    "lastSeen": "2026-07-20T18:15:08.961Z"
+    "lastSeen": "2026-07-20T19:38:27.358Z"
   },
   {
     "itemName": "Blackstone",
@@ -1629,7 +1629,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 55, -784",
-    "lastSeen": "2026-07-20T18:15:09.712Z"
+    "lastSeen": "2026-07-20T19:38:26.606Z"
   },
   {
     "itemName": "End Stone",
@@ -1645,7 +1645,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 56, -784",
-    "lastSeen": "2026-07-20T18:15:10.444Z"
+    "lastSeen": "2026-07-20T19:38:25.904Z"
   },
   {
     "itemName": "Sea Lantern",
@@ -1661,7 +1661,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 54, -786",
-    "lastSeen": "2026-07-20T18:15:11.211Z"
+    "lastSeen": "2026-07-20T19:38:29.661Z"
   },
   {
     "itemName": "Prismarine",
@@ -1677,7 +1677,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 55, -786",
-    "lastSeen": "2026-07-20T18:15:11.977Z"
+    "lastSeen": "2026-07-20T19:38:30.461Z"
   },
   {
     "itemName": "Warped Nylium",
@@ -1693,7 +1693,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 57, -784",
-    "lastSeen": "2026-07-20T18:15:12.695Z"
+    "lastSeen": "2026-07-20T19:38:25.103Z"
   },
   {
     "itemName": "Dark Prismarine",
@@ -1709,7 +1709,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 56, -786",
-    "lastSeen": "2026-07-20T18:15:13.494Z"
+    "lastSeen": "2026-07-20T19:38:28.909Z"
   },
   {
     "itemName": "Sculk",
@@ -1725,7 +1725,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 54, -789",
-    "lastSeen": "2026-07-20T18:15:14.245Z"
+    "lastSeen": "2026-07-20T19:38:33.415Z"
   },
   {
     "itemName": "Dripstone Block",
@@ -1741,7 +1741,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 55, -789",
-    "lastSeen": "2026-07-20T18:15:15.078Z"
+    "lastSeen": "2026-07-20T19:38:32.665Z"
   },
   {
     "itemName": "Pointed Dripstone",
@@ -1757,23 +1757,23 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 56, -789",
-    "lastSeen": "2026-07-20T18:15:15.845Z"
+    "lastSeen": "2026-07-20T19:38:31.913Z"
   },
   {
     "itemName": "Stone",
     "baseItem": "minecraft:stone",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 8,
-    "priceLabel": "8 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 29376,
-    "stacksInStock": 459,
+    "amount": 1728,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3845, 64, -786",
-    "lastSeen": "2026-07-20T19:34:54.811Z"
+    "position": "-3845, 54, -791",
+    "lastSeen": "2026-07-20T19:38:34.917Z"
   },
   {
     "itemName": "Deepslate",
@@ -1789,7 +1789,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 55, -791",
-    "lastSeen": "2026-07-20T18:15:17.378Z"
+    "lastSeen": "2026-07-20T19:38:34.166Z"
   },
   {
     "itemName": "Bricks",
@@ -1805,7 +1805,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 57, -789",
-    "lastSeen": "2026-07-20T18:15:18.145Z"
+    "lastSeen": "2026-07-20T19:38:31.162Z"
   },
   {
     "itemName": "Prismarine Bricks",
@@ -1821,7 +1821,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 57, -786",
-    "lastSeen": "2026-07-20T18:15:18.879Z"
+    "lastSeen": "2026-07-20T19:38:28.159Z"
   },
   {
     "itemName": "Cobblestone",
@@ -1837,7 +1837,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 56, -791",
-    "lastSeen": "2026-07-20T18:15:19.661Z"
+    "lastSeen": "2026-07-20T19:38:35.867Z"
   },
   {
     "itemName": "Granite",
@@ -1853,7 +1853,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 54, -794",
-    "lastSeen": "2026-07-20T18:15:20.446Z"
+    "lastSeen": "2026-07-20T19:38:37.170Z"
   },
   {
     "itemName": "Diorite",
@@ -1869,7 +1869,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 55, -794",
-    "lastSeen": "2026-07-20T18:15:21.230Z"
+    "lastSeen": "2026-07-20T19:38:39.423Z"
   },
   {
     "itemName": "Andesite",
@@ -1885,7 +1885,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3845, 56, -794",
-    "lastSeen": "2026-07-20T18:15:21.996Z"
+    "lastSeen": "2026-07-20T19:38:38.672Z"
   },
   {
     "itemName": "Tuff",
@@ -1901,7 +1901,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 57, -794",
-    "lastSeen": "2026-07-20T18:15:22.746Z"
+    "lastSeen": "2026-07-20T19:38:37.971Z"
   },
   {
     "itemName": "Cobbled Deepslate",
@@ -1917,7 +1917,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3845, 57, -791",
-    "lastSeen": "2026-07-20T18:15:23.563Z"
+    "lastSeen": "2026-07-20T19:38:36.417Z"
   },
   {
     "itemName": "Mud",
@@ -1933,23 +1933,23 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3843, 54, -797",
-    "lastSeen": "2026-07-20T18:15:27.814Z"
+    "lastSeen": "2026-07-20T19:38:40.174Z"
   },
   {
     "itemName": "Gravel",
     "baseItem": "minecraft:gravel",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 31104,
-    "stacksInStock": 486,
-    "currency": "diamondblock",
+    "amount": 1472,
+    "stacksInStock": 23,
+    "currency": "diamond",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3845, 65, -786",
-    "lastSeen": "2026-07-20T19:34:55.561Z"
+    "position": "-3840, 54, -797",
+    "lastSeen": "2026-07-20T19:38:43.182Z"
   },
   {
     "itemName": "Packed Mud",
@@ -1965,7 +1965,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3840, 55, -797",
-    "lastSeen": "2026-07-20T18:15:29.384Z"
+    "lastSeen": "2026-07-20T19:38:43.933Z"
   },
   {
     "itemName": "Coarse Dirt",
@@ -1981,7 +1981,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3843, 55, -797",
-    "lastSeen": "2026-07-20T18:15:30.114Z"
+    "lastSeen": "2026-07-20T19:38:41.026Z"
   },
   {
     "itemName": "Clay",
@@ -1997,7 +1997,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3840, 56, -797",
-    "lastSeen": "2026-07-20T18:15:30.915Z"
+    "lastSeen": "2026-07-20T19:38:45.484Z"
   },
   {
     "itemName": "Dirt",
@@ -2013,7 +2013,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3843, 56, -797",
-    "lastSeen": "2026-07-20T18:15:31.666Z"
+    "lastSeen": "2026-07-20T19:38:41.677Z"
   },
   {
     "itemName": "Sandstone",
@@ -2029,7 +2029,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3838, 54, -797",
-    "lastSeen": "2026-07-20T18:15:32.398Z"
+    "lastSeen": "2026-07-20T19:38:46.583Z"
   },
   {
     "itemName": "Sand",
@@ -2045,39 +2045,39 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3838, 55, -797",
-    "lastSeen": "2026-07-20T18:15:33.216Z"
+    "lastSeen": "2026-07-20T19:38:47.336Z"
   },
   {
     "itemName": "Podzol",
     "baseItem": "minecraft:podzol",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 25920,
-    "stacksInStock": 405,
-    "currency": "diamondblock",
+    "amount": 1408,
+    "stacksInStock": 22,
+    "currency": "diamond",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3845, 67, -789",
-    "lastSeen": "2026-07-20T19:35:37.423Z"
+    "position": "-3840, 57, -797",
+    "lastSeen": "2026-07-20T19:38:44.683Z"
   },
   {
     "itemName": "Grass Block",
     "baseItem": "minecraft:grass_block",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 43200,
-    "stacksInStock": 675,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3845, 67, -786",
-    "lastSeen": "2026-07-20T19:34:57.815Z"
+    "position": "-3843, 57, -797",
+    "lastSeen": "2026-07-20T19:38:42.582Z"
   },
   {
     "itemName": "Red Sandstone",
@@ -2093,23 +2093,23 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3835, 54, -797",
-    "lastSeen": "2026-07-20T18:15:46.453Z"
+    "lastSeen": "2026-07-20T19:38:49.839Z"
   },
   {
     "itemName": "Red Sand",
     "baseItem": "minecraft:red_sand",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 43200,
-    "stacksInStock": 675,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3845, 65, -789",
-    "lastSeen": "2026-07-20T19:35:35.921Z"
+    "position": "-3835, 55, -797",
+    "lastSeen": "2026-07-20T19:38:50.591Z"
   },
   {
     "itemName": "Compressed Ice",
@@ -2141,7 +2141,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3838, 56, -797",
-    "lastSeen": "2026-07-20T18:15:48.802Z"
+    "lastSeen": "2026-07-20T19:38:48.135Z"
   },
   {
     "itemName": "Moss Block",
@@ -2157,7 +2157,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3833, 54, -797",
-    "lastSeen": "2026-07-20T18:15:49.603Z"
+    "lastSeen": "2026-07-20T19:38:52.842Z"
   },
   {
     "itemName": "Azalea",
@@ -2173,7 +2173,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3833, 55, -797",
-    "lastSeen": "2026-07-20T18:15:50.337Z"
+    "lastSeen": "2026-07-20T19:38:53.642Z"
   },
   {
     "itemName": "Blue Ice",
@@ -2189,23 +2189,23 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3835, 57, -797",
-    "lastSeen": "2026-07-20T18:15:51.121Z"
+    "lastSeen": "2026-07-20T19:38:52.142Z"
   },
   {
     "itemName": "Mycelium",
     "baseItem": "minecraft:mycelium",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 43200,
-    "stacksInStock": 675,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "BlueHowlite",
     "world": "Firefly",
-    "position": "-3845, 67, -784",
-    "lastSeen": "2026-07-20T19:34:56.362Z"
+    "position": "-3838, 57, -797",
+    "lastSeen": "2026-07-20T19:38:48.887Z"
   },
   {
     "itemName": "Pale Moss Block",
@@ -2221,7 +2221,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3833, 56, -797",
-    "lastSeen": "2026-07-20T18:15:52.670Z"
+    "lastSeen": "2026-07-20T19:38:54.393Z"
   },
   {
     "itemName": "Verdant Froglight",
@@ -2237,7 +2237,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3830, 54, -797",
-    "lastSeen": "2026-07-20T18:15:56.606Z"
+    "lastSeen": "2026-07-20T19:38:55.944Z"
   },
   {
     "itemName": "Pearlescent Froglight",
@@ -2253,7 +2253,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3830, 55, -797",
-    "lastSeen": "2026-07-20T18:15:57.355Z"
+    "lastSeen": "2026-07-20T19:38:56.644Z"
   },
   {
     "itemName": "Ochre Froglight",
@@ -2269,7 +2269,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3830, 56, -797",
-    "lastSeen": "2026-07-20T18:15:58.172Z"
+    "lastSeen": "2026-07-20T19:38:57.445Z"
   },
   {
     "itemName": "Melon",
@@ -2285,7 +2285,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3828, 54, -797",
-    "lastSeen": "2026-07-20T18:15:58.989Z"
+    "lastSeen": "2026-07-20T19:38:58.901Z"
   },
   {
     "itemName": "Pumpkin",
@@ -2301,7 +2301,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3828, 55, -797",
-    "lastSeen": "2026-07-20T18:15:59.772Z"
+    "lastSeen": "2026-07-20T19:38:59.651Z"
   },
   {
     "itemName": "Snow Block",
@@ -2317,7 +2317,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3830, 57, -797",
-    "lastSeen": "2026-07-20T18:16:00.505Z"
+    "lastSeen": "2026-07-20T19:38:58.197Z"
   },
   {
     "itemName": "Flowering Azalea",
@@ -2333,7 +2333,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3833, 57, -797",
-    "lastSeen": "2026-07-20T18:16:01.255Z"
+    "lastSeen": "2026-07-20T19:38:55.094Z"
   },
   {
     "itemName": "Carved Pumpkin",
@@ -2349,7 +2349,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3828, 56, -797",
-    "lastSeen": "2026-07-20T18:16:05.657Z"
+    "lastSeen": "2026-07-20T19:39:00.450Z"
   },
   {
     "itemName": "Hay Bale",
@@ -2365,7 +2365,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3828, 57, -797",
-    "lastSeen": "2026-07-20T18:16:06.390Z"
+    "lastSeen": "2026-07-20T19:39:01.152Z"
   },
   {
     "itemName": "Acacia Log",
@@ -2381,87 +2381,87 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 54, -791",
-    "lastSeen": "2026-07-20T18:16:12.392Z"
+    "lastSeen": "2026-07-20T19:37:50.299Z"
   },
   {
     "itemName": "Dark Oak Log",
     "baseItem": "minecraft:dark_oak_log",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1728,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3845, 65, -779",
-    "lastSeen": "2026-07-20T19:35:28.742Z"
+    "position": "-3822, 55, -791",
+    "lastSeen": "2026-07-20T19:39:08.721Z"
   },
   {
     "itemName": "Oak Log",
     "baseItem": "minecraft:oak_log",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1728,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3845, 64, -776",
-    "lastSeen": "2026-07-20T19:35:26.439Z"
+    "position": "-3822, 54, -794",
+    "lastSeen": "2026-07-20T19:39:05.718Z"
   },
   {
     "itemName": "Spruce Log",
     "baseItem": "minecraft:spruce_log",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 43200,
-    "stacksInStock": 675,
+    "amount": 1728,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3845, 65, -776",
-    "lastSeen": "2026-07-20T19:35:27.992Z"
+    "position": "-3822, 55, -794",
+    "lastSeen": "2026-07-20T19:39:06.369Z"
   },
   {
     "itemName": "Mangrove Log",
     "baseItem": "minecraft:mangrove_log",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1728,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3845, 66, -779",
-    "lastSeen": "2026-07-20T19:35:29.444Z"
+    "position": "-3822, 56, -791",
+    "lastSeen": "2026-07-20T19:39:09.472Z"
   },
   {
     "itemName": "Pale Oak Log",
     "baseItem": "minecraft:pale_oak_log",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1728,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3843, 65, -774",
-    "lastSeen": "2026-07-20T19:35:24.137Z"
+    "position": "-3822, 54, -789",
+    "lastSeen": "2026-07-20T19:37:48.698Z"
   },
   {
     "itemName": "Birch Log",
@@ -2477,7 +2477,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 56, -794",
-    "lastSeen": "2026-07-20T18:16:16.893Z"
+    "lastSeen": "2026-07-20T19:39:07.219Z"
   },
   {
     "itemName": "Block of Bamboo",
@@ -2493,39 +2493,39 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 55, -789",
-    "lastSeen": "2026-07-20T18:16:17.660Z"
+    "lastSeen": "2026-07-20T19:37:49.499Z"
   },
   {
     "itemName": "Cherry Log",
     "baseItem": "minecraft:cherry_log",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1664,
+    "stacksInStock": 26,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3845, 67, -779",
-    "lastSeen": "2026-07-20T19:35:30.245Z"
+    "position": "-3822, 57, -791",
+    "lastSeen": "2026-07-20T19:39:10.224Z"
   },
   {
     "itemName": "Jungle Log",
     "baseItem": "minecraft:jungle_log",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
+    "amount": 1728,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "Josnas",
     "world": "Firefly",
-    "position": "-3845, 67, -776",
-    "lastSeen": "2026-07-20T18:18:15.788Z"
+    "position": "-3822, 57, -794",
+    "lastSeen": "2026-07-20T19:39:07.971Z"
   },
   {
     "itemName": "Stripped Pale Oak Log",
@@ -2541,7 +2541,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 54, -786",
-    "lastSeen": "2026-07-20T18:16:21.393Z"
+    "lastSeen": "2026-07-20T19:37:47.997Z"
   },
   {
     "itemName": "Stripped Oak Log",
@@ -2557,7 +2557,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 54, -784",
-    "lastSeen": "2026-07-20T19:07:15.023Z"
+    "lastSeen": "2026-07-20T19:37:47.246Z"
   },
   {
     "itemName": "Stripped Spruce Log",
@@ -2573,7 +2573,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 55, -784",
-    "lastSeen": "2026-07-20T18:16:22.977Z"
+    "lastSeen": "2026-07-20T19:37:51.001Z"
   },
   {
     "itemName": "Stripped Birch Log",
@@ -2589,7 +2589,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 56, -784",
-    "lastSeen": "2026-07-20T18:16:25.611Z"
+    "lastSeen": "2026-07-20T19:37:51.752Z"
   },
   {
     "itemName": "Stripped Jungle Log",
@@ -2605,7 +2605,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 57, -784",
-    "lastSeen": "2026-07-20T18:16:29.532Z"
+    "lastSeen": "2026-07-20T19:37:52.552Z"
   },
   {
     "itemName": "Stripped Acacia Log",
@@ -2621,7 +2621,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 54, -781",
-    "lastSeen": "2026-07-20T18:16:30.281Z"
+    "lastSeen": "2026-07-20T19:37:53.252Z"
   },
   {
     "itemName": "Stripped Dark Oak Log",
@@ -2637,7 +2637,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 55, -781",
-    "lastSeen": "2026-07-20T18:16:31.064Z"
+    "lastSeen": "2026-07-20T19:37:55.506Z"
   },
   {
     "itemName": "Stripped Mangrove Log",
@@ -2653,7 +2653,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 56, -781",
-    "lastSeen": "2026-07-20T18:16:31.846Z"
+    "lastSeen": "2026-07-20T19:37:54.756Z"
   },
   {
     "itemName": "Oak Shelf",
@@ -2669,7 +2669,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 54, -779",
-    "lastSeen": "2026-07-20T18:16:32.630Z"
+    "lastSeen": "2026-07-20T19:37:56.257Z"
   },
   {
     "itemName": "Spruce Shelf",
@@ -2685,7 +2685,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 55, -779",
-    "lastSeen": "2026-07-20T18:16:33.380Z"
+    "lastSeen": "2026-07-20T19:37:58.513Z"
   },
   {
     "itemName": "Stripped Cherry Log",
@@ -2701,7 +2701,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3822, 57, -781",
-    "lastSeen": "2026-07-20T18:16:34.130Z"
+    "lastSeen": "2026-07-20T19:37:54.003Z"
   },
   {
     "itemName": "Birch Shelf",
@@ -2717,7 +2717,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 56, -779",
-    "lastSeen": "2026-07-20T18:16:35.597Z"
+    "lastSeen": "2026-07-20T19:37:57.061Z"
   },
   {
     "itemName": "Acacia Shelf",
@@ -2733,7 +2733,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 54, -776",
-    "lastSeen": "2026-07-20T18:16:36.346Z"
+    "lastSeen": "2026-07-20T19:37:59.263Z"
   },
   {
     "itemName": "Dark Oak Shelf",
@@ -2749,7 +2749,7 @@
     "seller": "Josnas",
     "world": "Firefly",
     "position": "-3822, 55, -776",
-    "lastSeen": "2026-07-20T18:16:37.147Z"
+    "lastSeen": "2026-07-20T19:38:00.065Z"
   },
   {
     "itemName": "Mangrove Shelf",
@@ -2765,7 +2765,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 56, -776",
-    "lastSeen": "2026-07-20T18:16:37.931Z"
+    "lastSeen": "2026-07-20T19:38:00.767Z"
   },
   {
     "itemName": "Pale Oak Shelf",
@@ -2781,7 +2781,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3825, 54, -774",
-    "lastSeen": "2026-07-20T18:16:38.664Z"
+    "lastSeen": "2026-07-20T19:38:02.371Z"
   },
   {
     "itemName": "Cherry Shelf",
@@ -2797,7 +2797,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 57, -776",
-    "lastSeen": "2026-07-20T18:16:39.393Z"
+    "lastSeen": "2026-07-20T19:38:01.569Z"
   },
   {
     "itemName": "Jungle Shelf",
@@ -2813,7 +2813,7 @@
     "seller": "BlueHowlite",
     "world": "Firefly",
     "position": "-3822, 57, -779",
-    "lastSeen": "2026-07-20T18:16:40.196Z"
+    "lastSeen": "2026-07-20T19:37:57.862Z"
   },
   {
     "itemName": "Yellow Stained Glass",
@@ -13598,5 +13598,37 @@
     "world": "Firefly",
     "position": "-3833, 67, -797",
     "lastSeen": "2026-07-20T19:35:58.703Z"
+  },
+  {
+    "itemName": "Chiseled Bookshelf",
+    "baseItem": "minecraft:chiseled_bookshelf",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 32,
+    "amount": 832,
+    "stacksInStock": 26,
+    "currency": "diamond",
+    "seller": "Josnas",
+    "world": "Firefly",
+    "position": "-3843, 55, -774",
+    "lastSeen": "2026-07-20T19:38:15.341Z"
+  },
+  {
+    "itemName": "Packed Ice",
+    "baseItem": "minecraft:packed_ice",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 1600,
+    "stacksInStock": 25,
+    "currency": "diamond",
+    "seller": "BlueHowlite",
+    "world": "Firefly",
+    "position": "-3835, 56, -797",
+    "lastSeen": "2026-07-20T19:38:51.341Z"
   }
 ]
