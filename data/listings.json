@@ -28468,16 +28468,16 @@
     "baseItem": "minecraft:prismarine_crystals",
     "bulk": false,
     "mixedContents": false,
-    "price": 2,
-    "priceLabel": "2 db",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
     "amount": 1728,
     "stacksInStock": 27,
-    "currency": "diamondblock",
+    "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3951, 116, -1167",
-    "lastSeen": "2026-07-20T23:18:53.243Z"
+    "position": "-3951, 113, -1168",
+    "lastSeen": "2026-07-20T23:23:01.700Z"
   },
   {
     "itemName": "Prismarine",
@@ -28493,23 +28493,23 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 113, -1167",
-    "lastSeen": "2026-07-20T23:18:02.252Z"
+    "lastSeen": "2026-07-20T23:23:02.480Z"
   },
   {
     "itemName": "Prismarine Shard",
     "baseItem": "minecraft:prismarine_shard",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3951, 112, -1169",
-    "lastSeen": "2026-07-20T23:17:59.110Z"
+    "position": "-3951, 113, -1169",
+    "lastSeen": "2026-07-20T23:23:52.650Z"
   },
   {
     "itemName": "Dark Prismarine",
@@ -28525,7 +28525,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 113, -1166",
-    "lastSeen": "2026-07-20T23:18:49.771Z"
+    "lastSeen": "2026-07-20T23:23:49.922Z"
   },
   {
     "itemName": "Shulker Shell",
@@ -28541,7 +28541,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 113, -1166",
-    "lastSeen": "2026-07-20T23:18:03.032Z"
+    "lastSeen": "2026-07-20T23:23:03.298Z"
   },
   {
     "itemName": "Enchanted Book",
@@ -28925,7 +28925,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 112, -1164",
-    "lastSeen": "2026-07-20T23:18:48.247Z"
+    "lastSeen": "2026-07-20T23:23:48.410Z"
   },
   {
     "itemName": "Prismarine Bricks",
@@ -28941,7 +28941,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 112, -1165",
-    "lastSeen": "2026-07-20T23:18:48.968Z"
+    "lastSeen": "2026-07-20T23:23:49.197Z"
   },
   {
     "itemName": "Stone",
@@ -28957,7 +28957,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 116, -1168",
-    "lastSeen": "2026-07-20T23:18:53.389Z"
+    "lastSeen": "2026-07-20T23:23:54.166Z"
   },
   {
     "itemName": "Grass Block",
@@ -28973,7 +28973,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 117, -1166",
-    "lastSeen": "2026-07-20T23:18:58.835Z"
+    "lastSeen": "2026-07-20T23:23:59.649Z"
   },
   {
     "itemName": "Cobblestone",
@@ -28989,7 +28989,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 116, -1169",
-    "lastSeen": "2026-07-20T23:18:54.931Z"
+    "lastSeen": "2026-07-20T23:23:55.761Z"
   },
   {
     "itemName": "Podzol",
@@ -29005,7 +29005,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 116, -1165",
-    "lastSeen": "2026-07-20T23:18:55.726Z"
+    "lastSeen": "2026-07-20T23:23:56.616Z"
   },
   {
     "itemName": "Block of Raw Copper",
@@ -29021,7 +29021,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 117, -1166",
-    "lastSeen": "2026-07-20T23:18:56.469Z"
+    "lastSeen": "2026-07-20T23:23:57.335Z"
   },
   {
     "itemName": "Block of Raw Iron",
@@ -29037,7 +29037,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 116, -1164",
-    "lastSeen": "2026-07-20T23:18:57.312Z"
+    "lastSeen": "2026-07-20T23:23:58.137Z"
   },
   {
     "itemName": "Smooth Stone",
@@ -29053,7 +29053,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 117, -1167",
-    "lastSeen": "2026-07-20T23:18:58.100Z"
+    "lastSeen": "2026-07-20T23:23:58.907Z"
   },
   {
     "itemName": "Mycelium",
@@ -29069,6 +29069,6 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 116, -1164",
-    "lastSeen": "2026-07-20T23:18:59.657Z"
+    "lastSeen": "2026-07-20T23:24:00.451Z"
   }
 ]
