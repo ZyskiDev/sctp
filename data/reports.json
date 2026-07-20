@@ -148,5 +148,30 @@
     "status": "edited",
     "createdAt": "2026-07-20T20:15:14.611Z",
     "resolvedAt": "2026-07-20T20:15:28.451Z"
+  },
+  {
+    "id": "85659129-3d07-47ec-915e-80336458d2bd",
+    "listingKey": "firefly|strawbscelestia|minecraft:light_gray_stained_glass_pane|light gray stained glass pane",
+    "listing": {
+      "itemName": "Light Gray Stained Glass Pane",
+      "baseItem": "minecraft:light_gray_stained_glass_pane",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 3,
+      "priceLabel": "3 db",
+      "stackSize": 1,
+      "amount": 26,
+      "stacksInStock": 26,
+      "currency": "diamondblock",
+      "seller": "StrawbsCelestia",
+      "world": "Firefly",
+      "position": "-3948, 103, -783",
+      "lastSeen": "2026-07-20T20:38:06.012Z"
+    },
+    "reason": "shop_gone",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-20T20:51:13.097Z",
+    "resolvedAt": null
   }
 ]
