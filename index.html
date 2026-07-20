@@ -252,7 +252,7 @@
 				<h1>Snailcraft Trading Post</h1>
 				<p class="tag">Every shop on the server, in <em>one</em> list!</p>
 			</div>
-			<button class="upload-cta" id="openUpload">Upload your shop file</button>
+			<button class="upload-cta" id="download">Download Mod</button>
 		</div>
 		<div class="trail-wrap" aria-hidden="true">
 			<svg viewBox="0 0 400 12" preserveAspectRatio="none">
@@ -691,6 +691,14 @@
 		document.getElementById("fileStatus").textContent = "";
 		document.getElementById("fileStatus").className = "file-status";
 	}
+	function download() {
+	  const link = document.createElement('a');
+	  link.href = 'shoplogger-1.0.0.jar'; // URL or path to the file
+	  link.download = 'snailcraftshoplogger.jar'; // suggested filename for the download
+	  document.body.appendChild(link);
+	  link.click();
+	  document.body.removeChild(link);
+	}
 	function closeUpload(){
 		document.getElementById("uploadBackdrop").classList.remove("open");
 	}
@@ -776,6 +784,7 @@
 
 	// ---------------- wiring ----------------
 	document.getElementById("openUpload").addEventListener("click", openUpload);
+	document.getElementById("download").addEventListener("click", download);
 	document.getElementById("closeUpload").addEventListener("click", closeUpload);
 	document.getElementById("uploadBackdrop").addEventListener("click", function(e){
 		if(e.target === this) closeUpload();
