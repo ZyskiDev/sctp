@@ -285,6 +285,15 @@
 			<h2>Filters</h2>
 
 			<div class="f-group">
+				<label for="fWorld">World</label>
+				<select id="fWorld">
+					<option value="">All worlds</option>
+					<option value="Firefly">Firefly</option>
+					<option value="Honeybee">Honeybee</option>
+				</select>
+			</div>
+
+			<div class="f-group">
 				<label for="fBulk">Listing type</label>
 				<select id="fBulk">
 					<option value="">All listings</option>
@@ -388,6 +397,7 @@
 		stacksinstock:"stacksInStock",
 		currency:"currency",
 		seller:"seller",
+		world:"world",
 		position:"position",
 		lastseen:"lastSeen",
 		mixedcontents:"mixedContents"
@@ -452,6 +462,7 @@
 			stacksInStock: stacksInStock,
 			currency: currency,
 			seller: seller,
+			world: String(row.world||"").trim() || "Unknown",
 			position: String(row.position||"").trim(),
 			lastSeen: String(row.lastSeen||"").trim(),
 			_uploadedAt: Date.now()
@@ -539,6 +550,7 @@
 
 	function applyFilters(){
 		var q = document.getElementById("searchInput").value.trim().toLowerCase();
+		var world = document.getElementById("fWorld").value;
 		var bulkMode = document.getElementById("fBulk").value;
 		var priceMin = document.getElementById("fPriceMin").value;
 		var priceMax = document.getElementById("fPriceMax").value;
@@ -550,6 +562,7 @@
 				var hay = (r.itemName+" "+r.baseItem+" "+r.seller).toLowerCase();
 				if(hay.indexOf(q) === -1) return false;
 			}
+			if(world && r.world !== world) return false;
 			if(bulkMode === "bulk" && !r.bulk) return false;
 			if(bulkMode === "single" && r.bulk) return false;
 			if(priceMin !== "" && r.price < parseFloat(priceMin)) return false;
@@ -620,6 +633,7 @@
 			'<th data-k="price-desc">Price</th>'+
 			'<th data-k="stock-desc">In stock</th>'+
 			'<th data-k="seller-az">Seller</th>'+
+			'<th>World</th>'+
 			'<th>Position</th>'+
 			'<th data-k="recent">Last seen</th>'+
 			'</tr></thead><tbody>';
@@ -635,6 +649,7 @@
 				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+r.stackSize+'</span></td>'+
 				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' stacks</span></td>'+
 				'<td class="seller">'+esc(r.seller)+'</td>'+
+				'<td>'+esc(r.world)+'</td>'+
 				'<td class="position">'+esc(r.position)+'</td>'+
 				'<td>'+relTime(r.lastSeen)+'</td>'+
 				'</tr>';
@@ -742,10 +757,10 @@
 
 	function exportFilteredCsv(){
 		if(filtered.length === 0){ showToast("Nothing to export with the current filters."); return; }
-		var headers = ["Item Name","Base Item","Bulk","Mixed Contents","Price","Stack Size","Amount In Stock","Stacks In Stock","Seller","Position","Last Seen"];
+		var headers = ["Item Name","Base Item","Bulk","Mixed Contents","Price","Stack Size","Amount In Stock","Stacks In Stock","Seller","World","Position","Last Seen"];
 		var lines = [headers.join(",")];
 		filtered.forEach(function(r){
-			var vals = [r.itemName, r.baseItem, r.bulk?"Yes":"No", r.mixedContents?"Yes":"No", r.priceLabel, r.stackSize, r.amount, r.stacksInStock, r.seller, r.position, r.lastSeen];
+			var vals = [r.itemName, r.baseItem, r.bulk?"Yes":"No", r.mixedContents?"Yes":"No", r.priceLabel, r.stackSize, r.amount, r.stacksInStock, r.seller, r.world, r.position, r.lastSeen];
 			lines.push(vals.map(function(v){
 				var s = String(v);
 				return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
@@ -790,12 +805,13 @@
 		document.getElementById("searchInput").value = "";
 		applyFilters();
 	});
-	["fBulk","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
+	["fWorld","fBulk","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 		document.getElementById(id).addEventListener("input", applyFilters);
 	});
 	document.getElementById("resetFilters").addEventListener("click", function(){
 		document.getElementById("searchInput").value = "";
+		document.getElementById("fWorld").value = "";
 		document.getElementById("fBulk").value = "";
 		document.getElementById("fPriceMin").value = "";
 		document.getElementById("fPriceMax").value = "";
