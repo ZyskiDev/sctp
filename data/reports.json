@@ -673,5 +673,30 @@
     "status": "edited",
     "createdAt": "2026-07-21T14:54:48.088Z",
     "resolvedAt": "2026-07-21T14:55:04.687Z"
+  },
+  {
+    "id": "d188939b-308e-4282-bd3d-b7c5be6c3b0e",
+    "listingKey": "firefly|spookadilly|minecraft:emerald|∟┘๑ pale snail ๑┘∟",
+    "listing": {
+      "itemName": "∟┘๑ Pale Snail ๑┘∟",
+      "baseItem": "minecraft:emerald",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 2,
+      "priceLabel": "2 dia",
+      "stackSize": 1,
+      "amount": 1,
+      "stacksInStock": 1,
+      "currency": "diamond",
+      "seller": "Spookadilly",
+      "world": "Firefly",
+      "position": "1590, 102, 624",
+      "lastSeen": "2026-07-21T10:24:09.391Z"
+    },
+    "reason": "wrong_info",
+    "details": "This chest sells Pale Oak Logs not Pale Snails",
+    "status": "pending",
+    "createdAt": "2026-07-21T14:58:06.877Z",
+    "resolvedAt": null
   }
 ]
