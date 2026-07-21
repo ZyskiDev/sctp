@@ -620,8 +620,8 @@
     },
     "reason": "wrong_info",
     "details": "",
-    "status": "pending",
+    "status": "approved",
     "createdAt": "2026-07-21T09:59:33.975Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-21T10:00:45.516Z"
   }
 ]
