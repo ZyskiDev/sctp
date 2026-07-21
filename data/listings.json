@@ -120733,7 +120733,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "728, 88, 1120",
-    "lastSeen": "2026-07-21T05:43:11.810Z"
+    "lastSeen": "2026-07-21T07:52:37.009Z"
   },
   {
     "itemName": "Firework Rocket",
@@ -120743,13 +120743,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 1664,
-    "stacksInStock": 26,
+    "amount": 1600,
+    "stacksInStock": 25,
     "currency": "diamond",
     "seller": "Jak00",
     "world": "Firefly",
-    "position": "724, 88, 1123",
-    "lastSeen": "2026-07-21T05:43:10.010Z"
+    "position": "724, 88, 1125",
+    "lastSeen": "2026-07-21T07:52:47.191Z"
   },
   {
     "itemName": "Honeycomb",
@@ -120765,7 +120765,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "726, 87, 1118",
-    "lastSeen": "2026-07-21T05:43:17.359Z"
+    "lastSeen": "2026-07-21T07:52:44.854Z"
   },
   {
     "itemName": "Netherite Upgrade",
@@ -120781,7 +120781,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "726, 87, 1117",
-    "lastSeen": "2026-07-21T05:43:18.160Z"
+    "lastSeen": "2026-07-21T07:52:43.307Z"
   },
   {
     "itemName": "Gunpowder",
@@ -120797,7 +120797,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "727, 87, 1117",
-    "lastSeen": "2026-07-21T05:43:21.361Z"
+    "lastSeen": "2026-07-21T07:52:56.544Z"
   },
   {
     "itemName": "Leaf Litter",
@@ -120813,7 +120813,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 87, 1116",
-    "lastSeen": "2026-07-21T05:43:18.960Z"
+    "lastSeen": "2026-07-21T07:52:44.039Z"
   },
   {
     "itemName": "Oak Log",
@@ -120829,7 +120829,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 87, 1120",
-    "lastSeen": "2026-07-21T05:43:15.025Z"
+    "lastSeen": "2026-07-21T07:52:45.613Z"
   },
   {
     "itemName": "Enchanted Book",
@@ -120839,13 +120839,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 14,
-    "stacksInStock": 14,
+    "amount": 18,
+    "stacksInStock": 18,
     "currency": "diamond",
     "seller": "Jak00",
     "world": "Firefly",
-    "position": "727, 89, 1126",
-    "lastSeen": "2026-07-21T05:43:05.607Z"
+    "position": "727, 88, 1126",
+    "lastSeen": "2026-07-21T07:52:40.919Z"
   },
   {
     "itemName": "◇◈ Kukritana Texture ◈◇",
@@ -120861,7 +120861,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 90, 1131",
-    "lastSeen": "2026-07-21T05:42:47.561Z"
+    "lastSeen": "2026-07-21T07:53:11.866Z"
   },
   {
     "itemName": "🐜 Ants' Pants 🐜",
@@ -120877,7 +120877,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 90, 1131",
-    "lastSeen": "2026-07-21T05:42:47.561Z"
+    "lastSeen": "2026-07-21T07:53:11.866Z"
   },
   {
     "itemName": "🕸 ✧ Trickin’ Treats ✧ 🕸",
@@ -120893,7 +120893,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 90, 1131",
-    "lastSeen": "2026-07-21T05:42:47.561Z"
+    "lastSeen": "2026-07-21T07:53:11.866Z"
   },
   {
     "itemName": "+༻⋆ Snail Brand Stove ⋆༺+",
@@ -120909,7 +120909,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 90, 1130",
-    "lastSeen": "2026-07-21T05:42:52.309Z"
+    "lastSeen": "2026-07-21T07:52:40.108Z"
   },
   {
     "itemName": "༻❀ QUEST CRATE KEY ❀༺",
@@ -120925,7 +120925,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 90, 1130",
-    "lastSeen": "2026-07-21T05:42:52.309Z"
+    "lastSeen": "2026-07-21T07:52:40.108Z"
   },
   {
     "itemName": ".･:✧ CRYPTID CRATE KEY ✧:･.",
@@ -120941,7 +120941,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 90, 1130",
-    "lastSeen": "2026-07-21T05:42:52.309Z"
+    "lastSeen": "2026-07-21T07:52:40.108Z"
   },
   {
     "itemName": "Verdant Froglight",
@@ -153180,8 +153180,8 @@
     "currency": "diamond",
     "seller": "Jak00",
     "world": "Firefly",
-    "position": "727, 88, 1126",
-    "lastSeen": "2026-07-21T05:43:06.355Z"
+    "position": "730, 89, 1127",
+    "lastSeen": "2026-07-21T07:53:15.751Z"
   },
   {
     "itemName": "⊰ ✵ End Armistice ✵ ⊱",
@@ -153197,7 +153197,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 90, 1132",
-    "lastSeen": "2026-07-21T05:42:48.360Z"
+    "lastSeen": "2026-07-21T07:53:18.107Z"
   },
   {
     "itemName": "◇◈ Shears Re-Texture ◈◇",
@@ -153213,7 +153213,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 90, 1132",
-    "lastSeen": "2026-07-21T05:42:48.360Z"
+    "lastSeen": "2026-07-21T07:53:18.107Z"
   },
   {
     "itemName": "◇◈ Luffy Sword Texture ◈◇",
@@ -153229,7 +153229,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 91, 1131",
-    "lastSeen": "2026-07-21T05:42:49.161Z"
+    "lastSeen": "2026-07-21T07:53:16.513Z"
   },
   {
     "itemName": "⊹₊⟡⋆Misty's Mushroom Staff⋆⟡₊⊹",
@@ -153245,7 +153245,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1131",
-    "lastSeen": "2026-07-21T05:42:50.761Z"
+    "lastSeen": "2026-07-21T07:53:17.309Z"
   },
   {
     "itemName": "🕸 ✧ Spell of Soul Transfiguring ✧ 🕸",
@@ -153261,7 +153261,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1131",
-    "lastSeen": "2026-07-21T05:42:50.761Z"
+    "lastSeen": "2026-07-21T07:53:17.309Z"
   },
   {
     "itemName": "｡ ₊°༺ Azi's Wand of Frames ༻°₊ ｡",
@@ -153277,7 +153277,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1131",
-    "lastSeen": "2026-07-21T05:42:50.761Z"
+    "lastSeen": "2026-07-21T07:53:17.309Z"
   },
   {
     "itemName": "Spider Spawn Egg",
@@ -153293,7 +153293,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1131",
-    "lastSeen": "2026-07-21T05:42:50.761Z"
+    "lastSeen": "2026-07-21T07:53:17.309Z"
   },
   {
     "itemName": "⋊☛ Cel's Bird Bread ☚⋉",
@@ -153309,7 +153309,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1131",
-    "lastSeen": "2026-07-21T05:42:50.761Z"
+    "lastSeen": "2026-07-21T07:53:17.309Z"
   },
   {
     "itemName": "｡๑இ☁ Breath of Radiance ☁இ๑｡",
@@ -153325,7 +153325,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1131",
-    "lastSeen": "2026-07-21T05:42:50.761Z"
+    "lastSeen": "2026-07-21T07:53:17.309Z"
   },
   {
     "itemName": "The Giant Sea Sheep",
@@ -153341,7 +153341,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1131",
-    "lastSeen": "2026-07-21T05:42:50.761Z"
+    "lastSeen": "2026-07-21T07:53:17.309Z"
   },
   {
     "itemName": "♡ Bstar's Hampter Companion ♡",
@@ -153357,7 +153357,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1131",
-    "lastSeen": "2026-07-21T05:42:50.761Z"
+    "lastSeen": "2026-07-21T07:53:17.309Z"
   },
   {
     "itemName": "Zombie Spawner",
@@ -153373,7 +153373,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1132",
-    "lastSeen": "2026-07-21T05:42:51.562Z"
+    "lastSeen": "2026-07-21T07:53:19.657Z"
   },
   {
     "itemName": "Skeleton Spawner",
@@ -153389,7 +153389,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1132",
-    "lastSeen": "2026-07-21T05:42:51.562Z"
+    "lastSeen": "2026-07-21T07:53:19.657Z"
   },
   {
     "itemName": "Cave Spider Spawner",
@@ -153405,7 +153405,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1132",
-    "lastSeen": "2026-07-21T05:42:51.562Z"
+    "lastSeen": "2026-07-21T07:53:19.657Z"
   },
   {
     "itemName": "Spider Spawner",
@@ -153421,7 +153421,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1132",
-    "lastSeen": "2026-07-21T05:42:51.562Z"
+    "lastSeen": "2026-07-21T07:53:19.657Z"
   },
   {
     "itemName": "Jak00's Head",
@@ -153437,7 +153437,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1132",
-    "lastSeen": "2026-07-21T05:42:51.562Z"
+    "lastSeen": "2026-07-21T07:53:19.657Z"
   },
   {
     "itemName": "❀ ❦ ENTOMOLOGY Rank Token ❦ ❀",
@@ -153453,7 +153453,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1132",
-    "lastSeen": "2026-07-21T05:42:51.562Z"
+    "lastSeen": "2026-07-21T07:53:19.657Z"
   },
   {
     "itemName": "˚ʚ♡ Turkey Pet ♡ɞ˚",
@@ -153469,7 +153469,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 91, 1130",
-    "lastSeen": "2026-07-21T05:42:53.109Z"
+    "lastSeen": "2026-07-21T07:52:49.549Z"
   },
   {
     "itemName": "⊰ ✵ Piglin Passport ✵ ⊱",
@@ -153485,7 +153485,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1130",
-    "lastSeen": "2026-07-21T05:42:53.923Z"
+    "lastSeen": "2026-07-21T07:52:50.356Z"
   },
   {
     "itemName": "ᯓ★ Rose Quartz's Shield ᯓ★",
@@ -153501,7 +153501,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "725, 89, 1130",
-    "lastSeen": "2026-07-21T05:42:53.923Z"
+    "lastSeen": "2026-07-21T07:52:50.356Z"
   },
   {
     "itemName": "Pale Moss Block",
@@ -153517,7 +153517,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "728, 91, 1127",
-    "lastSeen": "2026-07-21T05:43:02.420Z"
+    "lastSeen": "2026-07-21T07:52:48.855Z"
   },
   {
     "itemName": "Block of Iron",
@@ -153533,7 +153533,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "729, 91, 1127",
-    "lastSeen": "2026-07-21T05:43:03.207Z"
+    "lastSeen": "2026-07-21T07:53:14.605Z"
   },
   {
     "itemName": "Moss Block",
@@ -153549,7 +153549,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "728, 89, 1127",
-    "lastSeen": "2026-07-21T05:43:04.007Z"
+    "lastSeen": "2026-07-21T07:52:48.021Z"
   },
   {
     "itemName": "Anvil",
@@ -153565,7 +153565,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "726, 90, 1120",
-    "lastSeen": "2026-07-21T05:43:10.810Z"
+    "lastSeen": "2026-07-21T07:52:38.621Z"
   },
   {
     "itemName": "Jungle Log",
@@ -153581,7 +153581,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 90, 1120",
-    "lastSeen": "2026-07-21T05:43:13.477Z"
+    "lastSeen": "2026-07-21T07:52:41.705Z"
   },
   {
     "itemName": "Flowering Azalea Leaves",
@@ -153597,7 +153597,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 90, 1119",
-    "lastSeen": "2026-07-21T05:43:14.211Z"
+    "lastSeen": "2026-07-21T07:53:00.755Z"
   },
   {
     "itemName": "Azalea Leaves",
@@ -153613,7 +153613,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 90, 1119",
-    "lastSeen": "2026-07-21T05:43:14.211Z"
+    "lastSeen": "2026-07-21T07:53:00.755Z"
   },
   {
     "itemName": "Birch Log",
@@ -153629,7 +153629,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 87, 1119",
-    "lastSeen": "2026-07-21T05:43:15.772Z"
+    "lastSeen": "2026-07-21T07:53:01.547Z"
   },
   {
     "itemName": "Spruce Log",
@@ -153645,7 +153645,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 87, 1118",
-    "lastSeen": "2026-07-21T05:43:16.559Z"
+    "lastSeen": "2026-07-21T07:52:42.508Z"
   },
   {
     "itemName": "Stripped Spruce Log",
@@ -153661,7 +153661,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 87, 1118",
-    "lastSeen": "2026-07-21T05:43:16.559Z"
+    "lastSeen": "2026-07-21T07:52:42.508Z"
   },
   {
     "itemName": "Block of Bamboo",
@@ -153677,7 +153677,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 87, 1117",
-    "lastSeen": "2026-07-21T05:43:19.760Z"
+    "lastSeen": "2026-07-21T07:52:57.351Z"
   },
   {
     "itemName": "Oak Leaves",
@@ -153693,7 +153693,7 @@
     "seller": "Jak00",
     "world": "Firefly",
     "position": "723, 90, 1118",
-    "lastSeen": "2026-07-21T05:43:20.560Z"
+    "lastSeen": "2026-07-21T07:52:58.507Z"
   },
   {
     "itemName": "Hunt - _C0B",
@@ -164430,5 +164430,21 @@
     "world": "Firefly",
     "position": "670, 91, 973",
     "lastSeen": "2026-07-21T07:27:24.117Z"
+  },
+  {
+    "itemName": "Deepslate Diamond Ore",
+    "baseItem": "minecraft:deepslate_diamond_ore",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 5,
+    "priceLabel": "5 dia",
+    "stackSize": 2,
+    "amount": 52,
+    "stacksInStock": 26,
+    "currency": "diamond",
+    "seller": "Jak00",
+    "world": "Firefly",
+    "position": "729, 89, 1127",
+    "lastSeen": "2026-07-21T07:53:11.051Z"
   }
 ]
