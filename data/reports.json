@@ -648,5 +648,30 @@
     "status": "approved",
     "createdAt": "2026-07-21T13:38:57.517Z",
     "resolvedAt": "2026-07-21T13:39:38.195Z"
+  },
+  {
+    "id": "ab7cf4e3-69dd-4932-bea2-68f560f75389",
+    "listingKey": "firefly|argoe|minecraft:emerald|∟┘๑ pale snail ๑┘∟",
+    "listing": {
+      "itemName": "∟┘๑ Pale Snail ๑┘∟",
+      "baseItem": "minecraft:emerald",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 32,
+      "priceLabel": "32 db",
+      "stackSize": 1,
+      "amount": 1,
+      "stacksInStock": 1,
+      "currency": "diamondblock",
+      "seller": "Argoe",
+      "world": "Firefly",
+      "position": "1587, 100, 632",
+      "lastSeen": "2026-07-21T10:24:11.861Z"
+    },
+    "reason": "other",
+    "details": "On Honeybee",
+    "status": "pending",
+    "createdAt": "2026-07-21T14:54:48.088Z",
+    "resolvedAt": null
   }
 ]
