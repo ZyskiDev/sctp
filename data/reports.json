@@ -748,5 +748,30 @@
     "status": "pending",
     "createdAt": "2026-07-21T17:09:24.557Z",
     "resolvedAt": null
+  },
+  {
+    "id": "63883df7-c770-4d57-93fa-aebe69abbfe1",
+    "listingKey": "honeybee|shadow8death|minecraft:granite|granite",
+    "listing": {
+      "itemName": "Granite",
+      "baseItem": "minecraft:granite",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 0,
+      "priceLabel": "0 dia",
+      "stackSize": 1,
+      "amount": 1,
+      "stacksInStock": 1,
+      "currency": "diamond",
+      "seller": "Shadow8death",
+      "world": "Honeybee",
+      "position": "-4033, 106, -910",
+      "lastSeen": "2026-07-21T02:07:11.518Z"
+    },
+    "reason": "wrong_info",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-21T17:09:29.507Z",
+    "resolvedAt": null
   }
 ]
