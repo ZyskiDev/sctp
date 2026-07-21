@@ -267,6 +267,19 @@
 	}
 	.info-icon:hover .tooltip, .info-icon:focus .tooltip{display:block;}
 
+	.download-options{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+	.download-option{
+		display:flex;flex-direction:column;gap:2px;
+		background:var(--panel-alt);border:1px solid var(--line);border-radius:10px;
+		padding:12px 14px;text-decoration:none;color:var(--text);
+		transition:border-color .15s ease, transform .12s ease;
+	}
+	.download-option:hover{border-color:var(--accent-dim);transform:translateY(-1px);}
+	.download-option strong{color:var(--shell);font-size:14px;}
+	.download-option span{font-family:var(--font-mono);color:var(--muted);font-size:12px;}
+	.download-reminder{font-size:12.5px;color:var(--muted);margin:0 0 4px;}
+	.download-reminder strong{color:var(--shell);font-weight:600;}
+
 	.shared-shop-cta{text-align:center;padding:8px 0 28px;}
 	.shared-shop-cta button{
 		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
@@ -294,7 +307,7 @@
 				<h1>Snailcraft Trading Post</h1>
 				<p class="tag">Every shop on the server, in <em>one</em> list!</p>
 			</div>
-			<a class="upload-cta" id="downloadMod" href="shoplogger-1.0.0.jar" download="shoplogger-1.0.0.jar">Download mod</a>
+			<button class="upload-cta" id="downloadMod" type="button">Download mod</button>
 		</div>
 		<div class="trail-wrap" aria-hidden="true">
 			<svg viewBox="0 0 400 12" preserveAspectRatio="none">
@@ -392,6 +405,28 @@
 <footer class="site">
 	Community-maintained · data comes from players' own Shop Logger exports · nothing here is verified by server staff
 </footer>
+
+<!-- download modal -->
+<div class="modal-backdrop" id="downloadBackdrop">
+	<div class="modal">
+		<h2>Download Shop Logger</h2>
+		<p>Pick the version that matches the Minecraft version you're playing.</p>
+		<div class="download-options">
+			<a class="download-option" href="shoplogger-1.0.0.jar" download="shoplogger-1.0.0.jar">
+				<strong>Minecraft 1.21.11</strong>
+				<span>shoplogger-1.0.0.jar</span>
+			</a>
+			<a class="download-option" href="shoplogger26-1.0.0.jar" download="shoplogger26-1.0.0.jar">
+				<strong>Minecraft 26.1 / 26.2</strong>
+				<span>shoplogger26-1.0.0.jar</span>
+			</a>
+		</div>
+		<p class="download-reminder">Requires <strong>Fabric API</strong> installed alongside the mod, and <strong>Fabric Loader 0.19.3</strong> or newer.</p>
+		<div class="modal-actions">
+			<button id="closeDownload" type="button">Close</button>
+		</div>
+	</div>
+</div>
 
 <!-- upload modal -->
 <div class="modal-backdrop" id="uploadBackdrop">
@@ -805,6 +840,14 @@
 		toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 3800);
 	}
 
+	// ---------------- download modal ----------------
+	function openDownload(){
+		document.getElementById("downloadBackdrop").classList.add("open");
+	}
+	function closeDownload(){
+		document.getElementById("downloadBackdrop").classList.remove("open");
+	}
+
 	// ---------------- upload modal ----------------
 	function openUpload(){
 		document.getElementById("uploadBackdrop").classList.add("open");
@@ -992,6 +1035,12 @@
 	}
 
 	// ---------------- wiring ----------------
+	document.getElementById("downloadMod").addEventListener("click", openDownload);
+	document.getElementById("closeDownload").addEventListener("click", closeDownload);
+	document.getElementById("downloadBackdrop").addEventListener("click", function(e){
+		if(e.target === this) closeDownload();
+	});
+
 	document.getElementById("closeUpload").addEventListener("click", closeUpload);
 	document.getElementById("uploadBackdrop").addEventListener("click", function(e){
 		if(e.target === this) closeUpload();
@@ -1011,7 +1060,7 @@
 	});
 
 	document.addEventListener("keydown", function(e){
-		if(e.key === "Escape"){ closeUpload(); closeReport(); closeSharedShopRequest(); }
+		if(e.key === "Escape"){ closeDownload(); closeUpload(); closeReport(); closeSharedShopRequest(); }
 	});
 
 	var dropzone = document.getElementById("dropzone");
