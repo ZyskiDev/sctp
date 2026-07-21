@@ -341,7 +341,7 @@
 			</div>
 
 			<div class="f-group">
-				<label>Price</label>
+				<label>Price (in diamonds)</label>
 				<div class="f-range">
 					<input type="number" id="fPriceMin" placeholder="min" min="0">
 					<input type="number" id="fPriceMax" placeholder="max" min="0">
@@ -415,8 +415,8 @@
 		<h2>Report this listing</h2>
 		<p id="reportListingLabel"></p>
 		<div class="reason-list">
-			<label><input type="radio" name="reportReason" value="scam"> Wrong price or stock</label>
-			<label><input type="radio" name="reportReason" value="wrong_info"> Wrong world</label>
+			<label><input type="radio" name="reportReason" value="scam"> Scam / didn't deliver as advertised</label>
+			<label><input type="radio" name="reportReason" value="wrong_info"> Wrong price or stock</label>
 			<label><input type="radio" name="reportReason" value="shop_gone"> Shop no longer exists</label>
 			<label><input type="radio" name="reportReason" value="inappropriate"> Inappropriate name or content</label>
 			<label><input type="radio" name="reportReason" value="other"> Other</label>
@@ -437,9 +437,9 @@
 		<h2>Request a shared shop note</h2>
 		<p>If you sell in more than one shop, an approved note lets buyers know — a small info icon will show up next to your name on any of your listings.</p>
 		<label class="field-label" for="sharedShopUsername">Your username</label>
-		<input type="text" id="sharedShopUsername" placeholder="e.g. Steve123" maxlength="32">
+		<input type="text" id="sharedShopUsername" placeholder="e.g. Steve" maxlength="32">
 		<label class="field-label" for="sharedShopList">Other shops you sell in (one per line)</label>
-		<textarea id="sharedShopList" placeholder="/shop diamond33&#10;/shop netherite44&#10;..."></textarea>
+		<textarea id="sharedShopList" placeholder="/shop diamond&#10;/shop netherite&#10;..."></textarea>
 		<div class="file-status" id="sharedShopStatus"></div>
 		<div class="modal-actions">
 			<button id="closeSharedShop" type="button">Cancel</button>
@@ -488,6 +488,16 @@
 	function parsePriceLabel(label){
 		var m = String(label||"").match(/-?[\d.]+/);
 		return m ? parseFloat(m[0]) : 0;
+	}
+
+	// Currency value relative to a single diamond — a diamond block crafts
+	// from 9 diamonds, so that's its worth for cross-currency comparisons.
+	// Unrecognized currencies fall back to 1 (treated as already diamond-scale)
+	// rather than distorting the sort.
+	var CURRENCY_VALUE = { diamond: 1, diamondblock: 9 };
+	function priceInDiamonds(r){
+		var mult = CURRENCY_VALUE[String(r.currency||"").toLowerCase()];
+		return r.price * (mult || 1);
 	}
 
 	function toBool(v){
@@ -663,16 +673,16 @@
 			if(world && r.world !== world) return false;
 			if(bulkMode === "bulk" && !r.bulk) return false;
 			if(bulkMode === "single" && r.bulk) return false;
-			if(priceMin !== "" && r.price < parseFloat(priceMin)) return false;
-			if(priceMax !== "" && r.price > parseFloat(priceMax)) return false;
+			if(priceMin !== "" && priceInDiamonds(r) < parseFloat(priceMin)) return false;
+			if(priceMax !== "" && priceInDiamonds(r) > parseFloat(priceMax)) return false;
 			if(minStock !== "" && r.amount < parseFloat(minStock)) return false;
 			return true;
 		});
 
 		filtered.sort(function(a,b){
 			switch(sortKey){
-				case "price-asc": return a.price - b.price;
-				case "price-desc": return b.price - a.price;
+				case "price-asc": return priceInDiamonds(a) - priceInDiamonds(b);
+				case "price-desc": return priceInDiamonds(b) - priceInDiamonds(a);
 				case "stock-desc": return b.amount - a.amount;
 				case "item-az": return a.itemName.localeCompare(b.itemName);
 				case "seller-az": return a.seller.localeCompare(b.seller);
