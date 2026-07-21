@@ -623,5 +623,30 @@
     "status": "approved",
     "createdAt": "2026-07-21T09:59:33.975Z",
     "resolvedAt": "2026-07-21T10:00:45.516Z"
+  },
+  {
+    "id": "47d69704-e881-43d8-96c0-6b254cd77a16",
+    "listingKey": "firefly|armedstingray90|minecraft:netherite_pickaxe|+༻⋆ lightweight pickaxe ⋆༺+",
+    "listing": {
+      "itemName": "+༻⋆ Lightweight Pickaxe ⋆༺+",
+      "baseItem": "minecraft:netherite_pickaxe",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 32,
+      "priceLabel": "32 db",
+      "stackSize": 1,
+      "amount": 1,
+      "stacksInStock": 1,
+      "currency": "diamondblock",
+      "seller": "ArmedStingray90",
+      "world": "Firefly",
+      "position": "766, 70, 983",
+      "lastSeen": "2026-07-21T05:55:08.300Z"
+    },
+    "reason": "shop_gone",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-21T13:38:57.517Z",
+    "resolvedAt": null
   }
 ]
