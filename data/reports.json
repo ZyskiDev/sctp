@@ -548,5 +548,30 @@
     "status": "approved",
     "createdAt": "2026-07-20T21:45:57.646Z",
     "resolvedAt": "2026-07-21T09:39:14.187Z"
+  },
+  {
+    "id": "a26f4fbe-8c85-4065-85fb-5fd13c1c3b3a",
+    "listingKey": "firefly|speedyturtle19|minecraft:smooth_stone|smooth stone",
+    "listing": {
+      "itemName": "Smooth Stone",
+      "baseItem": "minecraft:smooth_stone",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 2,
+      "priceLabel": "2 ironblock",
+      "stackSize": 64,
+      "amount": 339,
+      "stacksInStock": 5.3,
+      "currency": "ironblock",
+      "seller": "SpeedyTurtle19",
+      "world": "Firefly",
+      "position": "642, 78, -1782",
+      "lastSeen": "2026-07-21T09:46:09.561Z"
+    },
+    "reason": "other",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-21T09:49:46.287Z",
+    "resolvedAt": null
   }
 ]
