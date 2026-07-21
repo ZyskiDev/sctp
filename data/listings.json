@@ -38317,7 +38317,7 @@
     "seller": "Chaos__Architect",
     "world": "Firefly",
     "position": "1536, 96, 458",
-    "lastSeen": "2026-07-21T06:29:53.436Z"
+    "lastSeen": "2026-07-21T07:19:51.875Z"
   },
   {
     "itemName": "Potion of Water Breathing",
@@ -38397,7 +38397,7 @@
     "seller": "Chaos__Architect",
     "world": "Firefly",
     "position": "1539, 96, 458",
-    "lastSeen": "2026-07-21T06:29:59.839Z"
+    "lastSeen": "2026-07-21T07:19:52.636Z"
   },
   {
     "itemName": "Stone",
@@ -38413,7 +38413,7 @@
     "seller": "Chaos__Architect",
     "world": "Firefly",
     "position": "1557, 97, 457",
-    "lastSeen": "2026-07-21T06:30:16.832Z"
+    "lastSeen": "2026-07-21T07:20:00.172Z"
   },
   {
     "itemName": "Polished Andesite",
@@ -38429,7 +38429,7 @@
     "seller": "Chaos__Architect",
     "world": "Firefly",
     "position": "1557, 97, 457",
-    "lastSeen": "2026-07-21T06:30:16.832Z"
+    "lastSeen": "2026-07-21T07:20:00.172Z"
   },
   {
     "itemName": "Smooth Stone",
@@ -38445,7 +38445,7 @@
     "seller": "Chaos__Architect",
     "world": "Firefly",
     "position": "1557, 97, 457",
-    "lastSeen": "2026-07-21T06:30:16.832Z"
+    "lastSeen": "2026-07-21T07:20:00.172Z"
   },
   {
     "itemName": "Paper",
@@ -38461,23 +38461,23 @@
     "seller": "Chaos__Architect",
     "world": "Firefly",
     "position": "1552, 97, 466",
-    "lastSeen": "2026-07-21T06:30:09.829Z"
+    "lastSeen": "2026-07-21T07:19:55.223Z"
   },
   {
     "itemName": "Firework Rocket",
     "baseItem": "minecraft:firework_rocket",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 7,
-    "priceLabel": "7 dia",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 3456,
-    "stacksInStock": 54,
+    "amount": 1280,
+    "stacksInStock": 20,
     "currency": "diamond",
     "seller": "Chaos__Architect",
     "world": "Firefly",
-    "position": "1536, 96, 464",
-    "lastSeen": "2026-07-21T06:30:07.041Z"
+    "position": "1542, 98, 464",
+    "lastSeen": "2026-07-21T07:19:54.209Z"
   },
   {
     "itemName": "Netherite Upgrade",
@@ -56797,7 +56797,7 @@
     "seller": "Meggiee",
     "world": "Firefly",
     "position": "1461, 99, 602",
-    "lastSeen": "2026-07-21T05:58:06.986Z"
+    "lastSeen": "2026-07-21T07:16:46.212Z"
   },
   {
     "itemName": "Cobblestone",
@@ -56813,7 +56813,7 @@
     "seller": "Meggiee",
     "world": "Firefly",
     "position": "1456, 100, 602",
-    "lastSeen": "2026-07-21T05:58:07.786Z"
+    "lastSeen": "2026-07-21T07:16:47.306Z"
   },
   {
     "itemName": "Oak Log",
@@ -104813,7 +104813,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3802, 112, -1144",
-    "lastSeen": "2026-07-21T00:01:57.385Z"
+    "lastSeen": "2026-07-21T07:28:29.791Z"
   },
   {
     "itemName": "Cyan Concrete",
@@ -104829,7 +104829,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3801, 112, -1144",
-    "lastSeen": "2026-07-21T00:01:58.157Z"
+    "lastSeen": "2026-07-21T07:28:33.033Z"
   },
   {
     "itemName": "Blue Concrete",
@@ -104845,7 +104845,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3800, 112, -1144",
-    "lastSeen": "2026-07-21T00:01:59.714Z"
+    "lastSeen": "2026-07-21T07:28:32.233Z"
   },
   {
     "itemName": "Brown Concrete",
@@ -104877,7 +104877,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3798, 112, -1139",
-    "lastSeen": "2026-07-21T00:02:05.117Z"
+    "lastSeen": "2026-07-21T07:28:30.579Z"
   },
   {
     "itemName": "Pink Concrete",
@@ -105325,7 +105325,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3786, 113, -1131",
-    "lastSeen": "2026-07-21T00:02:52.399Z"
+    "lastSeen": "2026-07-21T07:30:14.247Z"
   },
   {
     "itemName": "Red Terracotta",
@@ -105341,7 +105341,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3786, 113, -1130",
-    "lastSeen": "2026-07-21T00:02:53.965Z"
+    "lastSeen": "2026-07-21T07:30:10.245Z"
   },
   {
     "itemName": "Blue Terracotta",
@@ -105357,7 +105357,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3786, 113, -1129",
-    "lastSeen": "2026-07-21T00:02:55.540Z"
+    "lastSeen": "2026-07-21T07:30:06.270Z"
   },
   {
     "itemName": "Cyan Terracotta",
@@ -105373,7 +105373,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3786, 112, -1128",
-    "lastSeen": "2026-07-21T00:02:56.320Z"
+    "lastSeen": "2026-07-21T07:29:58.267Z"
   },
   {
     "itemName": "Light Blue Terracotta",
@@ -105389,7 +105389,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3786, 113, -1127",
-    "lastSeen": "2026-07-21T00:02:58.697Z"
+    "lastSeen": "2026-07-21T07:30:00.628Z"
   },
   {
     "itemName": "Gray Wool",
@@ -105405,7 +105405,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3788, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:01.023Z"
+    "lastSeen": "2026-07-21T07:30:03.029Z"
   },
   {
     "itemName": "Black Wool",
@@ -105421,7 +105421,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3787, 112, -1125",
-    "lastSeen": "2026-07-21T00:03:00.250Z"
+    "lastSeen": "2026-07-21T07:30:05.457Z"
   },
   {
     "itemName": "Light Gray Wool",
@@ -105437,7 +105437,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3789, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:03.268Z"
+    "lastSeen": "2026-07-21T07:30:03.830Z"
   },
   {
     "itemName": "White Wool",
@@ -105453,7 +105453,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3790, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:05.656Z"
+    "lastSeen": "2026-07-21T07:30:08.644Z"
   },
   {
     "itemName": "Orange Wool",
@@ -105469,23 +105469,23 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3791, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:06.427Z"
+    "lastSeen": "2026-07-21T07:30:12.645Z"
   },
   {
     "itemName": "Yellow Wool",
     "baseItem": "minecraft:yellow_wool",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 10368,
-    "stacksInStock": 162,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "BrandonT80",
     "world": "Firefly",
-    "position": "-3792, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:07.940Z"
+    "position": "-3792, 112, -1125",
+    "lastSeen": "2026-07-21T07:30:16.674Z"
   },
   {
     "itemName": "Green Wool",
@@ -105517,7 +105517,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3792, 112, -1130",
-    "lastSeen": "2026-07-21T00:03:10.260Z"
+    "lastSeen": "2026-07-21T07:30:15.834Z"
   },
   {
     "itemName": "Lime Wool",
@@ -105554,18 +105554,18 @@
   {
     "itemName": "Magenta Wool",
     "baseItem": "minecraft:magenta_wool",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
     "price": 1,
-    "priceLabel": "1 db",
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 15552,
-    "stacksInStock": 243,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "BrandonT80",
     "world": "Firefly",
-    "position": "-3796, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:24.144Z"
+    "position": "-3796, 112, -1125",
+    "lastSeen": "2026-07-21T07:29:56.626Z"
   },
   {
     "itemName": "Pink Wool",
@@ -105581,7 +105581,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3797, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:15.591Z"
+    "lastSeen": "2026-07-21T07:28:49.746Z"
   },
   {
     "itemName": "Brown Wool",
@@ -105597,7 +105597,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3798, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:17.918Z"
+    "lastSeen": "2026-07-21T07:28:46.584Z"
   },
   {
     "itemName": "Red Wool",
@@ -105613,7 +105613,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3799, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:18.723Z"
+    "lastSeen": "2026-07-21T07:28:41.782Z"
   },
   {
     "itemName": "Blue Wool",
@@ -105629,7 +105629,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3800, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:23.263Z"
+    "lastSeen": "2026-07-21T07:28:39.408Z"
   },
   {
     "itemName": "Cyan Wool",
@@ -105645,7 +105645,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3801, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:22.510Z"
+    "lastSeen": "2026-07-21T07:28:40.982Z"
   },
   {
     "itemName": "Light Blue Wool",
@@ -105661,7 +105661,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3802, 113, -1125",
-    "lastSeen": "2026-07-21T00:03:21.774Z"
+    "lastSeen": "2026-07-21T07:28:43.436Z"
   },
   {
     "itemName": "Lime Stained Glass",
@@ -105677,7 +105677,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3798, 112, -1130",
-    "lastSeen": "2026-07-21T00:03:24.902Z"
+    "lastSeen": "2026-07-21T07:28:44.250Z"
   },
   {
     "itemName": "Green Stained Glass",
@@ -105693,7 +105693,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3797, 112, -1130",
-    "lastSeen": "2026-07-21T00:03:25.725Z"
+    "lastSeen": "2026-07-21T07:28:47.425Z"
   },
   {
     "itemName": "Yellow Stained Glass",
@@ -105709,7 +105709,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3796, 112, -1130",
-    "lastSeen": "2026-07-21T00:03:26.498Z"
+    "lastSeen": "2026-07-21T07:29:55.892Z"
   },
   {
     "itemName": "Light Gray Stained Glass",
@@ -105741,7 +105741,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3791, 112, -1130",
-    "lastSeen": "2026-07-21T00:03:33.446Z"
+    "lastSeen": "2026-07-21T07:29:57.453Z"
   },
   {
     "itemName": "Black Dye",
@@ -105757,7 +105757,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3791, 113, -1131",
-    "lastSeen": "2026-07-21T00:03:38.859Z"
+    "lastSeen": "2026-07-21T07:30:17.528Z"
   },
   {
     "itemName": "Gray Dye",
@@ -105842,18 +105842,18 @@
   {
     "itemName": "Green Dye",
     "baseItem": "minecraft:green_dye",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 2,
-    "priceLabel": "2 db",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 3456,
-    "stacksInStock": 54,
-    "currency": "diamondblock",
+    "amount": 1536,
+    "stacksInStock": 24,
+    "currency": "diamond",
     "seller": "BrandonT80",
     "world": "Firefly",
-    "position": "-3797, 113, -1131",
-    "lastSeen": "2026-07-21T00:03:44.981Z"
+    "position": "-3797, 112, -1131",
+    "lastSeen": "2026-07-21T07:29:55.079Z"
   },
   {
     "itemName": "Lime Dye",
@@ -105869,7 +105869,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3798, 112, -1131",
-    "lastSeen": "2026-07-21T00:03:45.791Z"
+    "lastSeen": "2026-07-21T07:28:36.980Z"
   },
   {
     "itemName": "Purple Dye",
@@ -105885,7 +105885,7 @@
     "seller": "BrandonT80",
     "world": "Firefly",
     "position": "-3798, 112, -1138",
-    "lastSeen": "2026-07-21T00:03:47.325Z"
+    "lastSeen": "2026-07-21T07:28:35.406Z"
   },
   {
     "itemName": "Magenta Dye",
@@ -149309,7 +149309,7 @@
     "seller": "LapJi852",
     "world": "Firefly",
     "position": "670, 91, 989",
-    "lastSeen": "2026-07-21T05:30:44.441Z"
+    "lastSeen": "2026-07-21T07:27:15.243Z"
   },
   {
     "itemName": "Raichu 2-2/ Wendy852",
@@ -149325,7 +149325,7 @@
     "seller": "LapJi852",
     "world": "Firefly",
     "position": "670, 91, 989",
-    "lastSeen": "2026-07-21T05:30:44.441Z"
+    "lastSeen": "2026-07-21T07:27:15.243Z"
   },
   {
     "itemName": "Raichu 2-3/ Wendy852",
@@ -149341,7 +149341,7 @@
     "seller": "LapJi852",
     "world": "Firefly",
     "position": "670, 91, 989",
-    "lastSeen": "2026-07-21T05:30:44.441Z"
+    "lastSeen": "2026-07-21T07:27:15.243Z"
   },
   {
     "itemName": "Raichu 1-3/ Wendy852",
@@ -149357,7 +149357,7 @@
     "seller": "LapJi852",
     "world": "Firefly",
     "position": "670, 91, 989",
-    "lastSeen": "2026-07-21T05:30:44.441Z"
+    "lastSeen": "2026-07-21T07:27:15.243Z"
   },
   {
     "itemName": "Raichu 2-1/ Wendy852",
@@ -149373,7 +149373,7 @@
     "seller": "LapJi852",
     "world": "Firefly",
     "position": "670, 91, 989",
-    "lastSeen": "2026-07-21T05:30:44.441Z"
+    "lastSeen": "2026-07-21T07:27:15.243Z"
   },
   {
     "itemName": "Raichu 1-1/ Wendy852",
@@ -149389,7 +149389,7 @@
     "seller": "LapJi852",
     "world": "Firefly",
     "position": "670, 91, 989",
-    "lastSeen": "2026-07-21T05:30:44.441Z"
+    "lastSeen": "2026-07-21T07:27:15.243Z"
   },
   {
     "itemName": "暹羅厘普#1/ Wendy852",
@@ -149421,7 +149421,7 @@
     "seller": "LapJi852",
     "world": "Firefly",
     "position": "656, 90, 994",
-    "lastSeen": "2026-07-21T05:30:46.055Z"
+    "lastSeen": "2026-07-21T07:27:16.722Z"
   },
   {
     "itemName": "Paper",
@@ -151981,7 +151981,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "773, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:06.637Z"
+    "lastSeen": "2026-07-21T07:16:07.891Z"
   },
   {
     "itemName": "🕸 ✧ Thirsty Blade ✧ 🕸",
@@ -151997,7 +151997,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "772, 88, 1168",
-    "lastSeen": "2026-07-21T05:42:09.025Z"
+    "lastSeen": "2026-07-21T07:16:09.519Z"
   },
   {
     "itemName": "⊱✥ Diving Helmet ✥⊰",
@@ -152013,7 +152013,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "772, 88, 1168",
-    "lastSeen": "2026-07-21T05:42:09.025Z"
+    "lastSeen": "2026-07-21T07:16:09.519Z"
   },
   {
     "itemName": "˗ˏˋ ⋆.˚✮ Genderqueer Pride Duck ✮˚.⋆ ˎˊ˗",
@@ -152029,7 +152029,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "773, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:09.798Z"
+    "lastSeen": "2026-07-21T07:16:20.309Z"
   },
   {
     "itemName": "˗ˏˋ ⋆.˚✮ Aromantic Pride Duck ✮˚.⋆ ˎˊ˗",
@@ -152045,7 +152045,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "773, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:09.798Z"
+    "lastSeen": "2026-07-21T07:16:20.309Z"
   },
   {
     "itemName": "*⊹ Dyeable Bucket Hat ⊹*",
@@ -152061,7 +152061,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "773, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:09.798Z"
+    "lastSeen": "2026-07-21T07:16:20.309Z"
   },
   {
     "itemName": "🕸 ✧ Pumpkin Glow Wand ✧ 🕸",
@@ -152077,7 +152077,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:10.559Z"
+    "lastSeen": "2026-07-21T07:16:07.144Z"
   },
   {
     "itemName": "🕸 ✧ Headless Horseman's Shield ✧ 🕸",
@@ -152093,7 +152093,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:10.559Z"
+    "lastSeen": "2026-07-21T07:16:07.144Z"
   },
   {
     "itemName": "♡ ✩ Reign's Moonlit Circlet ☽ ♡",
@@ -152109,7 +152109,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:10.559Z"
+    "lastSeen": "2026-07-21T07:16:07.144Z"
   },
   {
     "itemName": "◇◈ Attunement: Auto Cook ◈◇",
@@ -152125,7 +152125,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:10.559Z"
+    "lastSeen": "2026-07-21T07:16:07.144Z"
   },
   {
     "itemName": "◇◈ Luffy Sword Texture ◈◇",
@@ -152141,7 +152141,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:10.559Z"
+    "lastSeen": "2026-07-21T07:16:07.144Z"
   },
   {
     "itemName": "🕸 ✧ Spell of Soul Transfiguring ✧ 🕸",
@@ -152157,7 +152157,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:10.559Z"
+    "lastSeen": "2026-07-21T07:16:07.144Z"
   },
   {
     "itemName": "｡๑இ☁ Sword of Seraphims ☁இ๑｡",
@@ -152173,7 +152173,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:10.559Z"
+    "lastSeen": "2026-07-21T07:16:07.144Z"
   },
   {
     "itemName": "⊰ ✵ Screwpernova ✵ ⊱",
@@ -152189,7 +152189,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 87, 1168",
-    "lastSeen": "2026-07-21T05:42:10.559Z"
+    "lastSeen": "2026-07-21T07:16:07.144Z"
   },
   {
     "itemName": "Stone",
@@ -152205,7 +152205,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Cobblestone",
@@ -152221,7 +152221,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Granite",
@@ -152237,7 +152237,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Andesite",
@@ -152253,7 +152253,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Diorite",
@@ -152269,7 +152269,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Cobbled Deepslate",
@@ -152285,7 +152285,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Tuff",
@@ -152301,7 +152301,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "White Concrete",
@@ -152317,7 +152317,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "End Rod",
@@ -152333,7 +152333,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Verdant Froglight",
@@ -152349,7 +152349,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Pearlescent Froglight",
@@ -152365,7 +152365,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Ochre Froglight",
@@ -152381,7 +152381,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Iron Bars",
@@ -152397,7 +152397,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Lava Bucket",
@@ -152413,7 +152413,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "774, 86, 1168",
-    "lastSeen": "2026-07-21T05:42:12.959Z"
+    "lastSeen": "2026-07-21T07:16:11.119Z"
   },
   {
     "itemName": "Emerald",
@@ -152429,7 +152429,7 @@
     "seller": "Mortalist",
     "world": "Firefly",
     "position": "784, 86, 1173",
-    "lastSeen": "2026-07-21T05:42:15.707Z"
+    "lastSeen": "2026-07-21T07:16:12.053Z"
   },
   {
     "itemName": "Wheat",
@@ -157789,7 +157789,7 @@
     "seller": "Meggiee",
     "world": "Firefly",
     "position": "1455, 100, 602",
-    "lastSeen": "2026-07-21T05:58:08.533Z"
+    "lastSeen": "2026-07-21T07:16:48.974Z"
   },
   {
     "itemName": "Andesite",
@@ -157805,7 +157805,7 @@
     "seller": "Meggiee",
     "world": "Firefly",
     "position": "1454, 100, 602",
-    "lastSeen": "2026-07-21T05:58:09.346Z"
+    "lastSeen": "2026-07-21T07:16:49.748Z"
   },
   {
     "itemName": "Granite",
@@ -157821,7 +157821,7 @@
     "seller": "Meggiee",
     "world": "Firefly",
     "position": "1453, 100, 602",
-    "lastSeen": "2026-07-21T05:58:10.933Z"
+    "lastSeen": "2026-07-21T07:16:50.561Z"
   },
   {
     "itemName": "Spruce Leaves",
@@ -163742,5 +163742,693 @@
     "world": "Firefly",
     "position": "-3963, 121, -1166",
     "lastSeen": "2026-07-21T07:17:54.519Z"
+  },
+  {
+    "itemName": "Demon Slayer 1-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 1-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 1-3/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 1-4/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 1-5/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 1-6/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 2-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 2-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 2-3/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 2-4/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 2-5/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 2-6/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 3-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 3-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 3-3/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 3-4/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 3-5/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 3-6/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 4-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 4-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 4-3/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 4-4/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 4-5/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "Demon Slayer 4-6/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 24,
+    "priceLabel": "24 db",
+    "stackSize": 1,
+    "amount": 6,
+    "stacksInStock": 6,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "652, 91, 973",
+    "lastSeen": "2026-07-21T07:26:59.048Z"
+  },
+  {
+    "itemName": "HIRONO/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "648, 90, 976",
+    "lastSeen": "2026-07-21T07:27:02.783Z"
+  },
+  {
+    "itemName": "Christmas MuLan/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "648, 90, 978",
+    "lastSeen": "2026-07-21T07:27:03.836Z"
+  },
+  {
+    "itemName": "Christmas Totoro 1-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "664, 91, 973",
+    "lastSeen": "2026-07-21T07:27:08.614Z"
+  },
+  {
+    "itemName": "Christmas Totoro 1-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "664, 91, 973",
+    "lastSeen": "2026-07-21T07:27:08.614Z"
+  },
+  {
+    "itemName": "Christmas Totoro 1-3/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "664, 91, 973",
+    "lastSeen": "2026-07-21T07:27:08.614Z"
+  },
+  {
+    "itemName": "Christmas Totoro 2-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "664, 91, 973",
+    "lastSeen": "2026-07-21T07:27:08.614Z"
+  },
+  {
+    "itemName": "Christmas Totoro 2-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "664, 91, 973",
+    "lastSeen": "2026-07-21T07:27:08.614Z"
+  },
+  {
+    "itemName": "Christmas Totoro 2-3/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 2,
+    "stacksInStock": 2,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "664, 91, 973",
+    "lastSeen": "2026-07-21T07:27:08.614Z"
+  },
+  {
+    "itemName": "地圖1 / wendy",
+    "baseItem": "minecraft:filled_map",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 15,
+    "stacksInStock": 15,
+    "currency": "diamondblock",
+    "seller": "WenDy852",
+    "world": "Firefly",
+    "position": "666, 90, 994",
+    "lastSeen": "2026-07-21T07:27:14.347Z"
+  },
+  {
+    "itemName": "地圖1",
+    "baseItem": "minecraft:filled_map",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "663, 90, 994",
+    "lastSeen": "2026-07-21T07:27:15.975Z"
+  },
+  {
+    "itemName": "地圖12",
+    "baseItem": "minecraft:filled_map",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 3,
+    "stacksInStock": 3,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "652, 90, 994",
+    "lastSeen": "2026-07-21T07:27:17.482Z"
+  },
+  {
+    "itemName": "DUCK YOU/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "650, 90, 994",
+    "lastSeen": "2026-07-21T07:27:18.309Z"
+  },
+  {
+    "itemName": "Chill Cat/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 1,
+    "amount": 4,
+    "stacksInStock": 4,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "648, 90, 990",
+    "lastSeen": "2026-07-21T07:27:19.123Z"
+  },
+  {
+    "itemName": "Solosis 1-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "670, 91, 973",
+    "lastSeen": "2026-07-21T07:27:24.117Z"
+  },
+  {
+    "itemName": "Solosis 1-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "670, 91, 973",
+    "lastSeen": "2026-07-21T07:27:24.117Z"
+  },
+  {
+    "itemName": "Solosis 2-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "670, 91, 973",
+    "lastSeen": "2026-07-21T07:27:24.117Z"
+  },
+  {
+    "itemName": "Solosis 2-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "670, 91, 973",
+    "lastSeen": "2026-07-21T07:27:24.117Z"
+  },
+  {
+    "itemName": "Solosis 3-1/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "670, 91, 973",
+    "lastSeen": "2026-07-21T07:27:24.117Z"
+  },
+  {
+    "itemName": "Solosis 3-2/ Wendy852",
+    "baseItem": "minecraft:filled_map",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 6,
+    "priceLabel": "6 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "LapJi852",
+    "world": "Firefly",
+    "position": "670, 91, 973",
+    "lastSeen": "2026-07-21T07:27:24.117Z"
   }
 ]
