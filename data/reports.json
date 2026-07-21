@@ -645,8 +645,8 @@
     },
     "reason": "shop_gone",
     "details": "",
-    "status": "pending",
+    "status": "approved",
     "createdAt": "2026-07-21T13:38:57.517Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-21T13:39:38.195Z"
   }
 ]
