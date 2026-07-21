@@ -749,7 +749,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3938, 105, -718",
-    "lastSeen": "2026-07-21T06:58:11.262Z"
+    "lastSeen": "2026-07-21T07:04:43.403Z"
   },
   {
     "itemName": "Light Gray Wool",
@@ -1021,7 +1021,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3941, 105, -720",
-    "lastSeen": "2026-07-21T06:58:49.813Z"
+    "lastSeen": "2026-07-21T07:04:51.256Z"
   },
   {
     "itemName": "*♤☆ Boh Plushie ☆♤*",
@@ -1037,7 +1037,7 @@
     "seller": "WonderAvocado",
     "world": "Firefly",
     "position": "-3939, 103, -719",
-    "lastSeen": "2026-07-21T06:58:01.268Z"
+    "lastSeen": "2026-07-21T07:04:44.162Z"
   },
   {
     "itemName": "*♤☆ Robot Plushie ☆♤*",
@@ -1053,7 +1053,7 @@
     "seller": "WonderAvocado",
     "world": "Firefly",
     "position": "-3939, 103, -719",
-    "lastSeen": "2026-07-21T06:58:01.268Z"
+    "lastSeen": "2026-07-21T07:04:44.162Z"
   },
   {
     "itemName": "Black Concrete",
@@ -1063,13 +1063,13 @@
     "price": 2,
     "priceLabel": "2 dia",
     "stackSize": 64,
-    "amount": 896,
-    "stacksInStock": 14,
+    "amount": 640,
+    "stacksInStock": 10,
     "currency": "diamond",
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3937, 104, -721",
-    "lastSeen": "2026-07-21T06:58:02.754Z"
+    "lastSeen": "2026-07-21T07:04:44.904Z"
   },
   {
     "itemName": "Gray Concrete",
@@ -1085,7 +1085,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 104, -722",
-    "lastSeen": "2026-07-21T06:58:00.467Z"
+    "lastSeen": "2026-07-21T07:04:46.501Z"
   },
   {
     "itemName": "Deepslate Diamond Ore",
@@ -1101,7 +1101,7 @@
     "seller": "Slasheryn",
     "world": "Firefly",
     "position": "-3941, 105, -719",
-    "lastSeen": "2026-07-21T06:58:49.010Z"
+    "lastSeen": "2026-07-21T07:04:50.454Z"
   },
   {
     "itemName": "* ʚïɞ Red Lacewing Butterfly ʚïɞ *",
@@ -1117,7 +1117,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 103, -717",
-    "lastSeen": "2026-07-21T06:58:12.081Z"
+    "lastSeen": "2026-07-21T07:04:45.707Z"
   },
   {
     "itemName": "* ʚïɞ Eastern Tiger Swallowtail ʚïɞ *",
@@ -1133,7 +1133,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 103, -717",
-    "lastSeen": "2026-07-21T06:58:12.081Z"
+    "lastSeen": "2026-07-21T07:04:45.707Z"
   },
   {
     "itemName": "* ʚïɞ Purple Emperor Butterfly ʚïɞ *",
@@ -1149,7 +1149,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 103, -717",
-    "lastSeen": "2026-07-21T06:58:12.081Z"
+    "lastSeen": "2026-07-21T07:04:45.707Z"
   },
   {
     "itemName": "* ʚïɞ Blue Morpho Butterfly ʚïɞ *",
@@ -1165,7 +1165,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3938, 103, -717",
-    "lastSeen": "2026-07-21T06:58:12.081Z"
+    "lastSeen": "2026-07-21T07:04:45.707Z"
   },
   {
     "itemName": "Light Gray Concrete",
@@ -1197,7 +1197,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3937, 107, -721",
-    "lastSeen": "2026-07-21T06:58:12.851Z"
+    "lastSeen": "2026-07-21T07:04:48.918Z"
   },
   {
     "itemName": "Orange Concrete",
@@ -1229,7 +1229,7 @@
     "seller": "Woolu",
     "world": "Firefly",
     "position": "-3937, 104, -715",
-    "lastSeen": "2026-07-21T06:58:09.730Z"
+    "lastSeen": "2026-07-21T07:04:47.310Z"
   },
   {
     "itemName": "◇◯🍴 Latte 🍴◯◇",
@@ -19134,5 +19134,37 @@
     "world": "Honeybee",
     "position": "-3796, 102, -1245",
     "lastSeen": "2026-07-21T01:09:14.142Z"
+  },
+  {
+    "itemName": "Gray Wool",
+    "baseItem": "minecraft:gray_wool",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 1152,
+    "stacksInStock": 18,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3938, 104, -714",
+    "lastSeen": "2026-07-21T07:04:52.057Z"
+  },
+  {
+    "itemName": "Red Wool",
+    "baseItem": "minecraft:red_wool",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 64,
+    "amount": 384,
+    "stacksInStock": 6,
+    "currency": "diamond",
+    "seller": "Woolu",
+    "world": "Firefly",
+    "position": "-3937, 107, -715",
+    "lastSeen": "2026-07-21T07:04:52.802Z"
   }
 ]
