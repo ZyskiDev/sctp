@@ -598,5 +598,30 @@
     "status": "pending",
     "createdAt": "2026-07-21T09:58:55.705Z",
     "resolvedAt": null
+  },
+  {
+    "id": "d3249af8-c87d-4fd2-89ad-07eb34a87d1f",
+    "listingKey": "firefly|antsandpants|minecraft:emerald|◇◯🍴 hotdog snail 🍴◯◇",
+    "listing": {
+      "itemName": "◇◯🍴 Hotdog Snail 🍴◯◇",
+      "baseItem": "minecraft:emerald",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 32,
+      "priceLabel": "32 db",
+      "stackSize": 1,
+      "amount": 1,
+      "stacksInStock": 1,
+      "currency": "diamondblock",
+      "seller": "antsandpants",
+      "world": "Firefly",
+      "position": "-3839, 95, -1060",
+      "lastSeen": "2026-07-21T00:08:23.523Z"
+    },
+    "reason": "wrong_info",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-21T09:59:33.975Z",
+    "resolvedAt": null
   }
 ]
