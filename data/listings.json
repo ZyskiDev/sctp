@@ -78484,16 +78484,16 @@
     "baseItem": "minecraft:arrow",
     "bulk": false,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
-    "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3951, 113, -1158",
-    "lastSeen": "2026-07-20T23:18:38.150Z"
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
   },
   {
     "itemName": "Bamboo",
@@ -79165,7 +79165,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 117, -1164",
-    "lastSeen": "2026-07-21T07:57:50.239Z"
+    "lastSeen": "2026-07-21T08:03:46.576Z"
   },
   {
     "itemName": "Smooth Stone",
@@ -79213,39 +79213,39 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 117, -1165",
-    "lastSeen": "2026-07-21T07:58:44.405Z"
+    "lastSeen": "2026-07-21T08:04:11.052Z"
   },
   {
     "itemName": "Yellow Dye",
     "baseItem": "minecraft:yellow_dye",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 2,
-    "priceLabel": "2 db",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3958, 120, -1166",
-    "lastSeen": "2026-07-21T07:58:02.689Z"
+    "position": "-3958, 121, -1166",
+    "lastSeen": "2026-07-21T08:03:48.943Z"
   },
   {
     "itemName": "Orange Dye",
     "baseItem": "minecraft:orange_dye",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 2,
-    "priceLabel": "2 db",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3957, 120, -1166",
-    "lastSeen": "2026-07-21T07:58:06.535Z"
+    "position": "-3957, 121, -1166",
+    "lastSeen": "2026-07-21T08:04:08.699Z"
   },
   {
     "itemName": "Gray Dye",
@@ -79277,7 +79277,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3954, 121, -1166",
-    "lastSeen": "2026-07-21T07:57:38.480Z"
+    "lastSeen": "2026-07-21T08:04:10.229Z"
   },
   {
     "itemName": "Light Gray Dye",
@@ -79309,7 +79309,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3953, 121, -1165",
-    "lastSeen": "2026-07-21T07:57:24.368Z"
+    "lastSeen": "2026-07-21T08:03:38.700Z"
   },
   {
     "itemName": "White Dye",
@@ -79341,7 +79341,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3952, 121, -1165",
-    "lastSeen": "2026-07-21T07:57:36.920Z"
+    "lastSeen": "2026-07-21T08:03:45.013Z"
   },
   {
     "itemName": "Black Stained Glass",
@@ -79351,13 +79351,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
+    "amount": 1472,
+    "stacksInStock": 23,
     "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3954, 121, -1165",
-    "lastSeen": "2026-07-21T07:57:19.821Z"
+    "position": "-3964, 121, -1166",
+    "lastSeen": "2026-07-21T08:04:43.951Z"
   },
   {
     "itemName": "Brown Dye",
@@ -79373,7 +79373,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 121, -1166",
-    "lastSeen": "2026-07-21T07:57:40.024Z"
+    "lastSeen": "2026-07-21T08:04:07.170Z"
   },
   {
     "itemName": "White Stained Glass",
@@ -79410,18 +79410,18 @@
   {
     "itemName": "Block of Iron",
     "baseItem": "minecraft:iron_block",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 5,
-    "priceLabel": "5 db",
+    "price": 2,
+    "priceLabel": "2 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3955, 116, -1163",
-    "lastSeen": "2026-07-21T07:58:46.449Z"
+    "position": "-3955, 117, -1163",
+    "lastSeen": "2026-07-21T08:03:41.060Z"
   },
   {
     "itemName": "Block of Raw Gold",
@@ -79437,7 +79437,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 117, -1162",
-    "lastSeen": "2026-07-21T07:57:46.352Z"
+    "lastSeen": "2026-07-21T08:03:39.488Z"
   },
   {
     "itemName": "Block of Gold",
@@ -79453,7 +79453,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 117, -1161",
-    "lastSeen": "2026-07-21T07:57:52.613Z"
+    "lastSeen": "2026-07-21T08:03:40.308Z"
   },
   {
     "itemName": "Gray Wool",
@@ -79469,7 +79469,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3953, 121, -1161",
-    "lastSeen": "2026-07-21T07:57:18.235Z"
+    "lastSeen": "2026-07-21T08:03:23.237Z"
   },
   {
     "itemName": "Light Gray Wool",
@@ -79485,7 +79485,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3952, 121, -1161",
-    "lastSeen": "2026-07-21T07:57:29.907Z"
+    "lastSeen": "2026-07-21T08:03:29.390Z"
   },
   {
     "itemName": "Black Wool",
@@ -79501,7 +79501,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3954, 121, -1161",
-    "lastSeen": "2026-07-21T07:57:15.146Z"
+    "lastSeen": "2026-07-21T08:03:21.664Z"
   },
   {
     "itemName": "Gray Glazed Terracotta",
@@ -79517,7 +79517,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3953, 121, -1160",
-    "lastSeen": "2026-07-21T07:57:32.256Z"
+    "lastSeen": "2026-07-21T08:03:27.835Z"
   },
   {
     "itemName": "Amethyst Shard",
@@ -79693,7 +79693,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3954, 121, -1160",
-    "lastSeen": "2026-07-21T07:57:25.988Z"
+    "lastSeen": "2026-07-21T08:03:24.749Z"
   },
   {
     "itemName": "Brown Glazed Terracotta",
@@ -79709,7 +79709,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 121, -1160",
-    "lastSeen": "2026-07-21T07:57:27.531Z"
+    "lastSeen": "2026-07-21T08:03:26.285Z"
   },
   {
     "itemName": "Light Gray Glazed Terracotta",
@@ -79725,7 +79725,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3952, 121, -1160",
-    "lastSeen": "2026-07-21T07:57:44.741Z"
+    "lastSeen": "2026-07-21T08:03:34.032Z"
   },
   {
     "itemName": "White Wool",
@@ -79741,7 +79741,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 121, -1161",
-    "lastSeen": "2026-07-21T07:57:48.780Z"
+    "lastSeen": "2026-07-21T08:03:37.134Z"
   },
   {
     "itemName": "Brown Stained Glass",
@@ -79757,7 +79757,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 121, -1165",
-    "lastSeen": "2026-07-21T07:57:21.384Z"
+    "lastSeen": "2026-07-21T08:03:09.100Z"
   },
   {
     "itemName": "Red Dye",
@@ -79773,7 +79773,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3956, 121, -1166",
-    "lastSeen": "2026-07-21T07:57:49.494Z"
+    "lastSeen": "2026-07-21T08:04:05.617Z"
   },
   {
     "itemName": "Lime Dye",
@@ -79789,7 +79789,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3962, 120, -1166",
-    "lastSeen": "2026-07-21T07:58:08.056Z"
+    "lastSeen": "2026-07-21T08:04:14.109Z"
   },
   {
     "itemName": "Purple Wool",
@@ -80669,27 +80669,11 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3958, 120, -1160",
-    "lastSeen": "2026-07-21T07:57:58.095Z"
+    "lastSeen": "2026-07-21T08:03:47.392Z"
   },
   {
     "itemName": "Lime Glazed Terracotta",
     "baseItem": "minecraft:lime_glazed_terracotta",
-    "bulk": true,
-    "mixedContents": false,
-    "price": 3,
-    "priceLabel": "3 db",
-    "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
-    "currency": "diamondblock",
-    "seller": "sqxzc",
-    "world": "Firefly",
-    "position": "-3962, 120, -1160",
-    "lastSeen": "2026-07-21T07:58:03.461Z"
-  },
-  {
-    "itemName": "Yellow Wool",
-    "baseItem": "minecraft:yellow_wool",
     "bulk": false,
     "mixedContents": false,
     "price": 1,
@@ -80700,8 +80684,24 @@
     "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3958, 121, -1161",
-    "lastSeen": "2026-07-21T07:57:55.756Z"
+    "position": "-3962, 121, -1160",
+    "lastSeen": "2026-07-21T08:03:18.563Z"
+  },
+  {
+    "itemName": "Yellow Wool",
+    "baseItem": "minecraft:yellow_wool",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 db",
+    "stackSize": 64,
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3958, 120, -1161",
+    "lastSeen": "2026-07-21T08:03:44.202Z"
   },
   {
     "itemName": "Green Glazed Terracotta",
@@ -80941,7 +80941,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3957, 121, -1160",
-    "lastSeen": "2026-07-21T07:57:51.860Z"
+    "lastSeen": "2026-07-21T08:03:35.526Z"
   },
   {
     "itemName": "Brown Terracotta",
@@ -80973,23 +80973,23 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3956, 121, -1160",
-    "lastSeen": "2026-07-21T07:57:34.557Z"
+    "lastSeen": "2026-07-21T08:03:30.917Z"
   },
   {
     "itemName": "White Glazed Terracotta",
     "baseItem": "minecraft:white_glazed_terracotta",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 3,
-    "priceLabel": "3 db",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3951, 120, -1160",
-    "lastSeen": "2026-07-20T23:30:12.065Z"
+    "position": "-3951, 121, -1160",
+    "lastSeen": "2026-07-21T08:03:42.653Z"
   },
   {
     "itemName": "White Terracotta",
@@ -81021,7 +81021,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 121, -1161",
-    "lastSeen": "2026-07-21T07:57:16.702Z"
+    "lastSeen": "2026-07-21T08:03:09.821Z"
   },
   {
     "itemName": "Red Wool",
@@ -81037,7 +81037,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3956, 121, -1161",
-    "lastSeen": "2026-07-21T07:57:22.875Z"
+    "lastSeen": "2026-07-21T08:03:20.822Z"
   },
   {
     "itemName": "Orange Wool",
@@ -81053,7 +81053,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3957, 121, -1161",
-    "lastSeen": "2026-07-21T07:57:35.351Z"
+    "lastSeen": "2026-07-21T08:03:32.503Z"
   },
   {
     "itemName": "Orange Stained Glass",
@@ -81069,7 +81069,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3957, 121, -1165",
-    "lastSeen": "2026-07-21T07:57:45.485Z"
+    "lastSeen": "2026-07-21T08:04:04.086Z"
   },
   {
     "itemName": "Yellow Stained Glass",
@@ -81085,7 +81085,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3958, 120, -1165",
-    "lastSeen": "2026-07-21T07:57:56.536Z"
+    "lastSeen": "2026-07-21T08:03:16.969Z"
   },
   {
     "itemName": "Block of Bamboo",
@@ -163709,7 +163709,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3956, 121, -1165",
-    "lastSeen": "2026-07-21T07:57:30.701Z"
+    "lastSeen": "2026-07-21T08:03:14.624Z"
   },
   {
     "itemName": "Lime Stained Glass",
@@ -163725,23 +163725,23 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3962, 120, -1165",
-    "lastSeen": "2026-07-21T07:58:01.168Z"
+    "lastSeen": "2026-07-21T08:04:12.526Z"
   },
   {
     "itemName": "Green Dye",
     "baseItem": "minecraft:green_dye",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 2,
+    "priceLabel": "2 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3963, 121, -1166",
-    "lastSeen": "2026-07-21T07:17:54.519Z"
+    "position": "-3963, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:15.628Z"
   },
   {
     "itemName": "Demon Slayer 1-1/ Wendy852",
@@ -164450,18 +164450,18 @@
   {
     "itemName": "Green Stained Glass",
     "baseItem": "minecraft:green_stained_glass",
-    "bulk": true,
+    "bulk": false,
     "mixedContents": false,
-    "price": 2,
-    "priceLabel": "2 db",
+    "price": 1,
+    "priceLabel": "1 dia",
     "stackSize": 64,
-    "amount": 46656,
-    "stacksInStock": 729,
-    "currency": "diamondblock",
+    "amount": 1728,
+    "stacksInStock": 27,
+    "currency": "diamond",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3963, 120, -1165",
-    "lastSeen": "2026-07-21T07:58:09.619Z"
+    "position": "-3963, 121, -1165",
+    "lastSeen": "2026-07-21T08:04:11.799Z"
   },
   {
     "itemName": "Cyan Stained Glass",
@@ -164478,5 +164478,405 @@
     "world": "Firefly",
     "position": "-3964, 121, -1165",
     "lastSeen": "2026-07-21T07:58:43.225Z"
+  },
+  {
+    "itemName": "*♤☆ Red-Throated Loon Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Tae Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Australian Shephered Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Mycellihop Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Venom Wyvern Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 2,
+    "amount": 2,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Lyrixia Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Hedgehog Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "⋆ Apple Pie Dinosaur ⋆",
+    "baseItem": "minecraft:amethyst_shard",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "⋆ Commander Zar ⋆",
+    "baseItem": "minecraft:amethyst_shard",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Catbus Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Boh Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 2,
+    "amount": 2,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "*♤☆ Robot Plushie ☆♤*",
+    "baseItem": "minecraft:leather",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 2,
+    "amount": 2,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "Golden Apple",
+    "baseItem": "minecraft:golden_apple",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 33,
+    "amount": 33,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "♨ Calcia Essence ♨",
+    "baseItem": "minecraft:nether_star",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 18,
+    "amount": 18,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "⋟ Meerkat Shovel ⋞",
+    "baseItem": "minecraft:netherite_shovel",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "࿔˚⋆⊹ Baby Duck Deluxe Plushie ⊹⋆˚࿔",
+    "baseItem": "minecraft:clay_ball",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "࿔˚⋆⊹ Red Loon Deluxe Plushie ⊹⋆˚࿔",
+    "baseItem": "minecraft:leather",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "Lapis Lazuli Ore",
+    "baseItem": "minecraft:lapis_ore",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 4,
+    "amount": 4,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "Splash Potion of Weakness",
+    "baseItem": "minecraft:splash_potion",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 3,
+    "stacksInStock": 3,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "Cheese Banner",
+    "baseItem": "minecraft:black_banner",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "∴⚡ Thunderbird's Wrath ⚡∴",
+    "baseItem": "minecraft:bow",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "Darkin Aegis",
+    "baseItem": "minecraft:shield",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "⋆ 👾 Ticket 👾 ⋆",
+    "baseItem": "minecraft:paper",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 21,
+    "amount": 21,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "Trader",
+    "baseItem": "minecraft:name_tag",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "࿔˚⋆ ☠ Here Lies Samurai_Wack  ☠ ⋆˚࿔",
+    "baseItem": "minecraft:clay_ball",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 2,
+    "priceLabel": "2 db",
+    "stackSize": 6,
+    "amount": 6,
+    "stacksInStock": 1,
+    "currency": "diamondblock",
+    "seller": "sqxzc",
+    "world": "Firefly",
+    "position": "-3957, 120, -1166",
+    "lastSeen": "2026-07-21T08:04:07.846Z"
   }
 ]
