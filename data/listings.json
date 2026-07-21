@@ -31895,13 +31895,13 @@
     "price": 5,
     "priceLabel": "5 dia",
     "stackSize": 2,
-    "amount": 50,
-    "stacksInStock": 25,
+    "amount": 54,
+    "stacksInStock": 27,
     "currency": "diamond",
     "seller": "Westerlund_",
     "world": "Firefly",
-    "position": "-3905, 105, -755",
-    "lastSeen": "2026-07-20T23:04:20.326Z"
+    "position": "-3905, 105, -749",
+    "lastSeen": "2026-07-21T08:25:16.246Z"
   },
   {
     "itemName": "Item Frame",
@@ -31917,7 +31917,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3902, 105, -755",
-    "lastSeen": "2026-07-20T20:32:46.435Z"
+    "lastSeen": "2026-07-21T08:25:27.182Z"
   },
   {
     "itemName": "Music Disc",
@@ -31927,13 +31927,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 4,
-    "stacksInStock": 4,
+    "amount": 3,
+    "stacksInStock": 3,
     "currency": "diamond",
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Music Disc",
@@ -31943,13 +31943,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 2,
-    "stacksInStock": 2,
+    "amount": 1,
+    "stacksInStock": 1,
     "currency": "diamond",
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Music Disc",
@@ -31959,17 +31959,33 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 3,
-    "stacksInStock": 3,
+    "amount": 2,
+    "stacksInStock": 2,
     "currency": "diamond",
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Music Disc",
     "baseItem": "minecraft:music_disc_ward",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 1,
+    "priceLabel": "1 dia",
+    "stackSize": 1,
+    "amount": 1,
+    "stacksInStock": 1,
+    "currency": "diamond",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3899, 105, -755",
+    "lastSeen": "2026-07-21T08:25:17.833Z"
+  },
+  {
+    "itemName": "Music Disc",
+    "baseItem": "minecraft:music_disc_mellohi",
     "bulk": false,
     "mixedContents": false,
     "price": 1,
@@ -31981,23 +31997,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
-  },
-  {
-    "itemName": "Music Disc",
-    "baseItem": "minecraft:music_disc_mellohi",
-    "bulk": false,
-    "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
-    "stackSize": 1,
-    "amount": 3,
-    "stacksInStock": 3,
-    "currency": "diamond",
-    "seller": "Westerlund_",
-    "world": "Firefly",
-    "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Music Disc",
@@ -32013,7 +32013,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Music Disc",
@@ -32029,7 +32029,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Music Disc",
@@ -32055,13 +32055,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 2,
-    "stacksInStock": 2,
+    "amount": 1,
+    "stacksInStock": 1,
     "currency": "diamond",
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Music Disc",
@@ -32071,13 +32071,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 3,
-    "stacksInStock": 3,
+    "amount": 2,
+    "stacksInStock": 2,
     "currency": "diamond",
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Music Disc",
@@ -32087,13 +32087,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 2,
-    "stacksInStock": 2,
+    "amount": 1,
+    "stacksInStock": 1,
     "currency": "diamond",
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3899, 105, -755",
-    "lastSeen": "2026-07-20T20:32:47.909Z"
+    "lastSeen": "2026-07-21T08:25:17.833Z"
   },
   {
     "itemName": "Podzol",
@@ -32109,7 +32109,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3896, 105, -755",
-    "lastSeen": "2026-07-20T20:32:49.735Z"
+    "lastSeen": "2026-07-21T08:25:18.631Z"
   },
   {
     "itemName": "Dirt",
@@ -32125,7 +32125,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3896, 105, -755",
-    "lastSeen": "2026-07-20T20:32:49.735Z"
+    "lastSeen": "2026-07-21T08:25:18.631Z"
   },
   {
     "itemName": "♡ Spider Plushie ♡",
@@ -32135,13 +32135,13 @@
     "price": 1,
     "priceLabel": "1 dia",
     "stackSize": 1,
-    "amount": 4,
-    "stacksInStock": 4,
+    "amount": 3,
+    "stacksInStock": 3,
     "currency": "diamond",
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3896, 105, -749",
-    "lastSeen": "2026-07-20T20:32:50.835Z"
+    "lastSeen": "2026-07-21T08:25:26.384Z"
   },
   {
     "itemName": "*♤☆ A Jester's Invitation ☆♤*",
@@ -32157,7 +32157,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -752",
-    "lastSeen": "2026-07-20T20:35:50.875Z"
+    "lastSeen": "2026-07-21T08:25:20.948Z"
   },
   {
     "itemName": "◇◯🍴 Dinner Bell 🍴◯◇",
@@ -32173,7 +32173,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -752",
-    "lastSeen": "2026-07-20T20:35:50.875Z"
+    "lastSeen": "2026-07-21T08:25:20.948Z"
   },
   {
     "itemName": ".･:✧ Fuzzy Camera ✧:･.",
@@ -32189,7 +32189,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -752",
-    "lastSeen": "2026-07-20T20:35:50.875Z"
+    "lastSeen": "2026-07-21T08:25:20.948Z"
   },
   {
     "itemName": "*♤☆ Stargaze's Echo ☆♤*",
@@ -32205,7 +32205,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -752",
-    "lastSeen": "2026-07-20T20:35:50.875Z"
+    "lastSeen": "2026-07-21T08:25:20.948Z"
   },
   {
     "itemName": "❀ ❦ Stag Beetle Slicer ❦ ❀",
@@ -32221,7 +32221,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -752",
-    "lastSeen": "2026-07-20T20:35:50.875Z"
+    "lastSeen": "2026-07-21T08:25:20.948Z"
   },
   {
     "itemName": "◇◯🍴 CULINARY CRATE KEY 🍴◯◇",
@@ -32253,7 +32253,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -752",
-    "lastSeen": "2026-07-20T20:35:50.875Z"
+    "lastSeen": "2026-07-21T08:25:20.948Z"
   },
   {
     "itemName": ".･:✧ Dweller's Visage ✧:･.",
@@ -32269,7 +32269,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -752",
-    "lastSeen": "2026-07-20T20:35:50.875Z"
+    "lastSeen": "2026-07-21T08:25:20.948Z"
   },
   {
     "itemName": ".･:✧ Jackalope Hat ✧:･.",
@@ -32285,7 +32285,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -752",
-    "lastSeen": "2026-07-20T20:35:50.875Z"
+    "lastSeen": "2026-07-21T08:25:20.948Z"
   },
   {
     "itemName": "*⊹☂ Rain Boots ☂⊹*",
@@ -32301,7 +32301,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": "+༻⋆ Safety Vest ⋆༺+",
@@ -32317,7 +32317,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": "⋊☛ Cel's Bird Bread ☚⋉",
@@ -32333,7 +32333,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": "     ⚠Powerglove of discord⚠",
@@ -32349,7 +32349,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": "⋆ 👾 Monkey Mayhem 👾 ⋆",
@@ -32365,7 +32365,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": "₊˚⊹ ☆ Nightfall Quasar ☆ ⊹˚₊",
@@ -32381,7 +32381,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": ".･:✧ Chupacabra's Bite ✧:･.",
@@ -32397,7 +32397,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": "🧀 Woolu's Fromage Cleaver 🧀",
@@ -32413,7 +32413,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": "｡๑இ☁ Breath of Radiance ☁இ๑｡",
@@ -32429,7 +32429,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -753",
-    "lastSeen": "2026-07-20T20:35:51.645Z"
+    "lastSeen": "2026-07-21T08:25:23.269Z"
   },
   {
     "itemName": "*♤☆ Sefi's Walking Stick ☆♤*",
@@ -32445,7 +32445,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": "◇◯🍴 Golden Spatula 🍴◯◇",
@@ -32461,7 +32461,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": "Black Stained Glass Pane",
@@ -32477,7 +32477,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": "Gray Stained Glass Pane",
@@ -32509,7 +32509,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": ".･:✧ Mothman Plushie ✧:･.",
@@ -32525,7 +32525,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": ".･:✧ Nessie Plushie ✧:･.",
@@ -32541,7 +32541,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": ".･:✧ Bigfoot Plushie ✧:･.",
@@ -32557,7 +32557,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": ".･:✧ Werewolf Plushie ✧:･.",
@@ -32573,7 +32573,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": "｡ ₊°༺ Azi's Wand of Frames ༻°₊ ｡",
@@ -32589,7 +32589,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": "*♤☆ Pyromancer's Fury ☆♤*",
@@ -32605,7 +32605,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": "🕸 ✧ Scarecrow ✧ 🕸",
@@ -32621,7 +32621,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": ".･:✧ Werewolf's Ears ✧:･.",
@@ -32637,7 +32637,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": "⋆ 👾 Debug Visor 👾 ⋆",
@@ -32653,7 +32653,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": ".･:✧ Loch Ness Monster ✧:･.",
@@ -32669,7 +32669,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -752",
-    "lastSeen": "2026-07-20T20:35:53.347Z"
+    "lastSeen": "2026-07-21T08:25:20.134Z"
   },
   {
     "itemName": "◊◇✧ Lumi's Cuddly Scarf ✧◇◊",
@@ -32685,7 +32685,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -751",
-    "lastSeen": "2026-07-20T20:35:54.123Z"
+    "lastSeen": "2026-07-21T08:25:22.502Z"
   },
   {
     "itemName": "Music Disc",
@@ -32701,7 +32701,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -751",
-    "lastSeen": "2026-07-20T20:35:54.123Z"
+    "lastSeen": "2026-07-21T08:25:22.502Z"
   },
   {
     "itemName": "❀ ❦ Spider Fangs ❦ ❀",
@@ -32717,7 +32717,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -751",
-    "lastSeen": "2026-07-20T20:35:54.123Z"
+    "lastSeen": "2026-07-21T08:25:22.502Z"
   },
   {
     "itemName": "Music Disc",
@@ -32733,7 +32733,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 105, -751",
-    "lastSeen": "2026-07-20T20:35:54.123Z"
+    "lastSeen": "2026-07-21T08:25:22.502Z"
   },
   {
     "itemName": "🕸 ✧ Notso Scissorgloves ✧ 🕸",
@@ -32749,7 +32749,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -753",
-    "lastSeen": "2026-07-20T20:35:54.644Z"
+    "lastSeen": "2026-07-21T08:25:19.388Z"
   },
   {
     "itemName": "◇◈ Handy Lockpick ◈◇",
@@ -32765,7 +32765,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -753",
-    "lastSeen": "2026-07-20T20:35:54.644Z"
+    "lastSeen": "2026-07-21T08:25:19.388Z"
   },
   {
     "itemName": "⋆ 👾 Skee Ball 👾 ⋆",
@@ -32781,7 +32781,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -753",
-    "lastSeen": "2026-07-20T20:35:54.644Z"
+    "lastSeen": "2026-07-21T08:25:19.388Z"
   },
   {
     "itemName": "The Giant Sea Sheep",
@@ -32797,7 +32797,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -753",
-    "lastSeen": "2026-07-20T20:35:54.644Z"
+    "lastSeen": "2026-07-21T08:25:19.388Z"
   },
   {
     "itemName": "｡๑♡ Nikki's Bunny Ears ♡๑｡",
@@ -32813,7 +32813,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -753",
-    "lastSeen": "2026-07-20T20:35:54.644Z"
+    "lastSeen": "2026-07-21T08:25:19.388Z"
   },
   {
     "itemName": "♫♪ Charm's Headphones ♫♪",
@@ -32829,7 +32829,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -753",
-    "lastSeen": "2026-07-20T20:35:54.644Z"
+    "lastSeen": "2026-07-21T08:25:19.388Z"
   },
   {
     "itemName": "🕸 ✧ Dyeable Witch Hat ✧ 🕸",
@@ -32845,7 +32845,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -753",
-    "lastSeen": "2026-07-20T20:35:54.644Z"
+    "lastSeen": "2026-07-21T08:25:19.388Z"
   },
   {
     "itemName": "❀ ❦ Wand of Pollination ❦ ❀",
@@ -32925,7 +32925,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -754",
-    "lastSeen": "2026-07-20T20:35:57.097Z"
+    "lastSeen": "2026-07-21T08:25:25.583Z"
   },
   {
     "itemName": "✸ Allonsi's Escarglow ✸",
@@ -32941,7 +32941,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -754",
-    "lastSeen": "2026-07-20T20:35:57.097Z"
+    "lastSeen": "2026-07-21T08:25:25.583Z"
   },
   {
     "itemName": "🕸 ✧ Spell of Soul Transfiguring ✧ 🕸",
@@ -32957,7 +32957,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -754",
-    "lastSeen": "2026-07-20T20:35:57.097Z"
+    "lastSeen": "2026-07-21T08:25:25.583Z"
   },
   {
     "itemName": "⊱✥ Violet Betta Bucket ✥⊰",
@@ -32973,7 +32973,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -750",
-    "lastSeen": "2026-07-20T20:35:58.548Z"
+    "lastSeen": "2026-07-21T08:25:24.840Z"
   },
   {
     "itemName": "⊱✥ Showa Sanshoku Koi Bucket ✥⊰",
@@ -32989,7 +32989,7 @@
     "seller": "Westerlund_",
     "world": "Firefly",
     "position": "-3889, 104, -750",
-    "lastSeen": "2026-07-20T20:35:58.548Z"
+    "lastSeen": "2026-07-21T08:25:24.840Z"
   },
   {
     "itemName": "Light Gray Stained Glass Pane",
@@ -164878,5 +164878,37 @@
     "world": "Firefly",
     "position": "-3957, 120, -1166",
     "lastSeen": "2026-07-21T08:04:07.846Z"
+  },
+  {
+    "itemName": "Grey Stained Glass Pane",
+    "baseItem": "minecraft:gray_stained_glass_pane",
+    "bulk": true,
+    "mixedContents": false,
+    "price": 32,
+    "priceLabel": "32 db",
+    "stackSize": 1,
+    "amount": 8,
+    "stacksInStock": 8,
+    "currency": "diamondblock",
+    "seller": "Westerlund_",
+    "world": "Firefly",
+    "position": "-3889, 104, -752",
+    "lastSeen": "2026-07-21T08:25:20.134Z"
+  },
+  {
+    "itemName": "Bundle",
+    "baseItem": "minecraft:bundle",
+    "bulk": false,
+    "mixedContents": false,
+    "price": 4,
+    "priceLabel": "4 db",
+    "stackSize": 1,
+    "amount": 18,
+    "stacksInStock": 18,
+    "currency": "diamondblock",
+    "seller": "glooppyy",
+    "world": "Firefly",
+    "position": "552, 86, -1707",
+    "lastSeen": "2026-07-21T08:25:57.790Z"
   }
 ]
