@@ -59,8 +59,8 @@
     "shops": [
       "/shop EarthHQ"
     ],
-    "status": "pending",
+    "status": "approved",
     "createdAt": "2026-07-21T15:50:21.020Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-21T15:50:30.108Z"
   }
 ]
