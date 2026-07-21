@@ -698,5 +698,30 @@
     "status": "approved",
     "createdAt": "2026-07-21T14:58:06.877Z",
     "resolvedAt": "2026-07-21T15:20:18.855Z"
+  },
+  {
+    "id": "d147bdc4-1db7-4ef4-b018-119e15ccbbc9",
+    "listingKey": "firefly|bookish__|minecraft:axolotl_spawn_egg|axolotl spawn egg",
+    "listing": {
+      "itemName": "Axolotl Spawn Egg",
+      "baseItem": "minecraft:axolotl_spawn_egg",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 1,
+      "priceLabel": "1 dia",
+      "stackSize": 1,
+      "amount": 1,
+      "stacksInStock": 1,
+      "currency": "diamond",
+      "seller": "bookish__",
+      "world": "Firefly",
+      "position": "528, 88, -1626",
+      "lastSeen": "2026-07-21T15:01:40.473Z"
+    },
+    "reason": "shop_gone",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-21T15:23:43.184Z",
+    "resolvedAt": null
   }
 ]
