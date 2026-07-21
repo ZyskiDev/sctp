@@ -695,8 +695,8 @@
     },
     "reason": "wrong_info",
     "details": "This chest sells Pale Oak Logs not Pale Snails",
-    "status": "pending",
+    "status": "approved",
     "createdAt": "2026-07-21T14:58:06.877Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-21T15:20:18.855Z"
   }
 ]
