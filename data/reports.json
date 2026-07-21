@@ -570,9 +570,9 @@
     },
     "reason": "other",
     "details": "",
-    "status": "pending",
+    "status": "denied",
     "createdAt": "2026-07-21T09:49:46.287Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-21T10:00:58.991Z"
   },
   {
     "id": "6bb5c59f-8b83-486a-8318-4f7e1d8684c1",
