@@ -773,5 +773,30 @@
     "status": "pending",
     "createdAt": "2026-07-21T17:09:29.507Z",
     "resolvedAt": null
+  },
+  {
+    "id": "fa38a362-31b1-4e5c-b548-f37884d4ad46",
+    "listingKey": "honeybee|shadow8death|minecraft:tuff|tuff",
+    "listing": {
+      "itemName": "Tuff",
+      "baseItem": "minecraft:tuff",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 0,
+      "priceLabel": "0 dia",
+      "stackSize": 64,
+      "amount": 64,
+      "stacksInStock": 1,
+      "currency": "diamond",
+      "seller": "Shadow8death",
+      "world": "Honeybee",
+      "position": "-4033, 106, -910",
+      "lastSeen": "2026-07-21T02:07:11.518Z"
+    },
+    "reason": "wrong_info",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-21T17:09:33.804Z",
+    "resolvedAt": null
   }
 ]
