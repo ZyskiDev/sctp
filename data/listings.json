@@ -78845,7 +78845,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3955, 117, -1154",
-    "lastSeen": "2026-07-21T07:30:19.906Z"
+    "lastSeen": "2026-07-21T08:43:51.793Z"
   },
   {
     "itemName": "Bone Block",
@@ -80381,7 +80381,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3957, 121, -1151",
-    "lastSeen": "2026-07-21T07:30:26.918Z"
+    "lastSeen": "2026-07-21T08:43:51.031Z"
   },
   {
     "itemName": "Lime Concrete Powder",
@@ -80418,50 +80418,50 @@
   {
     "itemName": "Orange Concrete Powder",
     "baseItem": "minecraft:orange_concrete_powder",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 2,
+    "priceLabel": "2 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3957, 121, -1155",
-    "lastSeen": "2026-07-21T08:43:20.061Z"
+    "position": "-3957, 120, -1155",
+    "lastSeen": "2026-07-21T08:43:49.471Z"
   },
   {
     "itemName": "Red Concrete Powder",
     "baseItem": "minecraft:red_concrete_powder",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 2,
+    "priceLabel": "2 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3956, 121, -1155",
-    "lastSeen": "2026-07-21T08:43:37.577Z"
+    "position": "-3956, 120, -1155",
+    "lastSeen": "2026-07-21T08:43:42.401Z"
   },
   {
     "itemName": "Red Concrete",
     "baseItem": "minecraft:red_concrete",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 3,
+    "priceLabel": "3 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3956, 121, -1151",
-    "lastSeen": "2026-07-21T07:30:20.743Z"
+    "position": "-3956, 120, -1151",
+    "lastSeen": "2026-07-21T08:43:48.658Z"
   },
   {
     "itemName": "Yellow Terracotta",
@@ -80482,18 +80482,18 @@
   {
     "itemName": "Brown Concrete",
     "baseItem": "minecraft:brown_concrete",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 3,
+    "priceLabel": "3 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3955, 121, -1151",
-    "lastSeen": "2026-07-21T08:43:36.789Z"
+    "position": "-3955, 120, -1151",
+    "lastSeen": "2026-07-21T08:43:41.569Z"
   },
   {
     "itemName": "White Concrete",
@@ -80509,7 +80509,7 @@
     "seller": "sqxzc",
     "world": "Firefly",
     "position": "-3951, 120, -1151",
-    "lastSeen": "2026-07-21T07:30:27.641Z"
+    "lastSeen": "2026-07-21T08:43:47.044Z"
   },
   {
     "itemName": "White Concrete Powder",
@@ -80546,18 +80546,18 @@
   {
     "itemName": "Orange Terracotta",
     "baseItem": "minecraft:orange_terracotta",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 2,
+    "priceLabel": "2 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3957, 121, -1156",
-    "lastSeen": "2026-07-21T07:30:14.480Z"
+    "position": "-3957, 120, -1156",
+    "lastSeen": "2026-07-21T08:43:52.606Z"
   },
   {
     "itemName": "Green Concrete Powder",
@@ -80642,18 +80642,18 @@
   {
     "itemName": "Red Terracotta",
     "baseItem": "minecraft:red_terracotta",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 2,
+    "priceLabel": "2 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3956, 121, -1156",
-    "lastSeen": "2026-07-21T07:30:08.222Z"
+    "position": "-3956, 120, -1156",
+    "lastSeen": "2026-07-21T08:43:47.844Z"
   },
   {
     "itemName": "Yellow Glazed Terracotta",
@@ -80946,18 +80946,18 @@
   {
     "itemName": "Brown Terracotta",
     "baseItem": "minecraft:brown_terracotta",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 2,
+    "priceLabel": "2 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3955, 121, -1156",
-    "lastSeen": "2026-07-21T08:43:35.946Z"
+    "position": "-3955, 120, -1156",
+    "lastSeen": "2026-07-21T08:43:40.751Z"
   },
   {
     "itemName": "Red Glazed Terracotta",
@@ -80994,18 +80994,18 @@
   {
     "itemName": "White Terracotta",
     "baseItem": "minecraft:white_terracotta",
-    "bulk": false,
+    "bulk": true,
     "mixedContents": false,
-    "price": 1,
-    "priceLabel": "1 dia",
+    "price": 2,
+    "priceLabel": "2 db",
     "stackSize": 64,
-    "amount": 1728,
-    "stacksInStock": 27,
-    "currency": "diamond",
+    "amount": 46656,
+    "stacksInStock": 729,
+    "currency": "diamondblock",
     "seller": "sqxzc",
     "world": "Firefly",
-    "position": "-3951, 121, -1156",
-    "lastSeen": "2026-07-21T07:30:16.790Z"
+    "position": "-3951, 120, -1156",
+    "lastSeen": "2026-07-21T08:43:46.260Z"
   },
   {
     "itemName": "Brown Wool",
