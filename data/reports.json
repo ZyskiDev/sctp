@@ -573,5 +573,30 @@
     "status": "pending",
     "createdAt": "2026-07-21T09:49:46.287Z",
     "resolvedAt": null
+  },
+  {
+    "id": "6bb5c59f-8b83-486a-8318-4f7e1d8684c1",
+    "listingKey": "firefly|slasheryn|minecraft:emerald|◇◯🍴 hotdog snail 🍴◯◇",
+    "listing": {
+      "itemName": "◇◯🍴 Hotdog Snail 🍴◯◇",
+      "baseItem": "minecraft:emerald",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 5,
+      "priceLabel": "5 db",
+      "stackSize": 1,
+      "amount": 1,
+      "stacksInStock": 1,
+      "currency": "diamondblock",
+      "seller": "Slasheryn",
+      "world": "Firefly",
+      "position": "416, 90, 1162",
+      "lastSeen": "2026-07-21T05:10:52.989Z"
+    },
+    "reason": "wrong_info",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-21T09:58:55.705Z",
+    "resolvedAt": null
   }
 ]
