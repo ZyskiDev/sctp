@@ -723,5 +723,30 @@
     "status": "approved",
     "createdAt": "2026-07-21T15:23:43.184Z",
     "resolvedAt": "2026-07-21T15:39:04.104Z"
+  },
+  {
+    "id": "b4f40ef6-2233-4c64-b858-1a21427a405a",
+    "listingKey": "honeybee|shadow8death|minecraft:gravel|gravel",
+    "listing": {
+      "itemName": "Gravel",
+      "baseItem": "minecraft:gravel",
+      "bulk": false,
+      "mixedContents": false,
+      "price": 0,
+      "priceLabel": "0 dia",
+      "stackSize": 3,
+      "amount": 3,
+      "stacksInStock": 1,
+      "currency": "diamond",
+      "seller": "Shadow8death",
+      "world": "Honeybee",
+      "position": "-4033, 106, -910",
+      "lastSeen": "2026-07-21T02:07:11.518Z"
+    },
+    "reason": "wrong_info",
+    "details": "",
+    "status": "pending",
+    "createdAt": "2026-07-21T17:09:24.557Z",
+    "resolvedAt": null
   }
 ]
