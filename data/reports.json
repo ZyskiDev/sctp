@@ -745,9 +745,9 @@
     },
     "reason": "wrong_info",
     "details": "",
-    "status": "pending",
+    "status": "approved",
     "createdAt": "2026-07-21T17:09:24.557Z",
-    "resolvedAt": null
+    "resolvedAt": "2026-07-21T17:11:20.518Z"
   },
   {
     "id": "63883df7-c770-4d57-93fa-aebe69abbfe1",
