@@ -42,5 +42,15 @@
     "status": "approved",
     "createdAt": "2026-07-21T12:54:21.180Z",
     "resolvedAt": "2026-07-21T13:39:22.138Z"
+  },
+  {
+    "id": "9faef9f2-4e77-4f65-adec-089e6838153f",
+    "username": "EarthHQ",
+    "shops": [
+      "/shop charmolyqi"
+    ],
+    "status": "pending",
+    "createdAt": "2026-07-21T15:50:06.604Z",
+    "resolvedAt": null
   }
 ]
