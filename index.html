@@ -133,6 +133,7 @@
 		cursor:pointer;white-space:nowrap;
 	}
 	.search-scope-menu input[type=checkbox]{accent-color:var(--accent);cursor:pointer;}
+	.search-scope-divider{height:1px;background:var(--line);margin:2px 0;}
 
 	/* ---------- stats ---------- */
 	.stats-band{
@@ -163,6 +164,8 @@
 		border-radius:8px;padding:8px 10px;font-family:var(--font-body);font-size:13.5px;
 	}
 	.f-range{display:flex;gap:8px;}
+	.f-checkbox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:0;}
+	.f-checkbox input[type=checkbox]{accent-color:var(--accent);cursor:pointer;}
 	.f-reset{
 		width:100%;background:transparent;border:1px dashed var(--line);color:var(--muted);
 		border-radius:8px;padding:9px;font-size:13px;cursor:pointer;margin-top:4px;
@@ -357,6 +360,8 @@
 					<label><input type="checkbox" id="scopeItemName" checked> Item name</label>
 					<label><input type="checkbox" id="scopeBaseItem" checked> Base item</label>
 					<label><input type="checkbox" id="scopeSeller" checked> Seller</label>
+					<div class="search-scope-divider"></div>
+					<label><input type="checkbox" id="scopeExactOnly"> Exact matches only</label>
 				</div>
 			</div>
 			<button id="clearSearch" type="button">Clear</button>
@@ -387,6 +392,10 @@
 					<option value="bulk">Bulk (shulker) only</option>
 					<option value="single">Non-bulk only</option>
 				</select>
+			</div>
+
+			<div class="f-group">
+				<label class="f-checkbox"><input type="checkbox" id="fHideDisplay"> Hide display-only listings</label>
 			</div>
 
 			<div class="f-group">
@@ -449,17 +458,17 @@
 		<h2>Download Shop Logger</h2>
 		<p>Pick the version that matches the Minecraft version you're playing.</p>
 		<div class="download-options">
-			<a class="download-option" href="shoplogger-1.0.0.jar" download="shoplogger-1.0.0.jar">
+			<a class="download-option" href="shoplogger-1.21.11-1.2.1.jar" download="shoplogger-1.21.11-1.2.1.jar">
 				<strong>Minecraft 1.21.11</strong>
-				<span>shoplogger-1.0.0.jar</span>
+				<span>shoplogger-1.21.11-1.2.1.jar</span>
 			</a>
-			<a class="download-option" href="shoplogger26-1.0.0.jar" download="shoplogger26-1.0.0.jar">
+			<a class="download-option" href="shoplogger-26.1-1.2.1.jar" download="shoplogger-26.1-1.2.1.jar">
 				<strong>Minecraft 26.1</strong>
-				<span>shoplogger26-1.0.0.jar</span>
+				<span>shoplogger-26.1-1.2.1.jar</span>
 			</a>
-			<a class="download-option" href="shoploggerv26.2-1.0.0.jar" download="shoploggerv26.2-1.0.0.jar">
+			<a class="download-option" href="shoplogger-26.2-1.2.1.jar" download="shoplogger-26.2-1.2.1.jar">
 				<strong>Minecraft 26.2</strong>
-				<span>shoploggerv26.2-1.0.0.jar</span>
+				<span>shoplogger-26.2-1.2.1.jar</span>
 			</a>
 		</div>
 		<p class="download-reminder">Requires <strong>Fabric API</strong> installed alongside the mod, and <strong>Fabric Loader 0.19.3</strong> or newer.</p>
@@ -732,31 +741,55 @@
 		});
 	}
 
+	// q is already trimmed+lowercased by the caller. Checks whichever fields
+	// are enabled in the search scope for an exact (not substring) match.
+	// Strips everything but letters — lets an exact-match search for "ITEM"
+	// hit a decorated name like "~~ITEM!~~" or "::ITEM::".
+	function alphaOnly(s){
+		return String(s||"").toLowerCase().replace(/[^a-z]/g, "");
+	}
+
+	function isExactMatch(r, q, scope){
+		if(scope.itemName && alphaOnly(r.itemName) === alphaOnly(q)) return true;
+		if(scope.baseItem && String(r.baseItem||"").trim().toLowerCase() === q) return true;
+		if(scope.seller && String(r.seller||"").trim().toLowerCase() === q) return true;
+		return false;
+	}
+
 	function applyFilters(){
 		var q = document.getElementById("searchInput").value.trim().toLowerCase();
 		var world = document.getElementById("fWorld").value;
 		var bulkMode = document.getElementById("fBulk").value;
+		var hideDisplay = document.getElementById("fHideDisplay").checked;
 		var priceMin = document.getElementById("fPriceMin").value;
 		var priceMax = document.getElementById("fPriceMax").value;
 		var minStock = document.getElementById("fMinStock").value;
 		sortKey = document.getElementById("fSort").value;
 
-		var scopeItemName = document.getElementById("scopeItemName").checked;
-		var scopeBaseItem = document.getElementById("scopeBaseItem").checked;
-		var scopeSeller = document.getElementById("scopeSeller").checked;
+		var scope = {
+			itemName: document.getElementById("scopeItemName").checked,
+			baseItem: document.getElementById("scopeBaseItem").checked,
+			seller: document.getElementById("scopeSeller").checked
+		};
+		var exactOnly = document.getElementById("scopeExactOnly").checked;
 
 		filtered = allListings.filter(function(r){
 			if(q){
-				var parts = [];
-				if(scopeItemName) parts.push(r.itemName);
-				if(scopeBaseItem) parts.push(r.baseItem);
-				if(scopeSeller) parts.push(r.seller);
-				var hay = parts.join(" ").toLowerCase();
-				if(hay.indexOf(q) === -1) return false;
+				if(exactOnly){
+					if(!isExactMatch(r, q, scope)) return false;
+				} else {
+					var parts = [];
+					if(scope.itemName) parts.push(r.itemName);
+					if(scope.baseItem) parts.push(r.baseItem);
+					if(scope.seller) parts.push(r.seller);
+					var hay = parts.join(" ").toLowerCase();
+					if(hay.indexOf(q) === -1) return false;
+				}
 			}
 			if(world && r.world !== world) return false;
 			if(bulkMode === "bulk" && !r.bulk) return false;
 			if(bulkMode === "single" && r.bulk) return false;
+			if(hideDisplay && String(r.currency||"").toLowerCase() === "display") return false;
 			if(priceMin !== "" && priceInDiamonds(r) < parseFloat(priceMin)) return false;
 			if(priceMax !== "" && priceInDiamonds(r) > parseFloat(priceMax)) return false;
 			if(minStock !== "" && r.amount < parseFloat(minStock)) return false;
@@ -764,6 +797,12 @@
 		});
 
 		filtered.sort(function(a,b){
+			// Exact matches always float to the top of a search, regardless of sort order.
+			if(q){
+				var aExact = isExactMatch(a, q, scope);
+				var bExact = isExactMatch(b, q, scope);
+				if(aExact !== bExact) return aExact ? -1 : 1;
+			}
 			switch(sortKey){
 				case "price-asc": return priceInDiamonds(a) - priceInDiamonds(b);
 				case "price-desc": return priceInDiamonds(b) - priceInDiamonds(a);
@@ -877,12 +916,25 @@
 	// Average price is per single item, in diamond-equivalent terms — a listing
 	// selling "2 dia per 32" contributes 2/32 here, not 2/64, since the sign's
 	// price is per whatever batch size the shop actually stocks (see ShopEntry).
+	// Above 9 diamonds (= 1 diamond block), show the average in db instead of
+	// dia — a bare diamond count that large is harder to read at a glance.
+	function fmtAvgPrice(diamonds){
+		if(diamonds === null) return "—";
+		if(diamonds > 9){
+			return fmtNum(Math.round((diamonds/9)*100)/100) + " db";
+		}
+		return fmtNum(Math.round(diamonds*100)/100) + " dia";
+	}
+
 	function renderPriceSummary(){
 		var el = document.getElementById("priceSummary");
 		var worlds = ["Firefly","Honeybee"];
 
+		// [DISPLAY] listings have no real price — never let them drag the average down.
+		var priced = filtered.filter(function(r){ return String(r.currency||"").toLowerCase() !== "display"; });
+
 		var rows = worlds.map(function(world){
-			var rows = filtered.filter(function(r){ return r.world === world; });
+			var rows = priced.filter(function(r){ return r.world === world; });
 			if(rows.length === 0) return {world:world, per1:null, per64:null};
 			var sum = rows.reduce(function(acc,r){ return acc + (priceInDiamonds(r)/r.stackSize); }, 0);
 			var per1 = sum / rows.length;
@@ -890,12 +942,12 @@
 		});
 
 		var html = '<table><thead><tr>'+
-			'<th>World</th><th>Avg price per 1 (diamonds)</th><th>Avg price per 64 (diamonds)</th>'+
+			'<th>World</th><th>Avg price per 1</th><th>Avg price per 64</th>'+
 			'</tr></thead><tbody>';
 		rows.forEach(function(row){
 			html += '<tr><td>'+esc(row.world)+'</td>'+
-				'<td>'+(row.per1 === null ? '—' : fmtNum(Math.round(row.per1*100)/100))+'</td>'+
-				'<td>'+(row.per64 === null ? '—' : fmtNum(Math.round(row.per64*100)/100))+'</td></tr>';
+				'<td>'+fmtAvgPrice(row.per1)+'</td>'+
+				'<td>'+fmtAvgPrice(row.per64)+'</td></tr>';
 		});
 		html += '</tbody></table>';
 		el.innerHTML = html;
@@ -1176,10 +1228,10 @@
 		searchScopeMenu.classList.remove("open");
 		searchScopeBtn.setAttribute("aria-expanded", "false");
 	});
-	["scopeItemName","scopeBaseItem","scopeSeller"].forEach(function(id){
+	["scopeItemName","scopeBaseItem","scopeSeller","scopeExactOnly"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 	});
-	["fWorld","fBulk","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
+	["fWorld","fBulk","fHideDisplay","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 		document.getElementById(id).addEventListener("input", applyFilters);
 	});
@@ -1187,6 +1239,7 @@
 		document.getElementById("searchInput").value = "";
 		document.getElementById("fWorld").value = "";
 		document.getElementById("fBulk").value = "";
+		document.getElementById("fHideDisplay").checked = false;
 		document.getElementById("fPriceMin").value = "";
 		document.getElementById("fPriceMax").value = "";
 		document.getElementById("fMinStock").value = "";
@@ -1194,6 +1247,7 @@
 		document.getElementById("scopeItemName").checked = true;
 		document.getElementById("scopeBaseItem").checked = true;
 		document.getElementById("scopeSeller").checked = true;
+		document.getElementById("scopeExactOnly").checked = false;
 		applyFilters();
 	});
 	document.getElementById("prevPage").addEventListener("click", function(){ page--; renderTable(); });
