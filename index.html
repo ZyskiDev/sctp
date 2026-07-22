@@ -120,6 +120,19 @@
 		border-radius:10px;padding:0 20px;font-family:var(--font-body);font-weight:600;cursor:pointer;
 	}
 	.search-box button:hover{border-color:var(--accent-dim);}
+	.search-scope{position:relative;display:flex;}
+	.search-scope-menu{
+		display:none;flex-direction:column;gap:8px;
+		position:absolute;top:calc(100% + 8px);right:0;
+		background:var(--panel-alt);border:1px solid var(--line);border-radius:10px;
+		padding:10px 12px;min-width:160px;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,0.35);
+	}
+	.search-scope-menu.open{display:flex;}
+	.search-scope-menu label{
+		display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);
+		cursor:pointer;white-space:nowrap;
+	}
+	.search-scope-menu input[type=checkbox]{accent-color:var(--accent);cursor:pointer;}
 
 	/* ---------- stats ---------- */
 	.stats-band{
@@ -155,6 +168,21 @@
 		border-radius:8px;padding:9px;font-size:13px;cursor:pointer;margin-top:4px;
 	}
 	.f-reset:hover{color:var(--text);border-color:var(--accent-dim);}
+
+	/* ---------- price summary ---------- */
+	.price-summary{padding:14px 16px;border-bottom:1px solid var(--line);}
+	.price-summary table{width:auto;min-width:0;border-collapse:collapse;}
+	.price-summary th{
+		text-align:left;color:var(--muted);font-weight:600;font-size:11px;
+		text-transform:uppercase;letter-spacing:.04em;background:none;cursor:default;
+		padding:0 20px 6px 0;border-bottom:none;white-space:nowrap;
+	}
+	.price-summary td{
+		padding:3px 20px 3px 0;font-family:var(--font-mono);color:var(--text);
+		white-space:nowrap;vertical-align:baseline;
+	}
+	.price-summary td:first-child{font-family:var(--font-body);font-weight:600;color:var(--shell);}
+	.price-summary tbody tr{border-bottom:none;}
 
 	/* ---------- table ---------- */
 	.table-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
@@ -323,6 +351,14 @@
 	<div class="search-band">
 		<div class="search-box">
 			<input id="searchInput" type="text" placeholder="Search an item, base item, or seller — e.g. diamond, netherite, Steve…" autocomplete="off">
+			<div class="search-scope">
+				<button id="searchScopeBtn" type="button" aria-haspopup="true" aria-expanded="false">Search in ▾</button>
+				<div class="search-scope-menu" id="searchScopeMenu">
+					<label><input type="checkbox" id="scopeItemName" checked> Item name</label>
+					<label><input type="checkbox" id="scopeBaseItem" checked> Base item</label>
+					<label><input type="checkbox" id="scopeSeller" checked> Seller</label>
+				</div>
+			</div>
 			<button id="clearSearch" type="button">Clear</button>
 		</div>
 	</div>
@@ -382,6 +418,7 @@
 		</aside>
 
 		<section class="table-card">
+			<div class="price-summary" id="priceSummary"></div>
 			<div class="table-toolbar">
 				<span class="count" id="resultCount">—</span>
 				<button id="exportBtn" type="button">Export filtered as CSV</button>
@@ -704,9 +741,17 @@
 		var minStock = document.getElementById("fMinStock").value;
 		sortKey = document.getElementById("fSort").value;
 
+		var scopeItemName = document.getElementById("scopeItemName").checked;
+		var scopeBaseItem = document.getElementById("scopeBaseItem").checked;
+		var scopeSeller = document.getElementById("scopeSeller").checked;
+
 		filtered = allListings.filter(function(r){
 			if(q){
-				var hay = (r.itemName+" "+r.baseItem+" "+r.seller).toLowerCase();
+				var parts = [];
+				if(scopeItemName) parts.push(r.itemName);
+				if(scopeBaseItem) parts.push(r.baseItem);
+				if(scopeSeller) parts.push(r.seller);
+				var hay = parts.join(" ").toLowerCase();
 				if(hay.indexOf(q) === -1) return false;
 			}
 			if(world && r.world !== world) return false;
@@ -829,8 +874,36 @@
 		});
 	}
 
+	// Average price is per single item, in diamond-equivalent terms — a listing
+	// selling "2 dia per 32" contributes 2/32 here, not 2/64, since the sign's
+	// price is per whatever batch size the shop actually stocks (see ShopEntry).
+	function renderPriceSummary(){
+		var el = document.getElementById("priceSummary");
+		var worlds = ["Firefly","Honeybee"];
+
+		var rows = worlds.map(function(world){
+			var rows = filtered.filter(function(r){ return r.world === world; });
+			if(rows.length === 0) return {world:world, per1:null, per64:null};
+			var sum = rows.reduce(function(acc,r){ return acc + (priceInDiamonds(r)/r.stackSize); }, 0);
+			var per1 = sum / rows.length;
+			return {world:world, per1:per1, per64:per1*64};
+		});
+
+		var html = '<table><thead><tr>'+
+			'<th>World</th><th>Avg price per 1 (diamonds)</th><th>Avg price per 64 (diamonds)</th>'+
+			'</tr></thead><tbody>';
+		rows.forEach(function(row){
+			html += '<tr><td>'+esc(row.world)+'</td>'+
+				'<td>'+(row.per1 === null ? '—' : fmtNum(Math.round(row.per1*100)/100))+'</td>'+
+				'<td>'+(row.per64 === null ? '—' : fmtNum(Math.round(row.per64*100)/100))+'</td></tr>';
+		});
+		html += '</tbody></table>';
+		el.innerHTML = html;
+	}
+
 	function renderAll(){
 		renderStats();
+		renderPriceSummary();
 		renderTable();
 	}
 
@@ -1089,6 +1162,23 @@
 		document.getElementById("searchInput").value = "";
 		applyFilters();
 	});
+
+	var searchScopeBtn = document.getElementById("searchScopeBtn");
+	var searchScopeMenu = document.getElementById("searchScopeMenu");
+	searchScopeBtn.addEventListener("click", function(e){
+		e.stopPropagation();
+		var open = searchScopeMenu.classList.toggle("open");
+		searchScopeBtn.setAttribute("aria-expanded", open ? "true" : "false");
+	});
+	document.addEventListener("click", function(e){
+		if(!searchScopeMenu.classList.contains("open")) return;
+		if(e.target === searchScopeBtn || searchScopeMenu.contains(e.target)) return;
+		searchScopeMenu.classList.remove("open");
+		searchScopeBtn.setAttribute("aria-expanded", "false");
+	});
+	["scopeItemName","scopeBaseItem","scopeSeller"].forEach(function(id){
+		document.getElementById(id).addEventListener("change", applyFilters);
+	});
 	["fWorld","fBulk","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 		document.getElementById(id).addEventListener("input", applyFilters);
@@ -1101,6 +1191,9 @@
 		document.getElementById("fPriceMax").value = "";
 		document.getElementById("fMinStock").value = "";
 		document.getElementById("fSort").value = "recent";
+		document.getElementById("scopeItemName").checked = true;
+		document.getElementById("scopeBaseItem").checked = true;
+		document.getElementById("scopeSeller").checked = true;
 		applyFilters();
 	});
 	document.getElementById("prevPage").addEventListener("click", function(){ page--; renderTable(); });
