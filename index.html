@@ -135,6 +135,13 @@
 	.search-scope-menu input[type=checkbox]{accent-color:var(--accent);cursor:pointer;}
 	.search-scope-divider{height:1px;background:var(--line);margin:2px 0;}
 
+	.rare-notice{
+		margin-top:10px;padding:9px 14px;border-radius:10px;
+		background:rgba(183,226,61,0.08);border:1px solid var(--accent-dim);
+		color:var(--accent);font-size:13.5px;font-weight:600;
+	}
+	.rare-notice[hidden]{display:none;}
+
 	/* ---------- stats ---------- */
 	.stats-band{
 		display:flex;gap:28px;flex-wrap:wrap;
@@ -151,8 +158,9 @@
 	.filters{
 		background:var(--panel);border:1px solid var(--line);border-radius:14px;
 		padding:18px 16px;position:sticky;top:16px;
+		max-height:calc(100vh - 32px);overflow-y:auto;
 	}
-	@media (max-width:860px){.filters{position:static;}}
+	@media (max-width:860px){.filters{position:static;max-height:none;overflow-y:visible;}}
 	.filters h2{
 		font-family:var(--font-display);font-size:15px;font-weight:600;margin:0 0 14px;
 		color:var(--shell);text-transform:uppercase;letter-spacing:.06em;
@@ -393,6 +401,7 @@
 			</div>
 			<button id="clearSearch" type="button">Clear</button>
 		</div>
+		<div class="rare-notice" id="rareNotice" hidden></div>
 	</div>
 
 	<div class="stats-band" id="statsBand">
@@ -762,11 +771,68 @@
 	// Set these after deploying the Worker (see trading-post-api/README.md).
 	var DATA_URL = "https://maxolotled.github.io/sctp/data/listings.json";
 	var SHARED_SHOPS_URL = "https://maxolotled.github.io/sctp/data/shared-shops-approved.json";
+	var RAR_FIREFLY_URL = "https://maxolotled.github.io/sctp/data/rar_firefly.txt";
+	var TL_HONEYBEE_URL = "https://maxolotled.github.io/sctp/data/tl_honeybee.txt";
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var API_KEY = "JjabYIfRtghvBJNoy6857TFVHbjknlMOi6754E5dcfvhgBHNI6b564"; // only used for manual upload / reports / requests, see notes in each modal
 
 	// seller (lowercased) -> array of shop names, from approved shared-shop requests
 	var sharedShopsBySeller = {};
+
+	// Rare-item name lists (one name per line in the .txt files), normalized
+	// with alphaOnly() so matching is case/punctuation-insensitive just like
+	// the rest of the site's exact-match logic.
+	var rareFireflyNames = new Set();
+	var rareHoneybeeNames = new Set();
+	var RARE_MESSAGES = {
+		firefly: "This item is available at /pw RentARare!",
+		honeybee: "This item is available at /pw tool_library!"
+	};
+
+	// Returns the applicable rare-availability message(s) for an item name, or
+	// an empty array if it isn't on either list. A name on both lists (should
+	// be rare in practice) gets both messages.
+	function rareMatchesFor(name){
+		var norm = alphaOnly(name);
+		if(!norm) return [];
+		var out = [];
+		if(rareFireflyNames.has(norm)) out.push(RARE_MESSAGES.firefly);
+		if(rareHoneybeeNames.has(norm)) out.push(RARE_MESSAGES.honeybee);
+		return out;
+	}
+
+	// q is already trimmed+lowercased. Shows/hides the notice below the search
+	// bar based on whether the full search text is an exact rare-name match —
+	// a substring match doesn't count, same as the site's other exact-match logic.
+	function updateRareNotice(q){
+		var el = document.getElementById("rareNotice");
+		var matches = q ? rareMatchesFor(q) : [];
+		if(matches.length === 0){
+			el.hidden = true;
+			el.textContent = "";
+			return;
+		}
+		el.textContent = matches.join(" ");
+		el.hidden = false;
+	}
+
+	async function fetchRareNameSet(url){
+		try {
+			var res = await fetch(url + "?t=" + Date.now());
+			if(!res.ok) return new Set();
+			var text = await res.text();
+			return new Set(text.split(/\r?\n/).map(alphaOnly).filter(Boolean));
+		} catch(e){
+			return new Set();
+		}
+	}
+
+	async function loadRareLists(){
+		rareFireflyNames = await fetchRareNameSet(RAR_FIREFLY_URL);
+		rareHoneybeeNames = await fetchRareNameSet(TL_HONEYBEE_URL);
+		updateRareNotice(document.getElementById("searchInput").value.trim().toLowerCase());
+		renderTable(); // re-render so any already-visible rows pick up their info icon
+	}
 
 	// ---------------- data loading ----------------
 	async function loadListings(){
@@ -936,6 +1002,7 @@
 
 	function applyFilters(){
 		var q = document.getElementById("searchInput").value.trim().toLowerCase();
+		updateRareNotice(q);
 		var world = document.getElementById("fWorld").value;
 		var bulkMode = document.getElementById("fBulk").value;
 		var hideDisplay = document.getElementById("fHideDisplay").checked;
@@ -1063,8 +1130,12 @@
 			var infoIcon = shops && shops.length
 				? '<span class="info-icon" tabindex="0">i<span class="tooltip">This user might sell in the following shops: '+esc(shops.join(", "))+'</span></span>'
 				: '';
+			var rareMatches = rareMatchesFor(r.itemName);
+			var rareIcon = rareMatches.length
+				? '<span class="info-icon" tabindex="0">i<span class="tooltip">'+esc(rareMatches.join(" "))+'</span></span>'
+				: '';
 			html += '<tr>'+
-				'<td class="item-name">'+esc(r.itemName)+'</td>'+
+				'<td class="item-name">'+esc(r.itemName)+rareIcon+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
 				'<td>'+
 					(r.bulk ? '<span class="badge bulk">Bulk</span>' : '<span class="badge single">Single</span>')+
@@ -1498,6 +1569,7 @@
 
 	loadListings();
 	setInterval(loadListings, 2 * 60 * 1000); // data updates on its own now — pick it up without a manual refresh
+	loadRareLists();
 })();
 </script>
 </body>
