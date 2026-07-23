@@ -184,6 +184,7 @@
 		position:absolute;top:calc(100% + 6px);left:0;right:0;
 		background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;
 		padding:10px 12px;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,0.35);
+		max-height:200px;overflow-y:auto;
 	}
 	.f-dropdown-menu.open{display:flex;}
 	.f-dropdown-menu label{
@@ -191,6 +192,7 @@
 		cursor:pointer;white-space:nowrap;
 	}
 	.f-dropdown-menu input[type=checkbox]{accent-color:var(--accent);cursor:pointer;}
+	.f-dropdown-menu .search-scope-divider{flex:0 0 auto;}
 	.f-reset{
 		width:100%;background:transparent;border:1px dashed var(--line);color:var(--muted);
 		border-radius:8px;padding:9px;font-size:13px;cursor:pointer;margin-top:4px;
@@ -416,6 +418,7 @@
 					<option value="">All listings</option>
 					<option value="bulk">Bulk (shulker) only</option>
 					<option value="single">Non-bulk only</option>
+					<option value="nonstacked">Non-stacked items only</option>
 				</select>
 			</div>
 
@@ -455,15 +458,22 @@
 			</div>
 
 			<div class="f-group">
-				<label for="fSort">Sort by</label>
-				<select id="fSort">
-					<option value="recent">Most recently updated</option>
-					<option value="price-asc">Price ↑</option>
-					<option value="price-desc">Price ↓</option>
-					<option value="stock-desc">Amount in stock ↓</option>
-					<option value="item-az">Item name A→Z</option>
-					<option value="seller-az">Seller A→Z</option>
-				</select>
+				<label for="sortDropdownBtn">Sort by</label>
+				<div class="f-dropdown">
+					<button type="button" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false" class="f-dropdown-btn">Most recently updated ▾</button>
+					<div class="f-dropdown-menu" id="sortDropdownMenu">
+						<label><input type="checkbox" data-sort="recent" checked> Most recently updated</label>
+						<div class="search-scope-divider"></div>
+						<label><input type="checkbox" data-sort="price-asc"> Price ↑ (cheapest per item first)</label>
+						<label><input type="checkbox" data-sort="price-desc"> Price ↓ (priciest per item first)</label>
+						<div class="search-scope-divider"></div>
+						<label><input type="checkbox" data-sort="stock-asc"> Stock ↑ (lowest first)</label>
+						<label><input type="checkbox" data-sort="stock-desc"> Stock ↓ (highest first)</label>
+						<div class="search-scope-divider"></div>
+						<label><input type="checkbox" data-sort="item-az"> Item name A→Z</label>
+						<label><input type="checkbox" data-sort="seller-az"> Seller A→Z</label>
+					</div>
+				</div>
 			</div>
 
 			<button class="f-reset" id="resetFilters" type="button">Reset all filters</button>
@@ -501,17 +511,17 @@
 		<h2>Download Shop Logger</h2>
 		<p>Pick the version that matches the Minecraft version you're playing.</p>
 		<div class="download-options">
-			<a class="download-option" href="shoplogger-1.21.11-1.2.2.jar" download="shoplogger-1.21.11-1.2.2.jar">
+			<a class="download-option" href="shoplogger-1.21.11-1.2.3.jar" download="shoplogger-1.21.11-1.2.3.jar">
 				<strong>Minecraft 1.21.11</strong>
-				<span>shoplogger-1.21.11-1.2.2.jar</span>
+				<span>shoplogger-1.21.11-1.2.3.jar</span>
 			</a>
-			<a class="download-option" href="shoplogger-26.1-1.2.2.jar" download="shoplogger-26.1-1.2.2.jar">
+			<a class="download-option" href="shoplogger-26.1-1.2.3.jar" download="shoplogger-26.1-1.2.3.jar">
 				<strong>Minecraft 26.1</strong>
-				<span>shoplogger-26.1-1.2.2.jar</span>
+				<span>shoplogger-26.1-1.2.3.jar</span>
 			</a>
-			<a class="download-option" href="shoplogger-26.2-1.2.2.jar" download="shoplogger-26.2-1.2.2.jar">
+			<a class="download-option" href="shoplogger-26.2-1.2.3.jar" download="shoplogger-26.2-1.2.3.jar">
 				<strong>Minecraft 26.2</strong>
-				<span>shoplogger-26.2-1.2.2.jar</span>
+				<span>shoplogger-26.2-1.2.3.jar</span>
 			</a>
 		</div>
 		<p class="download-reminder">Requires <strong>Fabric API</strong> installed alongside the mod, and <strong>Fabric Loader 0.19.3</strong> or newer.</p>
@@ -587,9 +597,23 @@
 	var filtered = [];
 	var page = 1;
 	var PAGE_SIZE = 50;
-	var sortKey = "recent";
 	var currencyFilters = {}; // lowercase currency -> checked, built from whatever's actually in the data
 	var CURRENCY_LABELS = { diamond: "Diamond", diamondblock: "Diamond block" };
+
+	// Multiple sort criteria can be active at once — e.g. price ascending AND
+	// stock ascending, applied as primary/tiebreaker in this fixed order
+	// regardless of which order they were checked in.
+	var SORT_OPTIONS = [
+		{ key: "recent", label: "Most recently updated" },
+		{ key: "price-asc", label: "Price ↑ (cheapest per item first)" },
+		{ key: "price-desc", label: "Price ↓ (priciest per item first)" },
+		{ key: "stock-asc", label: "Stock ↑ (lowest first)" },
+		{ key: "stock-desc", label: "Stock ↓ (highest first)" },
+		{ key: "item-az", label: "Item name A→Z" },
+		{ key: "seller-az", label: "Seller A→Z" },
+	];
+	var SORT_EXCLUSIVE_PAIRS = [["price-asc", "price-desc"], ["stock-asc", "stock-desc"]];
+	var activeSorts = new Set(["recent"]);
 
 	// ---------------- helpers ----------------
 	function normHeader(h){
@@ -632,6 +656,14 @@
 		if(String(r.currency||"").toLowerCase() === "display") return Infinity;
 		var mult = CURRENCY_VALUE[String(r.currency||"").toLowerCase()];
 		return r.price * (mult || 1);
+	}
+
+	// Price per single item, not per listing — a "1 dia per 64" listing is a
+	// much better deal than "1 dia per 32" even though priceInDiamonds() is
+	// the same for both, so sorting by price needs this instead of the raw
+	// listing price.
+	function pricePerItem(r){
+		return priceInDiamonds(r) / (r.stackSize || 1);
 	}
 
 	function toBool(v){
@@ -820,6 +852,36 @@
 		btn.textContent = label + " ▾";
 	}
 
+	function sortLabel(key){
+		var opt = SORT_OPTIONS.filter(function(o){ return o.key === key; })[0];
+		return opt ? opt.label : key;
+	}
+
+	function updateSortDropdownLabel(){
+		var btn = document.getElementById("sortDropdownBtn");
+		var checked = SORT_OPTIONS.map(function(o){ return o.key; }).filter(function(k){ return activeSorts.has(k); });
+		var label = checked.length ? checked.map(sortLabel).join(", ") : "No sort (upload order)";
+		btn.textContent = label + " ▾";
+	}
+
+	// Keeps the checkboxes in the sort dropdown in sync with activeSorts —
+	// needed after setSortOnly() or resetFilters() change the set programmatically.
+	function syncSortMenuCheckboxes(){
+		var menu = document.getElementById("sortDropdownMenu");
+		Array.prototype.forEach.call(menu.querySelectorAll("input[type=checkbox]"), function(cb){
+			cb.checked = activeSorts.has(cb.getAttribute("data-sort"));
+		});
+		updateSortDropdownLabel();
+	}
+
+	// Used by the clickable table-header shortcuts — replaces whatever sort
+	// criteria were active with just this one.
+	function setSortOnly(key){
+		activeSorts = new Set([key]);
+		syncSortMenuCheckboxes();
+		applyFilters();
+	}
+
 	// Manual upload goes through the same Worker the mod uses. Note: API_KEY
 	// lives in this page's source, so it's a spam deterrent, not real
 	// security — the Worker's GitHub token is what's actually protected.
@@ -859,6 +921,19 @@
 		return false;
 	}
 
+	function compareBySortKey(key, a, b){
+		switch(key){
+			case "price-asc": return pricePerItem(a) - pricePerItem(b);
+			case "price-desc": return pricePerItem(b) - pricePerItem(a);
+			case "stock-asc": return a.amount - b.amount;
+			case "stock-desc": return b.amount - a.amount;
+			case "item-az": return a.itemName.localeCompare(b.itemName);
+			case "seller-az": return a.seller.localeCompare(b.seller);
+			case "recent": return rowTimestamp(b) - rowTimestamp(a);
+			default: return 0;
+		}
+	}
+
 	function applyFilters(){
 		var q = document.getElementById("searchInput").value.trim().toLowerCase();
 		var world = document.getElementById("fWorld").value;
@@ -871,7 +946,6 @@
 			.split(",").map(function(s){ return s.trim(); }).filter(Boolean);
 		var excludeSellers = document.getElementById("fExcludeSellers").value.toLowerCase()
 			.split(",").map(function(s){ return s.trim(); }).filter(Boolean);
-		sortKey = document.getElementById("fSort").value;
 
 		var scope = {
 			itemName: document.getElementById("scopeItemName").checked,
@@ -896,6 +970,7 @@
 			if(world && r.world !== world) return false;
 			if(bulkMode === "bulk" && !r.bulk) return false;
 			if(bulkMode === "single" && r.bulk) return false;
+			if(bulkMode === "nonstacked" && r.stackSize === 64) return false;
 			var currency = String(r.currency||"").toLowerCase();
 			if(hideDisplay && currency === "display") return false;
 			if(currency !== "display" && currencyFilters.hasOwnProperty(currency) && !currencyFilters[currency]) return false;
@@ -914,14 +989,16 @@
 				var bExact = isExactMatch(b, q, scope);
 				if(aExact !== bExact) return aExact ? -1 : 1;
 			}
-			switch(sortKey){
-				case "price-asc": return priceInDiamonds(a) - priceInDiamonds(b);
-				case "price-desc": return priceInDiamonds(b) - priceInDiamonds(a);
-				case "stock-desc": return b.amount - a.amount;
-				case "item-az": return a.itemName.localeCompare(b.itemName);
-				case "seller-az": return a.seller.localeCompare(b.seller);
-				default: return rowTimestamp(b) - rowTimestamp(a);
+			// Multiple sort criteria can be active at once — apply each checked
+			// one in SORT_OPTIONS order as a tiebreaker for the previous one,
+			// then fall back to "most recent" so the order is always deterministic.
+			for(var i=0;i<SORT_OPTIONS.length;i++){
+				var key = SORT_OPTIONS[i].key;
+				if(!activeSorts.has(key)) continue;
+				var cmp = compareBySortKey(key, a, b);
+				if(cmp !== 0) return cmp;
 			}
+			return rowTimestamp(b) - rowTimestamp(a);
 		});
 
 		page = 1;
@@ -993,8 +1070,8 @@
 					(r.bulk ? '<span class="badge bulk">Bulk</span>' : '<span class="badge single">Single</span>')+
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '')+
 				'</td>'+
-				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+r.stackSize+'</span></td>'+
-				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' stacks</span></td>'+
+				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span></td>'+
+				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' '+(r.stackSize === 64 ? 'stacks' : 'groups')+'</span></td>'+
 				'<td class="seller">'+esc(r.seller)+infoIcon+'</td>'+
 				'<td>'+esc(r.world)+'</td>'+
 				'<td class="position">'+esc(r.position)+'</td>'+
@@ -1012,8 +1089,7 @@
 
 		area.querySelectorAll("thead th[data-k]").forEach(function(th){
 			th.addEventListener("click", function(){
-				document.getElementById("fSort").value = th.getAttribute("data-k");
-				applyFilters();
+				setSortOnly(th.getAttribute("data-k"));
 			});
 		});
 
@@ -1343,7 +1419,7 @@
 		document.getElementById(id).addEventListener("change", applyFilters);
 	});
 	["fWorld","fBulk","fHideDisplay",
-		"fPriceMin","fPriceMax","fMinStock","fExcludeItems","fExcludeSellers","fSort"].forEach(function(id){
+		"fPriceMin","fPriceMax","fMinStock","fExcludeItems","fExcludeSellers"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 		document.getElementById(id).addEventListener("input", applyFilters);
 	});
@@ -1362,6 +1438,39 @@
 		currencyDropdownBtn.setAttribute("aria-expanded", "false");
 	});
 
+	var sortDropdownBtn = document.getElementById("sortDropdownBtn");
+	var sortDropdownMenu = document.getElementById("sortDropdownMenu");
+	sortDropdownBtn.addEventListener("click", function(e){
+		e.stopPropagation();
+		var open = sortDropdownMenu.classList.toggle("open");
+		sortDropdownBtn.setAttribute("aria-expanded", open ? "true" : "false");
+	});
+	document.addEventListener("click", function(e){
+		if(!sortDropdownMenu.classList.contains("open")) return;
+		if(e.target === sortDropdownBtn || sortDropdownMenu.contains(e.target)) return;
+		sortDropdownMenu.classList.remove("open");
+		sortDropdownBtn.setAttribute("aria-expanded", "false");
+	});
+	Array.prototype.forEach.call(sortDropdownMenu.querySelectorAll("input[type=checkbox]"), function(cb){
+		cb.addEventListener("change", function(){
+			var key = cb.getAttribute("data-sort");
+			if(cb.checked){
+				activeSorts.add(key);
+				// Opposite-direction sorts on the same field don't make sense together —
+				// checking one always turns off its pair (e.g. Price ↑ turns off Price ↓).
+				SORT_EXCLUSIVE_PAIRS.forEach(function(pair){
+					if(pair.indexOf(key) === -1) return;
+					var other = pair[0] === key ? pair[1] : pair[0];
+					activeSorts.delete(other);
+				});
+			} else {
+				activeSorts.delete(key);
+			}
+			syncSortMenuCheckboxes();
+			applyFilters();
+		});
+	});
+
 	document.getElementById("resetFilters").addEventListener("click", function(){
 		document.getElementById("searchInput").value = "";
 		document.getElementById("fWorld").value = "";
@@ -1375,7 +1484,8 @@
 		document.getElementById("fMinStock").value = "";
 		document.getElementById("fExcludeItems").value = "";
 		document.getElementById("fExcludeSellers").value = "";
-		document.getElementById("fSort").value = "recent";
+		activeSorts = new Set(["recent"]);
+		syncSortMenuCheckboxes();
 		document.getElementById("scopeItemName").checked = true;
 		document.getElementById("scopeBaseItem").checked = true;
 		document.getElementById("scopeSeller").checked = true;
