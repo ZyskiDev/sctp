@@ -159,13 +159,38 @@
 	}
 	.f-group{margin-bottom:16px;}
 	.f-group label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
-	.f-group select, .f-group input[type=number]{
+	.f-group select, .f-group input[type=number], .f-group input[type=text]{
 		width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
 		border-radius:8px;padding:8px 10px;font-family:var(--font-body);font-size:13.5px;
+	}
+	.f-group input[type=text]::placeholder{color:var(--muted);}
+	.f-group input[type=text]:focus, .f-group input[type=number]:focus, .f-group select:focus{
+		outline:none;border-color:var(--accent-dim);
 	}
 	.f-range{display:flex;gap:8px;}
 	.f-checkbox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:0;}
 	.f-checkbox input[type=checkbox]{accent-color:var(--accent);cursor:pointer;}
+
+	.f-dropdown{position:relative;}
+	.f-dropdown-btn{
+		width:100%;text-align:left;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:8px 10px;font-family:var(--font-body);font-size:13.5px;cursor:pointer;
+		display:flex;justify-content:space-between;align-items:center;gap:8px;
+		overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+	}
+	.f-dropdown-btn:hover{border-color:var(--accent-dim);}
+	.f-dropdown-menu{
+		display:none;flex-direction:column;gap:8px;
+		position:absolute;top:calc(100% + 6px);left:0;right:0;
+		background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;
+		padding:10px 12px;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,0.35);
+	}
+	.f-dropdown-menu.open{display:flex;}
+	.f-dropdown-menu label{
+		display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);
+		cursor:pointer;white-space:nowrap;
+	}
+	.f-dropdown-menu input[type=checkbox]{accent-color:var(--accent);cursor:pointer;}
 	.f-reset{
 		width:100%;background:transparent;border:1px dashed var(--line);color:var(--muted);
 		border-radius:8px;padding:9px;font-size:13px;cursor:pointer;margin-top:4px;
@@ -399,9 +424,11 @@
 			</div>
 
 			<div class="f-group">
-				<label>Currency</label>
-				<label class="f-checkbox"><input type="checkbox" id="fCurrencyDiamond" checked> Diamond</label>
-				<label class="f-checkbox"><input type="checkbox" id="fCurrencyDiamondBlock" checked> Diamond block</label>
+				<label for="currencyDropdownBtn">Currency</label>
+				<div class="f-dropdown">
+					<button type="button" id="currencyDropdownBtn" aria-haspopup="true" aria-expanded="false" class="f-dropdown-btn">All currencies ▾</button>
+					<div class="f-dropdown-menu" id="currencyDropdownMenu"></div>
+				</div>
 			</div>
 
 			<div class="f-group">
@@ -561,6 +588,8 @@
 	var page = 1;
 	var PAGE_SIZE = 50;
 	var sortKey = "recent";
+	var currencyFilters = {}; // lowercase currency -> checked, built from whatever's actually in the data
+	var CURRENCY_LABELS = { diamond: "Diamond", diamondblock: "Diamond block" };
 
 	// ---------------- helpers ----------------
 	function normHeader(h){
@@ -734,7 +763,61 @@
 			sharedShopsBySeller = {};
 		}
 
+		populateCurrencyOptions();
 		applyFilters();
+	}
+
+	function currencyLabel(c){
+		return CURRENCY_LABELS[c] || (c.charAt(0).toUpperCase() + c.slice(1));
+	}
+
+	// Rebuilds the currency dropdown from whatever currencies are actually
+	// present in the loaded data (display listings excluded — those are
+	// governed by "Hide display-only listings" instead). Preserves whatever
+	// the user already had checked/unchecked across data refreshes.
+	function populateCurrencyOptions(){
+		var found = {};
+		allListings.forEach(function(r){
+			var c = String(r.currency||"").toLowerCase();
+			if(c && c !== "display") found[c] = true;
+		});
+		var currencies = Object.keys(found).sort();
+		var next = {};
+		currencies.forEach(function(c){
+			next[c] = currencyFilters.hasOwnProperty(c) ? currencyFilters[c] : true;
+		});
+		currencyFilters = next;
+
+		var menu = document.getElementById("currencyDropdownMenu");
+		menu.innerHTML = currencies.map(function(c){
+			return '<label><input type="checkbox" data-currency="' + esc(c) + '"' +
+				(currencyFilters[c] ? " checked" : "") + '> ' + esc(currencyLabel(c)) + '</label>';
+		}).join("");
+		Array.prototype.forEach.call(menu.querySelectorAll("input[type=checkbox]"), function(cb){
+			cb.addEventListener("change", function(){
+				currencyFilters[cb.getAttribute("data-currency")] = cb.checked;
+				updateCurrencyDropdownLabel();
+				applyFilters();
+			});
+		});
+		updateCurrencyDropdownLabel();
+	}
+
+	function updateCurrencyDropdownLabel(){
+		var btn = document.getElementById("currencyDropdownBtn");
+		var currencies = Object.keys(currencyFilters);
+		var checked = currencies.filter(function(c){ return currencyFilters[c]; });
+		var label;
+		if(currencies.length === 0){
+			label = "No currencies";
+		} else if(checked.length === 0){
+			label = "None selected";
+		} else if(checked.length === currencies.length){
+			label = "All currencies";
+		} else {
+			label = checked.map(currencyLabel).join(", ");
+		}
+		btn.textContent = label + " ▾";
 	}
 
 	// Manual upload goes through the same Worker the mod uses. Note: API_KEY
@@ -781,8 +864,6 @@
 		var world = document.getElementById("fWorld").value;
 		var bulkMode = document.getElementById("fBulk").value;
 		var hideDisplay = document.getElementById("fHideDisplay").checked;
-		var showDiamond = document.getElementById("fCurrencyDiamond").checked;
-		var showDiamondBlock = document.getElementById("fCurrencyDiamondBlock").checked;
 		var priceMin = document.getElementById("fPriceMin").value;
 		var priceMax = document.getElementById("fPriceMax").value;
 		var minStock = document.getElementById("fMinStock").value;
@@ -817,8 +898,7 @@
 			if(bulkMode === "single" && r.bulk) return false;
 			var currency = String(r.currency||"").toLowerCase();
 			if(hideDisplay && currency === "display") return false;
-			if(currency === "diamond" && !showDiamond) return false;
-			if(currency === "diamondblock" && !showDiamondBlock) return false;
+			if(currency !== "display" && currencyFilters.hasOwnProperty(currency) && !currencyFilters[currency]) return false;
 			if(excludeItems.length && excludeItems.indexOf(String(r.baseItem||"").toLowerCase()) !== -1) return false;
 			if(excludeSellers.length && excludeSellers.indexOf(String(r.seller||"").toLowerCase()) !== -1) return false;
 			if(priceMin !== "" && priceInDiamonds(r) < parseFloat(priceMin)) return false;
@@ -1262,18 +1342,34 @@
 	["scopeItemName","scopeBaseItem","scopeSeller","scopeExactOnly"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 	});
-	["fWorld","fBulk","fHideDisplay","fCurrencyDiamond","fCurrencyDiamondBlock",
+	["fWorld","fBulk","fHideDisplay",
 		"fPriceMin","fPriceMax","fMinStock","fExcludeItems","fExcludeSellers","fSort"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 		document.getElementById(id).addEventListener("input", applyFilters);
 	});
+
+	var currencyDropdownBtn = document.getElementById("currencyDropdownBtn");
+	var currencyDropdownMenu = document.getElementById("currencyDropdownMenu");
+	currencyDropdownBtn.addEventListener("click", function(e){
+		e.stopPropagation();
+		var open = currencyDropdownMenu.classList.toggle("open");
+		currencyDropdownBtn.setAttribute("aria-expanded", open ? "true" : "false");
+	});
+	document.addEventListener("click", function(e){
+		if(!currencyDropdownMenu.classList.contains("open")) return;
+		if(e.target === currencyDropdownBtn || currencyDropdownMenu.contains(e.target)) return;
+		currencyDropdownMenu.classList.remove("open");
+		currencyDropdownBtn.setAttribute("aria-expanded", "false");
+	});
+
 	document.getElementById("resetFilters").addEventListener("click", function(){
 		document.getElementById("searchInput").value = "";
 		document.getElementById("fWorld").value = "";
 		document.getElementById("fBulk").value = "";
 		document.getElementById("fHideDisplay").checked = false;
-		document.getElementById("fCurrencyDiamond").checked = true;
-		document.getElementById("fCurrencyDiamondBlock").checked = true;
+		Object.keys(currencyFilters).forEach(function(c){ currencyFilters[c] = true; });
+		Array.prototype.forEach.call(currencyDropdownMenu.querySelectorAll("input[type=checkbox]"), function(cb){ cb.checked = true; });
+		updateCurrencyDropdownLabel();
 		document.getElementById("fPriceMin").value = "";
 		document.getElementById("fPriceMax").value = "";
 		document.getElementById("fMinStock").value = "";
