@@ -399,6 +399,12 @@
 			</div>
 
 			<div class="f-group">
+				<label>Currency</label>
+				<label class="f-checkbox"><input type="checkbox" id="fCurrencyDiamond" checked> Diamond</label>
+				<label class="f-checkbox"><input type="checkbox" id="fCurrencyDiamondBlock" checked> Diamond block</label>
+			</div>
+
+			<div class="f-group">
 				<label>Price (in diamonds)</label>
 				<div class="f-range">
 					<input type="number" id="fPriceMin" placeholder="min" min="0">
@@ -409,6 +415,16 @@
 			<div class="f-group">
 				<label for="fMinStock">Minimum in stock</label>
 				<input type="number" id="fMinStock" placeholder="e.g. 64" min="0">
+			</div>
+
+			<div class="f-group">
+				<label for="fExcludeItems">Exclude base items</label>
+				<input type="text" id="fExcludeItems" placeholder="comma-separated, e.g. minecraft:dirt">
+			</div>
+
+			<div class="f-group">
+				<label for="fExcludeSellers">Exclude sellers</label>
+				<input type="text" id="fExcludeSellers" placeholder="comma-separated seller names">
 			</div>
 
 			<div class="f-group">
@@ -458,17 +474,17 @@
 		<h2>Download Shop Logger</h2>
 		<p>Pick the version that matches the Minecraft version you're playing.</p>
 		<div class="download-options">
-			<a class="download-option" href="shoplogger-1.21.11-1.2.1.jar" download="shoplogger-1.21.11-1.2.1.jar">
+			<a class="download-option" href="shoplogger-1.21.11-1.2.2.jar" download="shoplogger-1.21.11-1.2.2.jar">
 				<strong>Minecraft 1.21.11</strong>
-				<span>shoplogger-1.21.11-1.2.1.jar</span>
+				<span>shoplogger-1.21.11-1.2.2.jar</span>
 			</a>
-			<a class="download-option" href="shoplogger-26.1-1.2.1.jar" download="shoplogger-26.1-1.2.1.jar">
+			<a class="download-option" href="shoplogger-26.1-1.2.2.jar" download="shoplogger-26.1-1.2.2.jar">
 				<strong>Minecraft 26.1</strong>
-				<span>shoplogger-26.1-1.2.1.jar</span>
+				<span>shoplogger-26.1-1.2.2.jar</span>
 			</a>
-			<a class="download-option" href="shoplogger-26.2-1.2.1.jar" download="shoplogger-26.2-1.2.1.jar">
+			<a class="download-option" href="shoplogger-26.2-1.2.2.jar" download="shoplogger-26.2-1.2.2.jar">
 				<strong>Minecraft 26.2</strong>
-				<span>shoplogger-26.2-1.2.1.jar</span>
+				<span>shoplogger-26.2-1.2.2.jar</span>
 			</a>
 		</div>
 		<p class="download-reminder">Requires <strong>Fabric API</strong> installed alongside the mod, and <strong>Fabric Loader 0.19.3</strong> or newer.</p>
@@ -581,6 +597,10 @@
 	// rather than distorting the sort.
 	var CURRENCY_VALUE = { diamond: 1, diamondblock: 9 };
 	function priceInDiamonds(r){
+		// [DISPLAY] listings have no real price — treat them as the single most
+		// expensive thing rather than the cheapest (price 0 would otherwise sort
+		// them first in a "lowest price" search, which is backwards).
+		if(String(r.currency||"").toLowerCase() === "display") return Infinity;
 		var mult = CURRENCY_VALUE[String(r.currency||"").toLowerCase()];
 		return r.price * (mult || 1);
 	}
@@ -761,9 +781,15 @@
 		var world = document.getElementById("fWorld").value;
 		var bulkMode = document.getElementById("fBulk").value;
 		var hideDisplay = document.getElementById("fHideDisplay").checked;
+		var showDiamond = document.getElementById("fCurrencyDiamond").checked;
+		var showDiamondBlock = document.getElementById("fCurrencyDiamondBlock").checked;
 		var priceMin = document.getElementById("fPriceMin").value;
 		var priceMax = document.getElementById("fPriceMax").value;
 		var minStock = document.getElementById("fMinStock").value;
+		var excludeItems = document.getElementById("fExcludeItems").value.toLowerCase()
+			.split(",").map(function(s){ return s.trim(); }).filter(Boolean);
+		var excludeSellers = document.getElementById("fExcludeSellers").value.toLowerCase()
+			.split(",").map(function(s){ return s.trim(); }).filter(Boolean);
 		sortKey = document.getElementById("fSort").value;
 
 		var scope = {
@@ -789,7 +815,12 @@
 			if(world && r.world !== world) return false;
 			if(bulkMode === "bulk" && !r.bulk) return false;
 			if(bulkMode === "single" && r.bulk) return false;
-			if(hideDisplay && String(r.currency||"").toLowerCase() === "display") return false;
+			var currency = String(r.currency||"").toLowerCase();
+			if(hideDisplay && currency === "display") return false;
+			if(currency === "diamond" && !showDiamond) return false;
+			if(currency === "diamondblock" && !showDiamondBlock) return false;
+			if(excludeItems.length && excludeItems.indexOf(String(r.baseItem||"").toLowerCase()) !== -1) return false;
+			if(excludeSellers.length && excludeSellers.indexOf(String(r.seller||"").toLowerCase()) !== -1) return false;
 			if(priceMin !== "" && priceInDiamonds(r) < parseFloat(priceMin)) return false;
 			if(priceMax !== "" && priceInDiamonds(r) > parseFloat(priceMax)) return false;
 			if(minStock !== "" && r.amount < parseFloat(minStock)) return false;
@@ -1231,7 +1262,8 @@
 	["scopeItemName","scopeBaseItem","scopeSeller","scopeExactOnly"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 	});
-	["fWorld","fBulk","fHideDisplay","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
+	["fWorld","fBulk","fHideDisplay","fCurrencyDiamond","fCurrencyDiamondBlock",
+		"fPriceMin","fPriceMax","fMinStock","fExcludeItems","fExcludeSellers","fSort"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", applyFilters);
 		document.getElementById(id).addEventListener("input", applyFilters);
 	});
@@ -1240,9 +1272,13 @@
 		document.getElementById("fWorld").value = "";
 		document.getElementById("fBulk").value = "";
 		document.getElementById("fHideDisplay").checked = false;
+		document.getElementById("fCurrencyDiamond").checked = true;
+		document.getElementById("fCurrencyDiamondBlock").checked = true;
 		document.getElementById("fPriceMin").value = "";
 		document.getElementById("fPriceMax").value = "";
 		document.getElementById("fMinStock").value = "";
+		document.getElementById("fExcludeItems").value = "";
+		document.getElementById("fExcludeSellers").value = "";
 		document.getElementById("fSort").value = "recent";
 		document.getElementById("scopeItemName").checked = true;
 		document.getElementById("scopeBaseItem").checked = true;
