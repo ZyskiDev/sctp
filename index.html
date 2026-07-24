@@ -82,6 +82,23 @@
 	}
 	.upload-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(183,226,61,0.18);}
 	.upload-cta:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+	.docs-cta{
+		display:inline-block;
+		background:transparent;
+		color:var(--text);
+		border:1px solid var(--line);
+		font-family:var(--font-body);
+		font-weight:600;
+		font-size:14.5px;
+		padding:11px 18px;
+		border-radius:999px;
+		cursor:pointer;
+		white-space:nowrap;
+		text-decoration:none;
+		transition:transform .12s ease, border-color .12s ease, color .12s ease;
+	}
+	.docs-cta:hover{border-color:var(--accent-dim);color:var(--accent);transform:translateY(-1px);}
+	.docs-cta:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 
 	.trail-wrap{position:relative;height:26px;margin-top:18px;}
 	.trail-wrap svg{position:absolute;top:8px;left:0;width:100%;height:12px;}
@@ -392,7 +409,10 @@
 				<h1>Snailcraft Trading Post</h1>
 				<p class="tag">Every shop on the server, in <em>one</em> list!</p>
 			</div>
-			<button class="upload-cta" id="downloadMod" type="button">Download mod</button>
+			<div style="display:flex;align-items:center;gap:16px;">
+				<a href="docs.html" class="docs-cta">Docs</a>
+				<button class="upload-cta" id="downloadMod" type="button">Download mod</button>
+			</div>
 		</div>
 		<div class="trail-wrap" aria-hidden="true">
 			<svg viewBox="0 0 400 12" preserveAspectRatio="none">

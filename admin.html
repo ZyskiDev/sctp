@@ -89,6 +89,17 @@
 			<summary>Resolved shared-shop requests</summary>
 			<div id="requestsResolved" style="margin-top:12px;"></div>
 		</details>
+
+		<h2>FAQ (shown on docs.html)</h2>
+		<div class="card">
+			<label for="faqQuestionInput">Question</label>
+			<input type="text" id="faqQuestionInput" placeholder="e.g. Does the mod work on servers other than Snailcraft?" style="width:100%;margin:6px 0;">
+			<label for="faqAnswerInput">Answer</label>
+			<textarea id="faqAnswerInput" placeholder="Answer text" rows="3" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;"></textarea>
+			<button id="faqAddBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Add FAQ entry</button>
+			<div class="err" id="faqAddErr"></div>
+		</div>
+		<div id="faqList"></div>
 	</div>
 </div>
 
@@ -102,6 +113,7 @@
 	var adminKey = sessionStorage.getItem("shoplogger_admin_key") || "";
 	var reports = [];
 	var requests = [];
+	var faqs = [];
 
 	function esc(s){
 		return String(s).replace(/[&<>"']/g, function(c){
@@ -138,12 +150,14 @@
 	async function refresh(){
 		reports = await api("/admin/reports");
 		requests = await api("/admin/shared-shop-requests");
+		faqs = await api("/admin/faq");
 		render();
 	}
 
 	function render(){
 		renderReports();
 		renderRequests();
+		renderFaq();
 	}
 
 	function renderReports(){
@@ -260,10 +274,90 @@
 		}
 	}
 
+	function renderFaq(){
+		var list = faqs.slice().reverse(); // newest first
+		document.getElementById("faqList").innerHTML = list.length
+			? list.map(faqCard).join("")
+			: '<div class="empty">No FAQ entries yet.</div>';
+
+		document.querySelectorAll(".faq-edit-toggle").forEach(function(b){
+			b.addEventListener("click", function(){
+				document.getElementById("faq-edit-" + b.getAttribute("data-id")).classList.toggle("open");
+			});
+		});
+		document.querySelectorAll(".faq-save").forEach(function(b){
+			b.addEventListener("click", function(){
+				var id = b.getAttribute("data-id");
+				var q = document.getElementById("faq-q-" + id).value.trim();
+				var a = document.getElementById("faq-a-" + id).value.trim();
+				if(!q || !a){ alert("Both question and answer are required."); return; }
+				updateFaqEntry(id, q, a);
+			});
+		});
+		document.querySelectorAll(".faq-delete").forEach(function(b){
+			b.addEventListener("click", function(){
+				if(confirm("Delete this FAQ entry?")) deleteFaqEntry(b.getAttribute("data-id"));
+			});
+		});
+	}
+
+	function faqCard(f){
+		return '<div class="card">'+
+			'<div class="title">'+esc(f.question)+'</div>'+
+			'<div class="details">'+esc(f.answer)+'</div>'+
+			'<div class="actions" style="margin-top:10px;">'+
+				'<button class="change faq-edit-toggle" data-id="'+f.id+'" type="button">Edit</button>'+
+				'<button class="deny faq-delete" data-id="'+f.id+'" type="button">Delete</button>'+
+			'</div>'+
+			'<div class="edit-form" id="faq-edit-'+f.id+'" style="flex-direction:column;align-items:stretch;">'+
+				'<input type="text" id="faq-q-'+f.id+'" value="'+esc(f.question)+'">'+
+				'<textarea id="faq-a-'+f.id+'" rows="3" style="background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit;">'+esc(f.answer)+'</textarea>'+
+				'<button class="approve faq-save" data-id="'+f.id+'" type="button" style="align-self:flex-start;">Save</button>'+
+			'</div>'+
+		'</div>';
+	}
+
+	async function addFaq(){
+		var qInput = document.getElementById("faqQuestionInput");
+		var aInput = document.getElementById("faqAnswerInput");
+		var errEl = document.getElementById("faqAddErr");
+		var question = qInput.value.trim();
+		var answer = aInput.value.trim();
+		if(!question || !answer){ errEl.textContent = "Both question and answer are required."; return; }
+		errEl.textContent = "";
+		try {
+			await api("/admin/faq/add", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ question:question, answer:answer }) });
+			qInput.value = "";
+			aInput.value = "";
+			await refresh();
+		} catch(err){
+			errEl.textContent = "Failed: " + err.message;
+		}
+	}
+
+	async function updateFaqEntry(id, question, answer){
+		try {
+			await api("/admin/faq/update", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, question:question, answer:answer }) });
+			await refresh();
+		} catch(err){
+			alert("Failed: " + err.message);
+		}
+	}
+
+	async function deleteFaqEntry(id){
+		try {
+			await api("/admin/faq/delete", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id }) });
+			await refresh();
+		} catch(err){
+			alert("Failed: " + err.message);
+		}
+	}
+
 	document.getElementById("loginBtn").addEventListener("click", login);
 	document.getElementById("adminKeyInput").addEventListener("keydown", function(e){
 		if(e.key === "Enter") login();
 	});
+	document.getElementById("faqAddBtn").addEventListener("click", addFaq);
 
 	if(adminKey){
 		refresh().then(function(){

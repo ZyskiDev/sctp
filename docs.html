@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SC Trading Post — Docs</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐌</text></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+	:root{
+		--bg:#101B14;
+		--panel:#1B2A20;
+		--panel-alt:#22332A;
+		--line:#33453A;
+		--muted:#8FA593;
+		--text:#EAEFE7;
+		--shell:#D9C89A;
+		--shell-dim:#A99A73;
+		--accent:#B7E23D;
+		--accent-dim:#87AE29;
+		--accent-ink:#16210F;
+		--warn:#E2A33D;
+		--info:#8C93E8;
+		--radius:10px;
+		--font-display:'Fraunces',serif;
+		--font-body:'Inter',sans-serif;
+		--font-mono:'JetBrains Mono',monospace;
+	}
+	*{box-sizing:border-box;}
+	body{
+		margin:0;
+		background:
+			radial-gradient(1200px 500px at 15% -10%, rgba(183,226,61,0.07), transparent 60%),
+			var(--bg);
+		color:var(--text);
+		font-family:var(--font-body);
+		line-height:1.6;
+	}
+	a{color:var(--accent);}
+	.wrap{max-width:920px;margin:0 auto;padding:0 24px;}
+
+	header.site{border-bottom:1px solid var(--line);padding:24px 0;}
+	.header-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+	.brand h1{font-family:var(--font-display);font-weight:600;font-size:26px;margin:0;color:var(--text);}
+	.brand .tag{color:var(--muted);font-size:13.5px;margin:2px 0 0;}
+	.header-links{display:flex;align-items:center;gap:18px;}
+	.header-links a{color:var(--muted);font-size:14px;font-weight:600;text-decoration:none;}
+	.header-links a:hover, .header-links a.active{color:var(--accent);}
+	.header-links a.active{color:var(--accent);}
+
+	main{padding:36px 0 60px;}
+	section{margin-bottom:48px;}
+	section h2{
+		font-family:var(--font-display);font-weight:600;font-size:22px;margin:0 0 6px;
+		color:var(--shell);
+	}
+	section .lede{color:var(--muted);font-size:14.5px;margin:0 0 22px;max-width:640px;}
+
+	/* ---------- install steps ---------- */
+	.install-steps{display:flex;flex-direction:column;gap:14px;}
+	.install-step{
+		display:flex;gap:18px;align-items:flex-start;
+		background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+		padding:18px;
+	}
+	.install-step .icon{
+		flex:0 0 auto;width:56px;height:56px;border-radius:12px;
+		background:var(--panel-alt);border:1px solid var(--line);
+		display:flex;align-items:center;justify-content:center;
+	}
+	.install-step .icon svg{width:32px;height:32px;}
+	.install-step .body h3{margin:0 0 4px;font-size:15.5px;color:var(--text);}
+	.install-step .body p{margin:0;color:var(--muted);font-size:13.5px;}
+	.install-step .body code{
+		background:var(--panel-alt);border:1px solid var(--line);border-radius:5px;
+		padding:1px 6px;font-family:var(--font-mono);font-size:12.5px;color:var(--shell);
+	}
+	.install-note{
+		margin-top:14px;padding:10px 14px;border-radius:8px;
+		background:rgba(140,147,232,0.08);border:1px solid var(--info);
+		color:var(--muted);font-size:13px;
+	}
+
+	/* ---------- feature grid ---------- */
+	.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+	.feature-card{
+		background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;
+	}
+	.feature-card h3{margin:0 0 6px;font-size:14.5px;color:var(--shell);}
+	.feature-card p{margin:0;color:var(--muted);font-size:13px;}
+
+	/* ---------- how it works ---------- */
+	.flow{display:flex;flex-direction:column;gap:10px;}
+	.flow-step{
+		display:flex;gap:14px;align-items:flex-start;
+		background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;
+	}
+	.flow-step .num{
+		flex:0 0 auto;width:26px;height:26px;border-radius:50%;
+		background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:13px;
+		display:flex;align-items:center;justify-content:center;
+	}
+	.flow-step p{margin:0;color:var(--muted);font-size:13.5px;}
+	.flow-step strong{color:var(--text);}
+
+	/* ---------- dropdowns (more features / FAQ) ---------- */
+	details.disclosure{
+		background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+		padding:0;margin-bottom:10px;overflow:hidden;
+	}
+	details.disclosure summary{
+		cursor:pointer;padding:14px 16px;font-weight:600;font-size:14px;color:var(--text);
+		list-style:none;display:flex;justify-content:space-between;align-items:center;
+	}
+	details.disclosure summary::-webkit-details-marker{display:none;}
+	details.disclosure summary::after{
+		content:'+';color:var(--accent);font-size:18px;font-weight:400;margin-left:12px;
+	}
+	details.disclosure[open] summary::after{content:'−';}
+	details.disclosure .content{padding:0 16px 16px;color:var(--muted);font-size:13.5px;}
+	details.disclosure .content p{margin:0 0 8px;}
+	details.disclosure .content p:last-child{margin-bottom:0;}
+
+	.minor-feature-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;}
+	.minor-feature-list li{padding-bottom:12px;border-bottom:1px solid var(--line);}
+	.minor-feature-list li:last-child{border-bottom:none;padding-bottom:0;}
+	.minor-feature-list strong{display:block;color:var(--text);font-size:13.5px;margin-bottom:2px;}
+
+	.faq-empty{color:var(--muted);font-size:13.5px;padding:8px 0;}
+
+	footer.site{padding:20px 0 40px;color:var(--muted);font-size:12.5px;text-align:center;}
+</style>
+</head>
+<body>
+
+<header class="site">
+	<div class="wrap header-row">
+		<div class="brand">
+			<h1>Docs</h1>
+			<p class="tag">Installing, using, and understanding Shop Logger.</p>
+		</div>
+		<div class="header-links">
+			<a href="index.html">Trading Post</a>
+			<a href="docs.html" class="active">Docs</a>
+		</div>
+	</div>
+</header>
+
+<div class="wrap">
+<main>
+
+	<section id="install">
+		<h2>Installing the mod</h2>
+		<p class="lede">Shop Logger is a client-side <a href="https://fabricmc.net/" target="_blank" rel="noopener">Fabric</a> mod, and it only needs to be installed on your own computer, not the server.</p>
+
+		<div class="install-steps">
+			<div class="install-step">
+				<div class="icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/>
+					</svg>
+				</div>
+				<div class="body">
+					<h3>1. Install Fabric Loader</h3>
+					<p>Download and run the installer from <a href="https://fabricmc.net/use/installer/" target="_blank" rel="noopener">fabricmc.net</a>, be sure to choose the same Minecraft version you play. Pick "Client" and hit Install. This is not needed if you already have Fabric installed. The minimum version is 0.19.3!</p>
+				</div>
+			</div>
+
+			<div class="install-step">
+				<div class="icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/><path d="M9 7v0"/>
+					</svg>
+				</div>
+				<div class="body">
+					<h3>2. Get Fabric API</h3>
+					<p>Shop Logger needs <a href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener">Fabric API</a> installed alongside it - it's not optional! Download the version matching your Minecraft version.</p>
+				</div>
+			</div>
+
+			<div class="install-step">
+				<div class="icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 8V21H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>
+					</svg>
+				</div>
+				<div class="body">
+					<h3>3. Download Shop Logger</h3>
+					<p>Grab the jar for your Minecraft version from the <a href="index.html">Trading Post homepage</a> ("Download mod") - there are separate versions for 1.21.11, 26.1, and 26.2, so be sure to pick the right one!</p>
+				</div>
+			</div>
+
+			<div class="install-step">
+				<div class="icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+					</svg>
+				</div>
+				<div class="body">
+					<h3>4. Drop both jars into your <code>mods</code> folder</h3>
+					<p>Open your Minecraft folder (<code>%appdata%\.minecraft</code> on Windows) → <code>mods</code>. Put the Fabric API jar and the Shop Logger jar in there together.</p>
+				</div>
+			</div>
+
+			<div class="install-step">
+				<div class="icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="var(--accent)" stroke="none"/>
+					</svg>
+				</div>
+				<div class="body">
+					<h3>5. Launch with the Fabric profile</h3>
+					<p>In your launcher, select the "Fabric Loader" profile the installer created, and press Play. Shop Logger loads automatically!</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="install-note">
+			Note: The above steps are for the official Minecraft launcher. If you use a third-party launcher, the steps may differ slightly, but the general idea is the same:  make sure to use Fabric, then put both jars in your mods folder.
+		</div>
+	</section>
+
+	<section id="how-it-works">
+		<h2>How it works</h2>
+		<p class="lede">The mod reads shop signs and their  chest contents, and shares that data with a website everyone can search.</p>
+
+		<div class="flow">
+			<div class="flow-step">
+				<div class="num">1</div>
+				<p><strong>World detection.</strong> On join, the mod figures out whether you're on Firefly or Honeybee by sending /help silently.</p>
+			</div>
+			<div class="flow-step">
+				<div class="num">2</div>
+				<p><strong>Scanning.</strong> Right-click a shop chest yourself, or let the mod scan known shops automatically if you walk within range. It will read the sign and whatever's in the chest. This causes the chest textures to look like they're opening!</p>
+			</div>
+			<div class="flow-step">
+				<div class="num">3</div>
+				<p><strong>Logging.</strong> Every scan updates a locally stored log with item, price, stock, seller, and position, and sold-out/removed shops get cleaned up as well.</p>
+			</div>
+			<div class="flow-step">
+				<div class="num">4</div>
+				<p><strong>Uploading.</strong> Your log gets uploaded to the shared Trading Post (manually with a keybind, or automatically every 15 minutes), and added to the big list!</p>
+			</div>
+			<div class="flow-step">
+				<div class="num">5</div>
+				<p><strong>Browsing.</strong> The <a href="index.html">website</a> reads that shared data, so you can search, filter, and sort every shop on the server in one place. You can also search from in-game with <code>/search &lt;item&gt;</code>.</p>
+			</div>
+		</div>
+	</section>
+
+	<section id="features">
+		<h2>Main features</h2>
+		<div class="feature-grid">
+			<div class="feature-card">
+				<h3>Manual &amp; automatic scanning</h3>
+				<p>Right-click a shop to log it, or let the mod scan nearby known shops silently as you walk past.</p>
+			</div>
+			<div class="feature-card">
+				<h3>Shared Trading Post upload</h3>
+				<p>Sends your scans to the shared website everyone can browse.</p>
+			</div>
+			<div class="feature-card">
+				<h3>In-game <code>/search</code></h3>
+				<p>Look up an item straight from chat without switching to the website.</p>
+			</div>
+			<div class="feature-card">
+				<h3>Searchable website</h3>
+				<p>Filter by world, currency, price, stock, listing type, and more!</p>
+			</div>
+		</div>
+	</section>
+
+	<section id="more-features">
+		<h2>More features</h2>
+		<p class="lede">Smaller things the mod does that are worth knowing about!</p>
+
+		<details class="disclosure">
+			<summary>Smaller features explained</summary>
+			<div class="content">
+				<ul class="minor-feature-list">
+					<li><strong>[DISPLAY] signs</strong><p>are supported as well!</p></li>
+					<li><strong>Shulker / bulk detection</strong><p>A shulker box that's full of one item gets logged as bulk!</p></li>
+					<li><strong>Enchanted book naming</strong><p>Enchanted books are logged with the actual enchantment name instead of the useless "Enchanted Book".</p></li>
+					<li><strong>Chat scan log</strong><p>An optional toggle that tells you everything found in a scan in chat, especially for tina :D</p></li>
+					<li><strong>Recently-scanned markers</strong><p>An optional particle over chests you've scanned recently, so you can see what's already been logged.</p></li>
+					<li><strong>Automatic cleanup</strong><p>Sold items, emptied chests, and shops that no longer exist get removed from the website automatically</p></li>
+					<li><strong>Keybindings</strong><p>Export, toggle auto-scan, toggle markers, toggle chat log, and manual upload are all bindable under Controls → Shop Logger (unbound by default except auto-scan).</p></li>
+				</ul>
+			</div>
+		</details>
+	</section>
+
+	<section id="faq">
+		<h2>FAQ</h2>
+		<p class="lede">Frequently asked questions go here!</p>
+		<div id="faqContainer"><div class="faq-empty">Loading…</div></div>
+	</section>
+
+</main>
+</div>
+
+<footer class="site">
+	Community-maintained · data comes from players' own Shop Logger exports · nothing here is verified by server staff
+</footer>
+
+<script>
+(function(){
+	"use strict";
+
+	var FAQ_URL = "data/faq.json";
+
+	function esc(s){
+		return String(s).replace(/[&<>"']/g, function(c){
+			return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+		});
+	}
+
+	function faqEntryHtml(f){
+		return '<details class="disclosure">'+
+			'<summary>'+esc(f.question)+'</summary>'+
+			'<div class="content"><p>'+esc(f.answer)+'</p></div>'+
+		'</details>';
+	}
+
+	async function loadFaq(){
+		var container = document.getElementById("faqContainer");
+		try {
+			var res = await fetch(FAQ_URL + "?t=" + Date.now());
+			var list = res.ok ? await res.json() : [];
+			if(!Array.isArray(list) || list.length === 0){
+				container.innerHTML = '<div class="faq-empty">No FAQ entries yet.</div>';
+				return;
+			}
+			container.innerHTML = list.map(faqEntryHtml).join("");
+		} catch(e){
+			container.innerHTML = '<div class="faq-empty">Couldn\'t load the FAQ right now.</div>';
+		}
+	}
+
+	loadFaq();
+})();
+</script>
+</body>
+</html>
