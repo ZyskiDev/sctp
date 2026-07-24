@@ -279,6 +279,18 @@
 		border-radius:8px;padding:6px 12px;cursor:pointer;
 	}
 	.pagination button:disabled{opacity:.4;cursor:not-allowed;}
+	.page-jump{display:flex;align-items:center;gap:6px;margin-left:6px;}
+	.page-jump label{white-space:nowrap;}
+	.page-jump input[type=number]{
+		width:56px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:6px 8px;font-family:var(--font-body);font-size:13px;
+	}
+	.page-jump input[type=number]:focus{outline:none;border-color:var(--accent-dim);}
+	.page-jump button{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;
+	}
+	.page-jump button:hover{border-color:var(--accent-dim);}
 
 	/* ---------- modal ---------- */
 	.modal-backdrop{
@@ -507,6 +519,11 @@
 				<button id="prevPage">← Prev</button>
 				<span id="pageIndicator">Page 1 of 1</span>
 				<button id="nextPage">Next →</button>
+				<span class="page-jump">
+					<label for="pageJumpInput">Go to page</label>
+					<input type="number" id="pageJumpInput" min="1" step="1">
+					<button id="pageJumpBtn" type="button">Go</button>
+				</span>
 			</div>
 		</section>
 	</div>
@@ -612,6 +629,10 @@
 	var filtered = [];
 	var page = 1;
 	var PAGE_SIZE = 50;
+	// Consumed once: the very first applyFilters() call after page load restores
+	// whatever page number was remembered from last time, instead of resetting
+	// to 1 like every later filter/search change correctly should.
+	var pendingPageRestore = true;
 	var currencyFilters = {}; // lowercase currency -> checked, built from whatever's actually in the data
 	var CURRENCY_LABELS = { diamond: "Diamond", diamondblock: "Diamond block" };
 
@@ -776,13 +797,35 @@
 		return Number(n).toLocaleString();
 	}
 
+	// Remembers the current page across refreshes/tab switches. Wrapped in
+	// try/catch since localStorage can throw (private browsing, storage
+	// disabled) — losing the remembered page just isn't worth breaking on.
+	var PAGE_STORAGE_KEY = "sctp_page";
+	function loadStoredPage(){
+		try {
+			var v = parseInt(localStorage.getItem(PAGE_STORAGE_KEY), 10);
+			return (v && v > 0) ? v : 1;
+		} catch(e){
+			return 1;
+		}
+	}
+	function storePage(p){
+		try { localStorage.setItem(PAGE_STORAGE_KEY, String(p)); } catch(e){}
+	}
+
 	// ---------------- config ----------------
 	// Set these after deploying the Worker (see trading-post-api/README.md).
-	var DATA_URL = "https://maxolotled.github.io/sctp/data/listings.json";
-	var SHARED_SHOPS_URL = "https://maxolotled.github.io/sctp/data/shared-shops-approved.json";
-	var RAR_FIREFLY_URL = "https://maxolotled.github.io/sctp/data/rar_firefly.txt";
-	var TL_HONEYBEE_URL = "https://maxolotled.github.io/sctp/data/tl_honeybee.txt";
-	var ITEM_LANG_URL = "https://maxolotled.github.io/sctp/data/item-lang-table.json";
+	// Data files are fetched relative to this page rather than via an absolute
+	// maxolotled.github.io URL — GitHub Pages 301-redirects the old github.io
+	// URL to a configured custom domain, and that cross-origin redirect isn't
+	// CORS-permitted, which silently broke every fetch() below after the
+	// custom domain was set up. Relative paths sidestep that entirely: they
+	// always resolve against whatever domain actually served this page.
+	var DATA_URL = "data/listings.json";
+	var SHARED_SHOPS_URL = "data/shared-shops-approved.json";
+	var RAR_FIREFLY_URL = "data/rar_firefly.txt";
+	var TL_HONEYBEE_URL = "data/tl_honeybee.txt";
+	var ITEM_LANG_URL = "data/item-lang-table.json";
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var API_KEY = "JjabYIfRtghvBJNoy6857TFVHbjknlMOi6754E5dcfvhgBHNI6b564"; // only used for manual upload / reports / requests, see notes in each modal
 
@@ -1126,7 +1169,12 @@
 			return rowTimestamp(b) - rowTimestamp(a);
 		});
 
-		page = 1;
+		if(pendingPageRestore){
+			page = loadStoredPage();
+			pendingPageRestore = false;
+		} else {
+			page = 1;
+		}
 		renderAll();
 	}
 
@@ -1167,6 +1215,8 @@
 
 		var totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 		if(page > totalPages) page = totalPages;
+		if(page < 1) page = 1;
+		storePage(page);
 		var start = (page-1)*PAGE_SIZE;
 		var pageRows = filtered.slice(start, start+PAGE_SIZE);
 
@@ -1628,6 +1678,18 @@
 	});
 	document.getElementById("prevPage").addEventListener("click", function(){ page--; renderTable(); });
 	document.getElementById("nextPage").addEventListener("click", function(){ page++; renderTable(); });
+	function goToTypedPage(){
+		var input = document.getElementById("pageJumpInput");
+		var n = parseInt(input.value, 10);
+		if(!n || n < 1) return;
+		page = n; // renderTable() clamps this to the actual last page if it's too high
+		renderTable();
+		input.value = "";
+	}
+	document.getElementById("pageJumpBtn").addEventListener("click", goToTypedPage);
+	document.getElementById("pageJumpInput").addEventListener("keydown", function(e){
+		if(e.key === "Enter") goToTypedPage();
+	});
 	document.getElementById("exportBtn").addEventListener("click", exportFilteredCsv);
 
 	loadListings();
