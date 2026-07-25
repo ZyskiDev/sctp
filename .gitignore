@@ -1,0 +1,8 @@
+# data/ is written directly by the Cloudflare Worker (and by players' own
+# mod uploads) via GitHub's API — it changes constantly from live usage.
+# Never commit it from a local clone: a locally-pulled snapshot is stale the
+# moment someone else uploads, and committing it back would clobber real
+# listings/reports/FAQ entries other people have added since you last pulled.
+# Already-tracked files in here are also marked --skip-worktree locally so
+# local changes to them never show up in `git status` either.
+data/
