@@ -79,7 +79,7 @@
 	.coord-finder label{font-size:13px;color:var(--muted);}
 	.coord-finder input{
 		width:110px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
-		border-radius:8px;padding:7px 10px;font-family:var(--font-mono);font-size:13.5px;
+		border-radius:8px;padding:7px 10px;font-family:var(--font-mono);font-size:16px;
 	}
 	.coord-finder button{
 		background:transparent;border:1px solid var(--line);color:var(--text);
@@ -97,8 +97,11 @@
 	}
 	#backBtn:hover{border-color:var(--accent-dim);color:var(--accent);}
 
+	.grid-scroll{
+		max-width:880px;margin:0 auto;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;
+	}
 	#mapGrid{
-		display:grid;gap:8px;width:100%;max-width:880px;margin:0 auto;
+		display:grid;gap:8px;width:100%;
 	}
 	.square{
 		position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -145,7 +148,7 @@
 	.modal label.field-label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
 	.modal input[type=text]{
 		width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
-		border-radius:8px;padding:8px 10px;font-family:var(--font-body);font-size:13.5px;margin-bottom:10px;
+		border-radius:8px;padding:10px;font-family:var(--font-body);font-size:16px;margin-bottom:10px;
 	}
 	.modal .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;flex-wrap:wrap;}
 	.modal .modal-actions button{
@@ -168,6 +171,27 @@
 	.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
 
 	footer.site{padding:20px 0 40px;color:var(--muted);font-size:12.5px;text-align:center;}
+
+	/* ---------- mobile: cells stop shrinking below a tappable/readable
+	   floor (grid scrolls sideways instead) and each cell shows just its
+	   short grid-coordinate label — full block coordinates still live in
+	   the modal once you tap a square. ---------- */
+	@media (max-width: 640px){
+		.wrap{padding:0 16px;}
+		header.site h1{font-size:26px;}
+		.steps-card{padding:18px 20px;}
+		.coord-finder{flex-direction:column;align-items:stretch;gap:10px;}
+		.coord-finder label{margin-bottom:-6px;}
+		.coord-finder input{width:100%;}
+		.coord-finder button{width:100%;padding:10px 14px;}
+		#mapGrid{gap:6px;}
+		.square.top .sq-coords, .square.leaf .sq-coords{display:none;}
+		.sq-stats{display:none;}
+		.sq-gridpos{
+			font-size:13px;font-weight:700;color:var(--text);opacity:1;margin-top:0;
+		}
+		.sq-user{font-size:10px;margin-top:2px;}
+	}
 </style>
 </head>
 <body>
@@ -215,7 +239,7 @@
 			<button type="button" id="backBtn">&larr; Back to overview</button>
 			<h3 id="gridTitle">World overview</h3>
 		</div>
-		<div id="mapGrid"></div>
+		<div class="grid-scroll"><div id="mapGrid"></div></div>
 	</section>
 </main>
 
@@ -290,7 +314,7 @@
 		document.getElementById("backBtn").style.display = "none";
 		document.getElementById("gridTitle").textContent = "World overview";
 		var grid = document.getElementById("mapGrid");
-		grid.style.gridTemplateColumns = "repeat(" + TOP_SIZE + ", 1fr)";
+		grid.style.gridTemplateColumns = "repeat(" + TOP_SIZE + ", minmax(46px, 1fr))";
 
 		var html = "";
 		for (var gy = 0; gy < TOP_SIZE; gy++){
@@ -304,6 +328,7 @@
 					: "";
 				html += '<div class="square top" data-gx="' + gx + '" data-gy="' + gy + '">' +
 					'<span class="sq-coords">X ~' + centerCoord(x0, x1) + '<br>Z ~' + centerCoord(z0, z1) + '</span>' +
+					'<span class="sq-gridpos">' + gx + ',' + gy + '</span>' +
 					statsLine +
 					'</div>';
 			}
@@ -330,7 +355,7 @@
 		document.getElementById("backBtn").style.display = "inline-block";
 		document.getElementById("gridTitle").textContent = "Click a square to claim or update it";
 		var grid = document.getElementById("mapGrid");
-		grid.style.gridTemplateColumns = "repeat(" + rx.count + ", 1fr)";
+		grid.style.gridTemplateColumns = "repeat(" + rx.count + ", minmax(46px, 1fr))";
 
 		var html = "";
 		for (var row = rz.start; row < rz.start + rz.count; row++){
