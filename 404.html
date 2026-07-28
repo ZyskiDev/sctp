@@ -116,6 +116,19 @@
 	.position{font-family:var(--font-mono);color:var(--muted);font-size:12px;}
 	.currency-cell{font-family:var(--font-mono);font-size:12px;color:var(--muted);text-transform:capitalize;}
 
+	.info-icon{
+		display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;
+		border-radius:50%;background:var(--info);color:var(--accent-ink);font-size:10px;font-weight:700;
+		cursor:help;margin-left:6px;position:relative;vertical-align:middle;
+	}
+	.info-icon .tooltip{
+		display:none;position:absolute;bottom:130%;left:0;
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		padding:8px 10px;border-radius:8px;font-size:12px;font-weight:400;white-space:normal;
+		width:200px;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,0.35);
+	}
+	.info-icon:hover .tooltip, .info-icon:focus .tooltip{display:block;}
+
 	.empty-state{padding:48px 24px;text-align:center;color:var(--muted);}
 	.empty-state h3{font-family:var(--font-display);color:var(--text);font-size:18px;margin:0 0 6px;}
 
@@ -164,6 +177,14 @@
 	}
 	function fmtNum(n){ return Number(n).toLocaleString(); }
 	function alphaOnly(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g, ""); }
+	// Manually-added listings (admin.html) store an "M001"-style id in
+	// lastSeen instead of a real scan timestamp.
+	function isManualListing(r){
+		return /^M\d+$/.test(String(r.lastSeen||""));
+	}
+	function manualIcon(text){
+		return '<span class="info-icon" tabindex="0">i<span class="tooltip">'+esc(text)+'</span></span>';
+	}
 	function relTime(iso){
 		var t = Date.parse(iso);
 		// Manually-added listings store an "M001"-style id here instead of a
@@ -448,6 +469,13 @@
 			'</tr></thead><tbody>';
 
 		filtered.forEach(function(r){
+			var manual = isManualListing(r);
+			var stockCell = manual
+				? '&infin;'+manualIcon("Added manually by an admin — stock isn't tracked for this listing.")
+				: fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' '+(r.stackSize === 64 ? 'stacks' : 'groups')+'</span>';
+			var lastSeenCell = manual
+				? 'None ('+esc(r.lastSeen)+')'+manualIcon("Added manually by an admin — there's no real scan time for this listing.")
+				: relTime(r.lastSeen);
 			html += '<tr>'+
 				'<td>'+esc(r.itemNameDisplay)+'</td>'+
 				'<td class="position">'+esc(r.baseItem)+'</td>'+
@@ -457,9 +485,9 @@
 				'</td>'+
 				'<td class="currency-cell">'+esc(r.currency)+'</td>'+
 				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span></td>'+
-				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' '+(r.stackSize === 64 ? 'stacks' : 'groups')+'</span></td>'+
+				'<td>'+stockCell+'</td>'+
 				'<td class="position">'+esc(r.position)+'</td>'+
-				'<td>'+relTime(r.lastSeen)+'</td>'+
+				'<td>'+lastSeenCell+'</td>'+
 				'</tr>';
 		});
 		html += '</tbody></table></div>';

@@ -1118,6 +1118,16 @@
 		});
 	}
 
+	// Manually-added listings (admin.html) store an "M001"-style id in
+	// lastSeen instead of a real scan timestamp — used to swap in the
+	// "None (id)" / "∞" display treatment below.
+	function isManualListing(r){
+		return /^M\d+$/.test(String(r.lastSeen||""));
+	}
+	function manualIcon(text){
+		return '<span class="info-icon" tabindex="0">i<span class="tooltip">'+esc(text)+'</span></span>';
+	}
+
 	// Matches worker.js/404.html's understanding of the same two abbreviations.
 	function worldSlug(world){
 		var w = String(world||"").toLowerCase();
@@ -1299,6 +1309,13 @@
 			var rareIcon = rareMatches.length
 				? '<span class="info-icon" tabindex="0">i<span class="tooltip">'+esc(rareMatches.join(" "))+'</span></span>'
 				: '';
+			var manual = isManualListing(r);
+			var stockCell = manual
+				? '&infin;'+manualIcon("Added manually by an admin — stock isn't tracked for this listing.")
+				: fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' '+(r.stackSize === 64 ? 'stacks' : 'groups')+'</span>';
+			var lastSeenCell = manual
+				? 'None ('+esc(r.lastSeen)+')'+manualIcon("Added manually by an admin — there's no real scan time for this listing.")
+				: relTime(r.lastSeen);
 			html += '<tr>'+
 				'<td class="item-name">'+esc(r.itemNameDisplay)+rareIcon+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
@@ -1307,11 +1324,11 @@
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '')+
 				'</td>'+
 				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span></td>'+
-				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' '+(r.stackSize === 64 ? 'stacks' : 'groups')+'</span></td>'+
+				'<td>'+stockCell+'</td>'+
 				'<td class="seller">'+(sellerUrl(r.seller, r.world) ? '<a href="'+sellerUrl(r.seller, r.world)+'">'+esc(r.seller)+'</a>' : esc(r.seller))+infoIcon+'</td>'+
 				'<td>'+esc(r.world)+'</td>'+
 				'<td class="position">'+esc(r.position)+'</td>'+
-				'<td>'+relTime(r.lastSeen)+'</td>'+
+				'<td>'+lastSeenCell+'</td>'+
 				'<td><button class="report-btn" type="button" data-row-idx="'+idx+'">Report</button></td>'+
 				'</tr>';
 		});

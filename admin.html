@@ -140,11 +140,15 @@
 			</select>
 			<label for="manualEntries">Entries, one per line: <code>itemName,price,currency,locationText[,priceLabel]</code></label>
 			<textarea id="manualEntries" rows="5" placeholder="Enchanted Golden Apple,5,diamond,Spawn shop stall 3&#10;Elytra,2,diamondblock,Ask in DMs" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:var(--font-mono, monospace);font-size:13.5px;"></textarea>
-			<div class="meta">No commas inside a field. priceLabel is optional — defaults to "price currency". Each entry gets a unique id (M001, M002, ...) shown in the Last seen column instead of a timestamp; delete by that id below.</div>
+			<div class="meta">No commas inside a field. priceLabel is optional — defaults to "price currency". Each entry gets a unique id (M001, M002, ...) shown in the Last seen column on the site instead of a timestamp.</div>
 			<button id="manualAddBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;margin-top:8px;">Add listings</button>
 			<div class="err" id="manualAddErr"></div>
+			<div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);flex-wrap:wrap;">
+				<input type="text" id="manualDeleteId" placeholder="Id to delete, e.g. M001" style="flex:1;min-width:160px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+				<button id="manualDeleteBtn" type="button" class="deny">Delete</button>
+			</div>
+			<div class="err" id="manualDeleteErr"></div>
 		</div>
-		<div id="manualList"></div>
 	</div>
 </div>
 
@@ -159,7 +163,6 @@
 	var reports = [];
 	var requests = [];
 	var faqs = [];
-	var manualListings = [];
 
 	function esc(s){
 		return String(s).replace(/[&<>"']/g, function(c){
@@ -197,7 +200,6 @@
 		reports = await api("/admin/reports");
 		requests = await api("/admin/shared-shop-requests");
 		faqs = await api("/admin/faq");
-		manualListings = await api("/admin/listings/manual");
 		render();
 	}
 
@@ -205,7 +207,6 @@
 		renderReports();
 		renderRequests();
 		renderFaq();
-		renderManualListings();
 	}
 
 	function renderReports(){
@@ -463,33 +464,6 @@
 
 	// ---------------- manually-added listings ----------------
 
-	function renderManualListings(){
-		var container = document.getElementById("manualList");
-		if(!manualListings.length){
-			container.innerHTML = '<div class="empty">No manually-added listings.</div>';
-			return;
-		}
-		container.innerHTML = manualListings.map(function(r){
-			return '<div class="card">'+
-				'<div class="row">'+
-					'<div>'+
-						'<div class="title">'+esc(r.itemName)+' <span class="badge pending">'+esc(r.lastSeen)+'</span></div>'+
-						'<div class="meta">'+esc(r.priceLabel)+' &middot; '+esc(r.seller)+' ('+esc(r.world)+') &middot; '+esc(r.position)+'</div>'+
-					'</div>'+
-				'</div>'+
-				'<div class="actions" style="margin-top:10px;">'+
-					'<button class="deny manual-delete" data-id="'+esc(r.lastSeen)+'" type="button">Delete</button>'+
-				'</div>'+
-			'</div>';
-		}).join("");
-
-		document.querySelectorAll(".manual-delete").forEach(function(b){
-			b.addEventListener("click", function(){
-				if(confirm("Delete "+b.getAttribute("data-id")+"?")) deleteManualListing(b.getAttribute("data-id"));
-			});
-		});
-	}
-
 	// Parses "itemName,price,currency,locationText[,priceLabel]" lines into
 	// {itemName, price, currency, position, priceLabel?} objects. Returns null
 	// (with an error message set) on the first malformed line.
@@ -535,26 +509,36 @@
 			errEl.style.color = "var(--accent)";
 			errEl.textContent = "Added: " + res.added.map(function(a){ return a.itemName+" ("+a.id+")"; }).join(", ");
 			document.getElementById("manualEntries").value = "";
-			await refresh();
 		} catch(err){
 			errEl.style.color = "var(--danger)";
 			errEl.textContent = "Failed: " + err.message;
 		}
 	}
 
-	async function deleteManualListing(id){
+	async function deleteManualListingById(){
+		var errEl = document.getElementById("manualDeleteErr");
+		errEl.style.color = "var(--danger)";
+		var id = document.getElementById("manualDeleteId").value.trim();
+		if(!/^M\d+$/i.test(id)){ errEl.textContent = "Enter an id like M001."; return; }
 		try {
 			await api("/admin/listings/manual-delete", {
 				method: "POST", headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ id: id }),
+				body: JSON.stringify({ id: id.toUpperCase() }),
 			});
-			await refresh();
+			errEl.style.color = "var(--accent)";
+			errEl.textContent = "Deleted " + id.toUpperCase() + ".";
+			document.getElementById("manualDeleteId").value = "";
 		} catch(err){
-			alert("Failed: " + err.message);
+			errEl.style.color = "var(--danger)";
+			errEl.textContent = "Failed: " + err.message;
 		}
 	}
 
 	document.getElementById("manualAddBtn").addEventListener("click", addManualListings);
+	document.getElementById("manualDeleteBtn").addEventListener("click", deleteManualListingById);
+	document.getElementById("manualDeleteId").addEventListener("keydown", function(e){
+		if(e.key === "Enter") deleteManualListingById();
+	});
 
 	document.getElementById("loginBtn").addEventListener("click", login);
 	document.getElementById("adminKeyInput").addEventListener("keydown", function(e){
