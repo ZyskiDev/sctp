@@ -633,10 +633,12 @@
 <!-- shared-shop request modal -->
 <div class="modal-backdrop" id="sharedShopBackdrop">
 	<div class="modal">
-		<h2>Request a shared shop note</h2>
-		<p>If you sell in more than one shop, an approved note lets buyers know — a small info icon will show up next to your name on any of your listings.</p>
+		<h2>Set up your seller page</h2>
+		<p>Once approved, buyers can click your name on any listing to see your own page — everything you sell, your other shops, and anything you want to say. Fill in either field below (or both).</p>
 		<label class="field-label" for="sharedShopUsername">Your username</label>
 		<input type="text" id="sharedShopUsername" placeholder="e.g. Steve" maxlength="32">
+		<label class="field-label" for="sharedShopBio">About you (shown on your seller page)</label>
+		<textarea id="sharedShopBio" placeholder="Anything you want buyers to know — hours you restock, what you specialize in, etc." maxlength="500"></textarea>
 		<label class="field-label" for="sharedShopList">Other shops you sell in (one per line)</label>
 		<textarea id="sharedShopList" placeholder="/shop diamond&#10;/shop netherite&#10;..."></textarea>
 		<div class="file-status" id="sharedShopStatus"></div>
@@ -1103,6 +1105,19 @@
 		});
 	}
 
+	// Matches worker.js/404.html's understanding of the same two abbreviations.
+	function worldSlug(world){
+		var w = String(world||"").toLowerCase();
+		if(w === "honeybee") return "hb";
+		if(w === "firefly") return "ff";
+		return "";
+	}
+	function sellerUrl(seller, world){
+		var slug = worldSlug(world);
+		if(!slug || !seller) return "";
+		return "/s/" + slug + "/" + encodeURIComponent(seller);
+	}
+
 	// q is already trimmed+lowercased by the caller. Checks whichever fields
 	// are enabled in the search scope for an exact (not substring) match.
 	// Strips everything but letters — lets an exact-match search for "ITEM"
@@ -1280,7 +1295,7 @@
 				'</td>'+
 				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span></td>'+
 				'<td>'+fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' '+(r.stackSize === 64 ? 'stacks' : 'groups')+'</span></td>'+
-				'<td class="seller">'+esc(r.seller)+infoIcon+'</td>'+
+				'<td class="seller">'+(sellerUrl(r.seller, r.world) ? '<a href="'+sellerUrl(r.seller, r.world)+'">'+esc(r.seller)+'</a>' : esc(r.seller))+infoIcon+'</td>'+
 				'<td>'+esc(r.world)+'</td>'+
 				'<td class="position">'+esc(r.position)+'</td>'+
 				'<td>'+relTime(r.lastSeen)+'</td>'+
@@ -1494,6 +1509,7 @@
 	// ---------------- shared-shop request modal ----------------
 	function openSharedShopRequest(){
 		document.getElementById("sharedShopUsername").value = "";
+		document.getElementById("sharedShopBio").value = "";
 		document.getElementById("sharedShopList").value = "";
 		var statusEl = document.getElementById("sharedShopStatus");
 		statusEl.textContent = "";
@@ -1507,6 +1523,7 @@
 	async function submitSharedShopRequest(){
 		var statusEl = document.getElementById("sharedShopStatus");
 		var username = document.getElementById("sharedShopUsername").value.trim();
+		var bio = document.getElementById("sharedShopBio").value.trim();
 		var shops = document.getElementById("sharedShopList").value
 			.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
 
@@ -1515,9 +1532,9 @@
 			statusEl.textContent = "Enter your username.";
 			return;
 		}
-		if(shops.length === 0){
+		if(shops.length === 0 && !bio){
 			statusEl.className = "file-status err";
-			statusEl.textContent = "List at least one shop.";
+			statusEl.textContent = "Add at least one shop, or something about you.";
 			return;
 		}
 
@@ -1527,7 +1544,7 @@
 			var res = await fetch(API_BASE + "/shared-shop-requests", {
 				method: "POST",
 				headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
-				body: JSON.stringify({ username: username, shops: shops })
+				body: JSON.stringify({ username: username, shops: shops, bio: bio })
 			});
 			var data = await res.json();
 			if(!res.ok) throw new Error(data.error || ("HTTP " + res.status));

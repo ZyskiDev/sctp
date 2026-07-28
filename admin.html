@@ -265,10 +265,15 @@
 				'<button class="deny req-deny" data-id="'+r.id+'" type="button">Deny</button>'+
 			  '</div>'
 			: '<span class="badge '+r.status+'">'+r.status+'</span>';
+		var shopsLine = (r.shops && r.shops.length)
+			? '<div class="meta">shops: '+esc(r.shops.join(", "))+' &middot; requested '+esc(r.createdAt)+'</div>'
+			: '<div class="meta">no shared shops listed &middot; requested '+esc(r.createdAt)+'</div>';
+		var bioBlock = r.bio ? '<div class="details">'+esc(r.bio)+'</div>' : '';
 
 		return '<div class="card">'+
 			'<div class="title">'+esc(r.username)+'</div>'+
-			'<div class="meta">shops: '+esc(r.shops.join(", "))+' &middot; requested '+esc(r.createdAt)+'</div>'+
+			shopsLine+
+			bioBlock+
 			'<div style="margin-top:10px;">'+actions+'</div>'+
 		'</div>';
 	}
