@@ -371,6 +371,10 @@
 		width:220px;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,0.35);
 	}
 	.info-icon:hover .tooltip, .info-icon:focus .tooltip{display:block;}
+	/* Icons in the rightmost table columns (In stock / Last seen) would have
+	   their tooltip clipped by .table-scroll's overflow-x — grow leftward
+	   from the icon instead of rightward. */
+	.info-icon.right .tooltip{left:auto;right:0;}
 
 	.download-options{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
 	.download-option{
@@ -1125,7 +1129,9 @@
 		return /^M\d+$/.test(String(r.lastSeen||""));
 	}
 	function manualIcon(text){
-		return '<span class="info-icon" tabindex="0">i<span class="tooltip">'+esc(text)+'</span></span>';
+		// "right" — these are only ever used in the In stock / Last seen
+		// columns, which sit at the right edge of the scrollable table.
+		return '<span class="info-icon right" tabindex="0">i<span class="tooltip">'+esc(text)+'</span></span>';
 	}
 
 	// Matches worker.js/404.html's understanding of the same two abbreviations.
