@@ -17,12 +17,13 @@ import java.util.Map;
 
 /**
  * Handles /search <item> — looks the term up against the same shared listing
- * data the website reads (data/listings.json), no auth needed since it's a
- * public GitHub Pages file, and prints matches to chat.
+ * data the website reads, via the Trading Post Worker's public GET /listings
+ * endpoint (backed by D1, edge-cached ~30s), no auth needed since it's a
+ * public read. Prints matches to chat.
  */
 public final class ShopSearch {
 
-	private static final String DATA_URL = "https://sctp.nl/data/listings.json";
+	private static final String DATA_URL = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev/listings";
 	private static final int MAX_RESULTS = 15;
 
 	// Same convention as index.html's price sort/filter fix: normalize to a
@@ -51,7 +52,7 @@ public final class ShopSearch {
 		message(client, ChatFormat.INFO, "Searching Trading Post for \"" + q + "\" on " + world.label() + "…");
 
 		HttpRequest request = HttpRequest.newBuilder()
-				.uri(URI.create(DATA_URL + "?t=" + System.currentTimeMillis())) // cache-bust, same as the website
+				.uri(URI.create(DATA_URL))
 				.GET()
 				.timeout(Duration.ofSeconds(15))
 				.build();
