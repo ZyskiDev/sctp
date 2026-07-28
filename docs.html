@@ -316,7 +316,7 @@
 (function(){
 	"use strict";
 
-	var FAQ_URL = "data/faq.json";
+	var FAQ_URL = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev/faq";
 
 	function esc(s){
 		return String(s).replace(/[&<>"']/g, function(c){
@@ -334,7 +334,7 @@
 	async function loadFaq(){
 		var container = document.getElementById("faqContainer");
 		try {
-			var res = await fetch(FAQ_URL + "?t=" + Date.now());
+			var res = await fetch(FAQ_URL);
 			var list = res.ok ? await res.json() : [];
 			if(!Array.isArray(list) || list.length === 0){
 				container.innerHTML = '<div class="faq-empty">No FAQ entries yet.</div>';

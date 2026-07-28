@@ -152,8 +152,9 @@
 (function(){
 	"use strict";
 
-	var DATA_URL = "/data/listings.json";
-	var SHARED_SHOPS_URL = "/data/shared-shops-approved.json";
+	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
+	var DATA_URL = API_BASE + "/listings";
+	var SHARED_SHOPS_URL = API_BASE + "/shared-shops";
 	var ITEM_LANG_URL = "/data/item-lang-table.json";
 
 	function esc(s){
@@ -256,12 +257,12 @@
 	async function loadAll(){
 		var listingsRaw = [], approved = [];
 		try {
-			var res = await fetch(DATA_URL + "?t=" + Date.now());
+			var res = await fetch(DATA_URL);
 			listingsRaw = res.ok ? await res.json() : [];
 		} catch(e){ listingsRaw = []; }
 
 		try {
-			var res2 = await fetch(SHARED_SHOPS_URL + "?t=" + Date.now());
+			var res2 = await fetch(SHARED_SHOPS_URL);
 			approved = res2.ok ? await res2.json() : [];
 		} catch(e){ approved = []; }
 

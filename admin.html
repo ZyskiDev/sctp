@@ -404,7 +404,7 @@
 		var coord = parseGridCoord(document.getElementById("worldMapCoordInput").value);
 		if(!coord){ errEl.textContent = "Enter a coordinate like 12x7 (0-48 for both)."; return; }
 		try {
-			var res = await fetch("data/world-map.json?t=" + Date.now());
+			var res = await fetch(API_BASE + "/world-map");
 			var data = res.ok ? await res.json() : {};
 			var entry = data[coord.col + "_" + coord.row] || { status: "unclaimed" };
 			curEl.textContent = "Current: " + entry.status + (entry.username ? (" — " + entry.username) : "");

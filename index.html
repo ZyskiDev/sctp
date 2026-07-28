@@ -852,12 +852,16 @@
 	// CORS-permitted, which silently broke every fetch() below after the
 	// custom domain was set up. Relative paths sidestep that entirely: they
 	// always resolve against whatever domain actually served this page.
-	var DATA_URL = "data/listings.json";
-	var SHARED_SHOPS_URL = "data/shared-shops-approved.json";
-	var RAR_FIREFLY_URL = "data/rar_firefly.txt";
-	var TL_HONEYBEE_URL = "data/tl_honeybee.txt";
-	var ITEM_LANG_URL = "data/item-lang-table.json";
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
+	// Everything except item-lang-table.json now reads through the Worker
+	// (backed by D1, edge-cached ~30s) instead of a static file on this site —
+	// no more GitHub Pages build-queue delay between an upload and it showing
+	// up. No cache-busting query param needed either: the Worker's cache TTL
+	// is now the only thing controlling freshness.
+	var DATA_URL = API_BASE + "/listings";
+	var SHARED_SHOPS_URL = API_BASE + "/shared-shops";
+	var RARE_ITEMS_URL = API_BASE + "/rare-items";
+	var ITEM_LANG_URL = "data/item-lang-table.json";
 	var API_KEY = "JjabYIfRtghvBJNoy6857TFVHbjknlMOi6754E5dcfvhgBHNI6b564"; // only used for manual upload / reports / requests, see notes in each modal
 
 	// seller (lowercased) -> array of shop names, from approved shared-shop requests
@@ -900,14 +904,17 @@
 		el.hidden = false;
 	}
 
-	async function fetchRareNameSet(url){
+	async function fetchRareNameSets(){
 		try {
-			var res = await fetch(url + "?t=" + Date.now());
-			if(!res.ok) return new Set();
-			var text = await res.text();
-			return new Set(text.split(/\r?\n/).map(alphaOnly).filter(Boolean));
+			var res = await fetch(RARE_ITEMS_URL);
+			if(!res.ok) return { firefly: new Set(), honeybee: new Set() };
+			var data = await res.json();
+			return {
+				firefly: new Set((data.firefly||[]).map(alphaOnly).filter(Boolean)),
+				honeybee: new Set((data.honeybee||[]).map(alphaOnly).filter(Boolean))
+			};
 		} catch(e){
-			return new Set();
+			return { firefly: new Set(), honeybee: new Set() };
 		}
 	}
 
@@ -950,8 +957,9 @@
 	var itemLangReady = loadItemLangTable();
 
 	async function loadRareLists(){
-		rareFireflyNames = await fetchRareNameSet(RAR_FIREFLY_URL);
-		rareHoneybeeNames = await fetchRareNameSet(TL_HONEYBEE_URL);
+		var sets = await fetchRareNameSets();
+		rareFireflyNames = sets.firefly;
+		rareHoneybeeNames = sets.honeybee;
 		updateRareNotice(document.getElementById("searchInput").value.trim().toLowerCase());
 		renderTable(); // re-render so any already-visible rows pick up their info icon
 	}
@@ -959,7 +967,7 @@
 	// ---------------- data loading ----------------
 	async function loadListings(){
 		try {
-			var res = await fetch(DATA_URL + "?t=" + Date.now()); // cache-bust so new commits show up promptly
+			var res = await fetch(DATA_URL);
 			if(res.ok){
 				allListings = await res.json();
 			} else {
@@ -980,7 +988,7 @@
 		allListings.forEach(function(r){ r.itemNameDisplay = localizedNameToEnglish(r.baseItem, r.itemName); });
 
 		try {
-			var shopsRes = await fetch(SHARED_SHOPS_URL + "?t=" + Date.now());
+			var shopsRes = await fetch(SHARED_SHOPS_URL);
 			var approved = shopsRes.ok ? await shopsRes.json() : [];
 			sharedShopsBySeller = {};
 			approved.forEach(function(entry){

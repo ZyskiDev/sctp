@@ -262,7 +262,7 @@
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var API_KEY = "JjabYIfRtghvBJNoy6857TFVHbjknlMOi6754E5dcfvhgBHNI6b564"; // same shared client key used across this site
-	var DATA_URL = "/data/world-map.json";
+	var DATA_URL = API_BASE + "/world-map";
 
 	// ---- grid math ----
 	// The 50k x 50k world is a 49x49 grid of leaf squares, one max-sized
@@ -589,7 +589,7 @@
 	// ---- load ----
 	async function load(){
 		try {
-			var res = await fetch(DATA_URL + "?t=" + Date.now());
+			var res = await fetch(DATA_URL);
 			mapData = res.ok ? await res.json() : {};
 		} catch (e) {
 			mapData = {};
