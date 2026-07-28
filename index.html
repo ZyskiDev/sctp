@@ -804,7 +804,10 @@
 
 	function rowTimestamp(r){
 		var t = Date.parse(r.lastSeen);
-		return isNaN(t) ? r._uploadedAt : t;
+		// Manually-added listings store an "M001"-style id in lastSeen instead
+		// of a timestamp — 0 (oldest possible) keeps them out of "recent" sorts
+		// and out of the newest-update stat without poisoning either with NaN.
+		return isNaN(t) ? 0 : t;
 	}
 
 	// Merging now happens server-side in the Worker (see trading-post-api/worker.js) —
@@ -812,7 +815,9 @@
 
 	function relTime(iso){
 		var t = Date.parse(iso);
-		if(isNaN(t)) return "unknown";
+		// Manually-added listings store an "M001"-style id here instead of a
+		// real timestamp — show it as-is rather than a meaningless "unknown".
+		if(isNaN(t)) return iso || "unknown";
 		var diff = Date.now() - t;
 		var m = Math.floor(diff/60000);
 		if(m < 1) return "just now";

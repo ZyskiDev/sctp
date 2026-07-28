@@ -166,7 +166,9 @@
 	function alphaOnly(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g, ""); }
 	function relTime(iso){
 		var t = Date.parse(iso);
-		if(isNaN(t)) return "—";
+		// Manually-added listings store an "M001"-style id here instead of a
+		// real timestamp — show it as-is rather than a meaningless dash.
+		if(isNaN(t)) return iso || "—";
 		var d = Math.floor((Date.now() - t) / 60000);
 		if(d < 1) return "just now";
 		if(d < 60) return d+"m ago";

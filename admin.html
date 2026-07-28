@@ -128,6 +128,23 @@
 			<button id="worldMapSaveBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Save</button>
 			<div class="err" id="worldMapErr"></div>
 		</div>
+
+		<h2>Manually add listings</h2>
+		<div class="card">
+			<label for="manualSeller">Seller username</label>
+			<input type="text" id="manualSeller" placeholder="e.g. Steve" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<label for="manualWorld">World</label>
+			<select id="manualWorld" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+				<option value="Firefly">Firefly</option>
+				<option value="Honeybee">Honeybee</option>
+			</select>
+			<label for="manualEntries">Entries, one per line: <code>itemName,price,currency,locationText[,priceLabel]</code></label>
+			<textarea id="manualEntries" rows="5" placeholder="Enchanted Golden Apple,5,diamond,Spawn shop stall 3&#10;Elytra,2,diamondblock,Ask in DMs" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:var(--font-mono, monospace);font-size:13.5px;"></textarea>
+			<div class="meta">No commas inside a field. priceLabel is optional — defaults to "price currency". Each entry gets a unique id (M001, M002, ...) shown in the Last seen column instead of a timestamp; delete by that id below.</div>
+			<button id="manualAddBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;margin-top:8px;">Add listings</button>
+			<div class="err" id="manualAddErr"></div>
+		</div>
+		<div id="manualList"></div>
 	</div>
 </div>
 
@@ -142,6 +159,7 @@
 	var reports = [];
 	var requests = [];
 	var faqs = [];
+	var manualListings = [];
 
 	function esc(s){
 		return String(s).replace(/[&<>"']/g, function(c){
@@ -179,6 +197,7 @@
 		reports = await api("/admin/reports");
 		requests = await api("/admin/shared-shop-requests");
 		faqs = await api("/admin/faq");
+		manualListings = await api("/admin/listings/manual");
 		render();
 	}
 
@@ -186,6 +205,7 @@
 		renderReports();
 		renderRequests();
 		renderFaq();
+		renderManualListings();
 	}
 
 	function renderReports(){
@@ -440,6 +460,101 @@
 
 	document.getElementById("worldMapLookupBtn").addEventListener("click", lookupWorldMapSquare);
 	document.getElementById("worldMapSaveBtn").addEventListener("click", saveWorldMapSquare);
+
+	// ---------------- manually-added listings ----------------
+
+	function renderManualListings(){
+		var container = document.getElementById("manualList");
+		if(!manualListings.length){
+			container.innerHTML = '<div class="empty">No manually-added listings.</div>';
+			return;
+		}
+		container.innerHTML = manualListings.map(function(r){
+			return '<div class="card">'+
+				'<div class="row">'+
+					'<div>'+
+						'<div class="title">'+esc(r.itemName)+' <span class="badge pending">'+esc(r.lastSeen)+'</span></div>'+
+						'<div class="meta">'+esc(r.priceLabel)+' &middot; '+esc(r.seller)+' ('+esc(r.world)+') &middot; '+esc(r.position)+'</div>'+
+					'</div>'+
+				'</div>'+
+				'<div class="actions" style="margin-top:10px;">'+
+					'<button class="deny manual-delete" data-id="'+esc(r.lastSeen)+'" type="button">Delete</button>'+
+				'</div>'+
+			'</div>';
+		}).join("");
+
+		document.querySelectorAll(".manual-delete").forEach(function(b){
+			b.addEventListener("click", function(){
+				if(confirm("Delete "+b.getAttribute("data-id")+"?")) deleteManualListing(b.getAttribute("data-id"));
+			});
+		});
+	}
+
+	// Parses "itemName,price,currency,locationText[,priceLabel]" lines into
+	// {itemName, price, currency, position, priceLabel?} objects. Returns null
+	// (with an error message set) on the first malformed line.
+	function parseManualEntries(text, errEl){
+		var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+		var entries = [];
+		for(var i=0; i<lines.length; i++){
+			var parts = lines[i].split(",").map(function(p){ return p.trim(); });
+			if(parts.length < 4){
+				errEl.textContent = "Line "+(i+1)+" needs at least itemName,price,currency,locationText";
+				return null;
+			}
+			var price = Number(parts[1]);
+			if(!parts[0] || !isFinite(price) || price < 0 || !parts[2] || !parts[3]){
+				errEl.textContent = "Line "+(i+1)+" is invalid — check itemName/price/currency/locationText.";
+				return null;
+			}
+			entries.push({ itemName: parts[0], price: price, currency: parts[2], position: parts[3], priceLabel: parts[4] || "" });
+		}
+		if(entries.length === 0){
+			errEl.textContent = "Enter at least one line.";
+			return null;
+		}
+		return entries;
+	}
+
+	async function addManualListings(){
+		var errEl = document.getElementById("manualAddErr");
+		errEl.style.color = "var(--danger)";
+		errEl.textContent = "";
+
+		var seller = document.getElementById("manualSeller").value.trim();
+		var world = document.getElementById("manualWorld").value;
+		var entries = parseManualEntries(document.getElementById("manualEntries").value, errEl);
+		if(!seller){ errEl.textContent = "Enter a seller username."; return; }
+		if(!entries) return;
+
+		try {
+			var res = await api("/admin/listings/manual-add", {
+				method: "POST", headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ seller: seller, world: world, entries: entries }),
+			});
+			errEl.style.color = "var(--accent)";
+			errEl.textContent = "Added: " + res.added.map(function(a){ return a.itemName+" ("+a.id+")"; }).join(", ");
+			document.getElementById("manualEntries").value = "";
+			await refresh();
+		} catch(err){
+			errEl.style.color = "var(--danger)";
+			errEl.textContent = "Failed: " + err.message;
+		}
+	}
+
+	async function deleteManualListing(id){
+		try {
+			await api("/admin/listings/manual-delete", {
+				method: "POST", headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ id: id }),
+			});
+			await refresh();
+		} catch(err){
+			alert("Failed: " + err.message);
+		}
+	}
+
+	document.getElementById("manualAddBtn").addEventListener("click", addManualListings);
 
 	document.getElementById("loginBtn").addEventListener("click", login);
 	document.getElementById("adminKeyInput").addEventListener("keydown", function(e){
