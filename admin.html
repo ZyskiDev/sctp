@@ -108,6 +108,26 @@
 			<div class="err" id="faqAddErr"></div>
 		</div>
 		<div id="faqList"></div>
+
+		<h2>World map override</h2>
+		<div class="card">
+			<label for="worldMapCoordInput">Grid coordinate (e.g. 12x7)</label>
+			<div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;">
+				<input type="text" id="worldMapCoordInput" placeholder="12x7" style="flex:1;min-width:120px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+				<button id="worldMapLookupBtn" type="button">Look up</button>
+			</div>
+			<div class="meta" id="worldMapCurrent"></div>
+			<div style="display:flex;gap:8px;margin:12px 0 6px;flex-wrap:wrap;align-items:center;">
+				<select id="worldMapStatusSelect" style="background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:13.5px;">
+					<option value="unclaimed">Unclaimed</option>
+					<option value="claimed">Claimed</option>
+					<option value="done">Done</option>
+				</select>
+				<input type="text" id="worldMapUsernameInput" placeholder="Minecraft username" style="flex:1;min-width:140px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			</div>
+			<button id="worldMapSaveBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Save</button>
+			<div class="err" id="worldMapErr"></div>
+		</div>
 	</div>
 </div>
 
@@ -365,6 +385,61 @@
 			alert("Failed: " + err.message);
 		}
 	}
+
+	// ---------------- world map override ----------------
+
+	function parseGridCoord(str){
+		var m = /^\s*(\d{1,2})\s*x\s*(\d{1,2})\s*$/i.exec(String(str || ""));
+		if(!m) return null;
+		var col = parseInt(m[1], 10), row = parseInt(m[2], 10);
+		if(col < 0 || col > 48 || row < 0 || row > 48) return null;
+		return { col: col, row: row };
+	}
+
+	async function lookupWorldMapSquare(){
+		var errEl = document.getElementById("worldMapErr");
+		var curEl = document.getElementById("worldMapCurrent");
+		errEl.style.color = "var(--danger)";
+		errEl.textContent = "";
+		var coord = parseGridCoord(document.getElementById("worldMapCoordInput").value);
+		if(!coord){ errEl.textContent = "Enter a coordinate like 12x7 (0-48 for both)."; return; }
+		try {
+			var res = await fetch("data/world-map.json?t=" + Date.now());
+			var data = res.ok ? await res.json() : {};
+			var entry = data[coord.col + "_" + coord.row] || { status: "unclaimed" };
+			curEl.textContent = "Current: " + entry.status + (entry.username ? (" — " + entry.username) : "");
+			document.getElementById("worldMapStatusSelect").value = entry.status;
+			document.getElementById("worldMapUsernameInput").value = entry.username || "";
+		} catch(err){
+			errEl.textContent = "Couldn't load world map data: " + err.message;
+		}
+	}
+
+	async function saveWorldMapSquare(){
+		var errEl = document.getElementById("worldMapErr");
+		errEl.style.color = "var(--danger)";
+		errEl.textContent = "";
+		var coord = parseGridCoord(document.getElementById("worldMapCoordInput").value);
+		if(!coord){ errEl.textContent = "Enter a coordinate like 12x7 (0-48 for both)."; return; }
+		var status = document.getElementById("worldMapStatusSelect").value;
+		var username = document.getElementById("worldMapUsernameInput").value.trim();
+		if(status !== "unclaimed" && !username){ errEl.textContent = "Enter a username for a claimed/done square."; return; }
+		try {
+			await api("/admin/world-map/set", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ squareId: coord.col + "_" + coord.row, status: status, username: username }),
+			});
+			errEl.style.color = "var(--accent)";
+			errEl.textContent = "Saved.";
+		} catch(err){
+			errEl.style.color = "var(--danger)";
+			errEl.textContent = "Failed: " + err.message;
+		}
+	}
+
+	document.getElementById("worldMapLookupBtn").addEventListener("click", lookupWorldMapSquare);
+	document.getElementById("worldMapSaveBtn").addEventListener("click", saveWorldMapSquare);
 
 	document.getElementById("loginBtn").addEventListener("click", login);
 	document.getElementById("adminKeyInput").addEventListener("keydown", function(e){
