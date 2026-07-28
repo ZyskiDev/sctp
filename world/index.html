@@ -75,6 +75,19 @@
 
 	#progressLine{color:var(--muted);font-size:13px;margin:0 0 18px;}
 
+	.coord-finder{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:20px;}
+	.coord-finder label{font-size:13px;color:var(--muted);}
+	.coord-finder input{
+		width:110px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:7px 10px;font-family:var(--font-mono);font-size:13.5px;
+	}
+	.coord-finder button{
+		background:transparent;border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:7px 14px;font-family:var(--font-body);font-size:13px;cursor:pointer;
+	}
+	.coord-finder button:hover{border-color:var(--accent-dim);color:var(--accent);}
+	.find-err{color:#E27D6B;font-size:12.5px;}
+
 	.grid-toolbar{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
 	.grid-toolbar h3{font-family:var(--font-display);font-weight:600;font-size:17px;margin:0;flex:1;}
 	#backBtn{
@@ -101,6 +114,10 @@
 	.square.leaf.claimed:hover{background:rgba(140,147,232,0.6);}
 	.square.leaf.done{background:rgba(183,226,61,0.45);cursor:default;}
 	.square.leaf.done:hover{background:rgba(183,226,61,0.45);}
+	.square.leaf.highlighted{
+		outline:3px solid var(--accent);outline-offset:-3px;
+		box-shadow:0 0 0 4px rgba(183,226,61,0.25);
+	}
 	.sq-coords{font-family:var(--font-mono);font-size:11px;line-height:1.5;color:var(--text);opacity:0.85;pointer-events:none;white-space:nowrap;}
 	.square.top .sq-coords{font-size:10.5px;opacity:0.7;}
 	.sq-gridpos{font-family:var(--font-mono);font-size:9.5px;color:var(--shell);opacity:0.8;margin-top:2px;pointer-events:none;}
@@ -186,6 +203,14 @@
 			<span class="legend-item"><span class="swatch done"></span> Done</span>
 		</div>
 		<p id="progressLine">Loading map state&hellip;</p>
+		<div class="coord-finder">
+			<label for="findX">X</label>
+			<input type="number" id="findX" placeholder="e.g. 1500">
+			<label for="findZ">Z</label>
+			<input type="number" id="findZ" placeholder="e.g. -3200">
+			<button id="findBtn" type="button">Find square</button>
+			<span class="find-err" id="findErr"></span>
+		</div>
 		<div class="grid-toolbar">
 			<button type="button" id="backBtn">&larr; Back to overview</button>
 			<h3 id="gridTitle">World overview</h3>
@@ -229,6 +254,7 @@
 	var mapData = {}; // squareId -> {status, username, claimedAt, completedAt}
 	var view = { mode: "top" };
 	var activeSquare = null;
+	var highlighted = null; // {col, row} from the coordinate finder, or null
 
 	function esc(s){
 		return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
@@ -260,6 +286,7 @@
 
 	function renderTopGrid(){
 		view = { mode: "top" };
+		highlighted = null;
 		document.getElementById("backBtn").style.display = "none";
 		document.getElementById("gridTitle").textContent = "World overview";
 		var grid = document.getElementById("mapGrid");
@@ -310,7 +337,8 @@
 			for (var col = rx.start; col < rx.start + rx.count; col++){
 				var xr = leafRange(col), zr = leafRange(row);
 				var st = squareState(col, row);
-				html += '<div class="square leaf ' + st.status + '" data-col="' + col + '" data-row="' + row + '">' +
+				var isHighlighted = highlighted && highlighted.col === col && highlighted.row === row;
+				html += '<div class="square leaf ' + st.status + (isHighlighted ? ' highlighted' : '') + '" data-col="' + col + '" data-row="' + row + '">' +
 					'<span class="sq-coords">X ~' + centerCoord(xr.min, xr.max) + '<br>Z ~' + centerCoord(zr.min, zr.max) + '</span>' +
 					'<span class="sq-gridpos">' + col + 'x' + row + '</span>' +
 					(st.status === "done" ? ('<span class="sq-user">' + esc(st.username) + '</span>') : "") +
@@ -333,6 +361,45 @@
 	});
 
 	document.getElementById("backBtn").addEventListener("click", renderTopGrid);
+
+	// ---- coordinate finder ----
+
+	function findCoordinate(){
+		var errEl = document.getElementById("findErr");
+		errEl.textContent = "";
+
+		var xVal = document.getElementById("findX").value.trim();
+		var zVal = document.getElementById("findZ").value.trim();
+		var x = parseInt(xVal, 10), z = parseInt(zVal, 10);
+		var worldMax = WORLD_MIN + GRID_SIZE * LEAF_BLOCKS - 1;
+
+		if (xVal === "" || zVal === "" || isNaN(x) || isNaN(z)){
+			errEl.textContent = "Enter both X and Z.";
+			return;
+		}
+		if (x < WORLD_MIN || x > worldMax || z < WORLD_MIN || z > worldMax){
+			errEl.textContent = "X and Z must be between " + WORLD_MIN + " and " + worldMax + ".";
+			return;
+		}
+
+		var col = Math.min(Math.max(Math.floor((x - WORLD_MIN) / LEAF_BLOCKS), 0), GRID_SIZE - 1);
+		var row = Math.min(Math.max(Math.floor((z - WORLD_MIN) / LEAF_BLOCKS), 0), GRID_SIZE - 1);
+		var gx = Math.min(Math.floor(col / 5), TOP_SIZE - 1);
+		var gy = Math.min(Math.floor(row / 5), TOP_SIZE - 1);
+
+		highlighted = { col: col, row: row };
+		renderSubGrid(gx, gy);
+
+		var el = document.querySelector('.square.leaf[data-col="' + col + '"][data-row="' + row + '"]');
+		if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+	}
+
+	document.getElementById("findBtn").addEventListener("click", findCoordinate);
+	["findX", "findZ"].forEach(function(id){
+		document.getElementById(id).addEventListener("keydown", function(e){
+			if (e.key === "Enter") findCoordinate();
+		});
+	});
 
 	// ---- modal ----
 
