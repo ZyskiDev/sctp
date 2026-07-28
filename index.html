@@ -1741,6 +1741,15 @@
 	loadListings();
 	setInterval(loadListings, 2 * 60 * 1000); // data updates on its own now — pick it up without a manual refresh
 	loadRareLists();
+
+	// Seller pages link here with ?addShop=<username> when a seller has no
+	// shop info yet, so the modal opens pre-filled instead of them retyping it.
+	var addShopUser = new URLSearchParams(window.location.search).get("addShop");
+	if(addShopUser){
+		openSharedShopRequest();
+		document.getElementById("sharedShopUsername").value = addShopUser;
+		history.replaceState(null, "", window.location.pathname); // don't reopen on refresh
+	}
 })();
 </script>
 </body>

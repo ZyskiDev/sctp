@@ -64,6 +64,13 @@
 	}
 	.profile-stats{display:flex;gap:22px;flex-wrap:wrap;flex:0 0 auto;font-family:var(--font-mono);font-size:13px;color:var(--muted);}
 	.profile-stats b{display:block;color:var(--shell);font-size:20px;font-weight:600;font-family:var(--font-display);}
+	.add-info-btn{
+		display:inline-block;margin-top:12px;background:transparent;color:var(--text);
+		border:1px solid var(--line);font-family:var(--font-body);font-weight:600;font-size:13px;
+		padding:8px 14px;border-radius:999px;text-decoration:none;cursor:pointer;
+		transition:border-color .12s ease, color .12s ease;
+	}
+	.add-info-btn:hover{border-color:var(--accent-dim);color:var(--accent);}
 
 	/* ---------- layout ---------- */
 	.layout{display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:start;}
@@ -277,6 +284,7 @@
 	function renderProfile(profile){
 		var shops = profile && Array.isArray(profile.shops) ? profile.shops : [];
 		var bio = profile && profile.bio ? profile.bio : "";
+		var hasAnyInfo = !!bio || shops.length > 0;
 		var distinctItems = new Set(allListings.map(function(r){ return r.baseItem; })).size;
 		var priced = allListings.filter(function(r){ return String(r.currency).toLowerCase() !== "display"; });
 		var avg = priced.length
@@ -293,6 +301,7 @@
 				'</div>'+
 				(bio ? '<p class="profile-bio">'+esc(bio)+'</p>' : '')+
 				(shops.length ? '<div class="profile-shops"><div class="label">Also sells at</div>'+shops.map(function(s){ return '<span class="shop-pill">'+esc(s)+'</span>'; }).join("")+'</div>' : '')+
+				(hasAnyInfo ? '' : '<a class="add-info-btn" href="/index.html?addShop='+encodeURIComponent(username)+'">+ Add your shop info</a>')+
 			'</div>'+
 			'<div class="profile-stats">'+
 				'<div><b>'+fmtNum(allListings.length)+'</b>listings</div>'+
