@@ -662,6 +662,10 @@
 	// ---------------- state ----------------
 	var allListings = [];   // merged master list
 	var filtered = [];
+	// rowKey(r) -> true for listings manually unchecked from the price-average
+	// calculation below. Checked (included) by default — this only ever holds
+	// exclusions, and resets on reload, same as every other in-page filter.
+	var avgExcluded = {};
 	var page = 1;
 	var PAGE_SIZE = 50;
 	// Consumed once: the very first applyFilters() call after page load restores
@@ -1298,6 +1302,7 @@
 			'<th data-k="item-az">Base item</th>'+
 			'<th>Type</th>'+
 			'<th data-k="price-desc">Price</th>'+
+			'<th>Avg?</th>'+
 			'<th data-k="stock-desc">In stock</th>'+
 			'<th data-k="seller-az">Seller</th>'+
 			'<th>World</th>'+
@@ -1330,6 +1335,7 @@
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '')+
 				'</td>'+
 				'<td><span class="price-main">'+esc(r.priceLabel)+'</span><br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span></td>'+
+				'<td style="text-align:center;"><input type="checkbox" class="avg-toggle" data-key="'+esc(rowKey(r))+'" title="Include this listing in the average price above"'+(avgExcluded[rowKey(r)] ? '' : ' checked')+'></td>'+
 				'<td>'+stockCell+'</td>'+
 				'<td class="seller">'+(sellerUrl(r.seller, r.world) ? '<a href="'+sellerUrl(r.seller, r.world)+'">'+esc(r.seller)+'</a>' : esc(r.seller))+infoIcon+'</td>'+
 				'<td>'+esc(r.world)+'</td>'+
@@ -1357,6 +1363,15 @@
 				openReport(pageRows[Number(btn.getAttribute("data-row-idx"))]);
 			});
 		});
+
+		area.querySelectorAll(".avg-toggle").forEach(function(cb){
+			cb.addEventListener("change", function(){
+				var key = cb.getAttribute("data-key");
+				if(cb.checked) delete avgExcluded[key];
+				else avgExcluded[key] = true;
+				renderPriceSummary();
+			});
+		});
 	}
 
 	// Average price is per single item, in diamond-equivalent terms — a listing
@@ -1376,8 +1391,11 @@
 		var el = document.getElementById("priceSummary");
 		var worlds = ["Firefly","Honeybee"];
 
-		// [DISPLAY] listings have no real price — never let them drag the average down.
-		var priced = filtered.filter(function(r){ return String(r.currency||"").toLowerCase() !== "display"; });
+		// [DISPLAY] listings have no real price — never let them drag the average
+		// down. Manually-unchecked listings (avg-toggle column) are excluded too.
+		var priced = filtered.filter(function(r){
+			return String(r.currency||"").toLowerCase() !== "display" && !avgExcluded[rowKey(r)];
+		});
 
 		var rows = worlds.map(function(world){
 			var rows = priced.filter(function(r){ return r.world === world; });
