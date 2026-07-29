@@ -228,6 +228,10 @@
 		font-size:10px;font-weight:700;flex:0 0 auto;
 	}
 	.sort-rank:empty{display:none;}
+	.avg-threshold-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+	.avg-threshold-label{font-size:12px;color:var(--muted);width:100%;}
+	.avg-threshold-row select{width:auto;}
+	.avg-threshold-row input[type=number]{width:60px;}
 	.f-reset{
 		width:100%;background:transparent;border:1px dashed var(--line);color:var(--muted);
 		border-radius:8px;padding:9px;font-size:13px;cursor:pointer;margin-top:4px;
@@ -532,6 +536,19 @@
 						<div class="search-scope-divider"></div>
 						<label><input type="checkbox" data-sort="item-az"><span class="sort-rank" data-sort-rank="item-az"></span> Item name A→Z</label>
 						<label><input type="checkbox" data-sort="seller-az"><span class="sort-rank" data-sort-rank="seller-az"></span> Seller A→Z</label>
+						<div class="search-scope-divider"></div>
+						<div class="avg-threshold-row">
+							<span class="avg-threshold-label">Exclude from average price:</span>
+							<select id="avgThresholdDir">
+								<option value="above">Above</option>
+								<option value="below">Below</option>
+							</select>
+							<input type="number" id="avgThresholdValue" placeholder="X" min="0">
+							<select id="avgThresholdUnit">
+								<option value="dia">dia</option>
+								<option value="db">db</option>
+							</select>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1391,10 +1408,28 @@
 		var el = document.getElementById("priceSummary");
 		var worlds = ["Firefly","Honeybee"];
 
+		// Optional "exclude above/below X dia/db" threshold from the sort menu —
+		// compared against the same per-single-item diamond price the average
+		// itself uses. Blank value = no threshold applied.
+		var thresholdDir = document.getElementById("avgThresholdDir").value;
+		var thresholdRaw = parseFloat(document.getElementById("avgThresholdValue").value);
+		var hasThreshold = isFinite(thresholdRaw) && thresholdRaw >= 0;
+		var thresholdDia = hasThreshold
+			? (document.getElementById("avgThresholdUnit").value === "db" ? thresholdRaw*9 : thresholdRaw)
+			: null;
+
 		// [DISPLAY] listings have no real price — never let them drag the average
-		// down. Manually-unchecked listings (avg-toggle column) are excluded too.
+		// down. Manually-unchecked listings (avg-toggle column) and anything
+		// outside the threshold above are excluded too.
 		var priced = filtered.filter(function(r){
-			return String(r.currency||"").toLowerCase() !== "display" && !avgExcluded[rowKey(r)];
+			if(String(r.currency||"").toLowerCase() === "display") return false;
+			if(avgExcluded[rowKey(r)]) return false;
+			if(hasThreshold){
+				var perItem = priceInDiamonds(r)/r.stackSize;
+				if(thresholdDir === "above" && perItem > thresholdDia) return false;
+				if(thresholdDir === "below" && perItem < thresholdDia) return false;
+			}
+			return true;
 		});
 
 		var rows = worlds.map(function(world){
@@ -1702,6 +1737,12 @@
 		document.getElementById(id).addEventListener("change", applyFilters);
 		document.getElementById(id).addEventListener("input", applyFilters);
 	});
+	// These only change what counts toward the average price summary, not
+	// which rows are in `filtered` — re-render just that panel, not the table.
+	["avgThresholdDir","avgThresholdValue","avgThresholdUnit"].forEach(function(id){
+		document.getElementById(id).addEventListener("change", renderPriceSummary);
+		document.getElementById(id).addEventListener("input", renderPriceSummary);
+	});
 
 	var currencyDropdownBtn = document.getElementById("currencyDropdownBtn");
 	var currencyDropdownMenu = document.getElementById("currencyDropdownMenu");
@@ -1774,6 +1815,10 @@
 		document.getElementById("scopeBaseItem").checked = true;
 		document.getElementById("scopeSeller").checked = true;
 		document.getElementById("scopeExactOnly").checked = false;
+		document.getElementById("avgThresholdDir").value = "above";
+		document.getElementById("avgThresholdValue").value = "";
+		document.getElementById("avgThresholdUnit").value = "dia";
+		avgExcluded = {};
 		applyFilters();
 	});
 	document.getElementById("prevPage").addEventListener("click", function(){ page--; renderTable(); });
