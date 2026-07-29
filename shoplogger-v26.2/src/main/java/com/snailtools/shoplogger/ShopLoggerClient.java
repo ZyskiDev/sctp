@@ -3,11 +3,13 @@ package com.snailtools.shoplogger;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.snailtools.qol.Cooldowns;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -16,8 +18,12 @@ import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
@@ -26,6 +32,7 @@ import org.lwjgl.glfw.GLFW;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 public class ShopLoggerClient implements ClientModInitializer {
 
@@ -154,6 +161,14 @@ public class ShopLoggerClient implements ClientModInitializer {
 					uploadTickCounter = 0;
 					ShopUploader.uploadAsync(client, false);
 				}
+			}
+		});
+
+		ItemTooltipCallback.EVENT.register(new ItemTooltipCallback() {
+			@Override
+			public void getTooltip(ItemStack stack, Item.TooltipContext tooltipContext, TooltipFlag tooltipFlag, List<Component> lines) {
+				Cooldowns.addQuestRotation(stack, lines);
+				Cooldowns.addAvailableRareCooldowns(stack, lines);
 			}
 		});
 	}
