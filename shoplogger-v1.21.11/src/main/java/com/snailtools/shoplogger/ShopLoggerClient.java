@@ -2,11 +2,13 @@ package com.snailtools.shoplogger;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.snailtools.qol.Cooldowns;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -18,14 +20,20 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
 
 import org.lwjgl.glfw.GLFW;
 
+import java.awt.*;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 public class ShopLoggerClient implements ClientModInitializer {
 
@@ -156,6 +164,16 @@ public class ShopLoggerClient implements ClientModInitializer {
 				}
 			}
 		});
+
+
+		ItemTooltipCallback.EVENT.register(new ItemTooltipCallback() {
+			@Override
+			public void getTooltip(ItemStack stack, Item.TooltipContext tooltipContext, TooltipType tooltipType, List<Text> lines) {
+				Cooldowns.addQuestRotation(stack, lines);
+				Cooldowns.addAvailableRareCooldowns(stack, lines);
+			}
+		});
+
 	}
 
 	private static int setWorld(CommandContext<FabricClientCommandSource> ctx, ShopWorld world) {
