@@ -205,6 +205,14 @@
 		});
 	}
 	function fmtNum(n){ return Number(n).toLocaleString(); }
+	// Graphs store price in diamonds/item (same basis as priceInDiamonds
+	// below); above 9 that reads more naturally as diamond blocks (9 dia = 1
+	// DB) than as a big raw diamond count.
+	function formatDiaOrDb(v){
+		if(v === null || v === undefined || isNaN(v)) return v;
+		var n = Math.round(v*100)/100;
+		return n > 9 ? (Math.round((n/9)*100)/100) + " DB" : n + " dia";
+	}
 	function alphaOnly(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g, ""); }
 
 	// ---------------- rare item name matching ----------------
@@ -629,8 +637,8 @@
 				(isRare ? rareInfoHtml(entry) : '')+
 				'<p class="history-note" id="historyNote"></p>'+
 				'<div class="charts-grid">'+
-					'<div class="chart-card"><h3>Average price (dia/item)</h3><div class="chart-wrap"><canvas id="chartAvgPrice"></canvas></div></div>'+
-					'<div class="chart-card"><h3>Lowest price (dia/item)</h3><div class="chart-wrap"><canvas id="chartLowestPrice"></canvas></div></div>'+
+					'<div class="chart-card"><h3>Average price (dia or DB/item)</h3><div class="chart-wrap"><canvas id="chartAvgPrice"></canvas></div></div>'+
+					'<div class="chart-card"><h3>Lowest price (dia or DB/item)</h3><div class="chart-wrap"><canvas id="chartLowestPrice"></canvas></div></div>'+
 					'<div class="chart-card"><h3>Distinct sellers</h3><div class="chart-wrap"><canvas id="chartSellers"></canvas></div></div>'+
 					'<div class="chart-card"><h3>Total stock</h3><div class="chart-wrap"><canvas id="chartStock"></canvas></div></div>'+
 				'</div>'+
@@ -669,11 +677,19 @@
 			}
 
 			[
-				{ id: "chartAvgPrice", field: "avgPrice" },
-				{ id: "chartLowestPrice", field: "lowestPrice" },
+				{ id: "chartAvgPrice", field: "avgPrice", isPrice: true },
+				{ id: "chartLowestPrice", field: "lowestPrice", isPrice: true },
 				{ id: "chartSellers", field: "sellerCount" },
 				{ id: "chartStock", field: "totalStock" },
 			].forEach(function(cfg){
+				var yTicks = { color: "#8FA593" };
+				var plugins = { legend: { labels: { color: "#EAEFE7" } } };
+				if(cfg.isPrice){
+					yTicks.callback = function(value){ return formatDiaOrDb(value); };
+					plugins.tooltip = { callbacks: { label: function(ctx){
+						return ctx.dataset.label + ": " + formatDiaOrDb(ctx.parsed.y);
+					} } };
+				}
 				new Chart(document.getElementById(cfg.id).getContext("2d"), {
 					type: "line",
 					data: {
@@ -688,9 +704,9 @@
 						interaction: { mode: "index", intersect: false },
 						scales: {
 							x: { ticks: { color: "#8FA593", maxRotation: 0 }, grid: { color: "#233128" } },
-							y: { ticks: { color: "#8FA593" }, grid: { color: "#233128" }, beginAtZero: true }
+							y: { ticks: yTicks, grid: { color: "#233128" }, beginAtZero: true }
 						},
-						plugins: { legend: { labels: { color: "#EAEFE7" } } }
+						plugins: plugins
 					}
 				});
 			});
