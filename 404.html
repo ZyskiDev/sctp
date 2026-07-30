@@ -151,6 +151,13 @@
 	.item-header .tag{color:var(--muted);font-size:13.5px;margin:4px 0 0;font-family:var(--font-mono);}
 	.item-header .tag a{color:var(--info);font-family:var(--font-body);}
 	.history-note{color:var(--warn);font-size:13px;margin:0 0 16px;}
+	.rare-info{
+		background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:24px;
+		display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:14px 20px;
+	}
+	.rare-info .f{display:flex;flex-direction:column;gap:3px;}
+	.rare-info .f-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-family:var(--font-mono);}
+	.rare-info .f-value{font-size:14px;color:var(--text);}
 	.charts-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;margin-bottom:24px;}
 	.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;}
 	.chart-card h3{font-family:var(--font-display);font-weight:600;font-size:15px;margin:0 0 12px;color:var(--shell);}
@@ -199,6 +206,56 @@
 	}
 	function fmtNum(n){ return Number(n).toLocaleString(); }
 	function alphaOnly(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g, ""); }
+
+	// ---------------- rare item name matching ----------------
+	// Rare items have no baseItem worth matching on (many share a generic
+	// vanilla item id), so listings are matched purely by display name.
+	// Aggressive normalization (case/punctuation/accents/decorative symbols
+	// all stripped) covers the overwhelming majority of real-world "typos" —
+	// shop signs wrapped in borders like "⋆✳ 1st Birthday Cake ✳⋆" normalize
+	// down to an exact match. True edit-distance fuzzing (tolerating actual
+	// misspelled letters) was tried and dropped: tested against live listings
+	// it produced real false positives, since this catalog has many
+	// intentionally similar but distinct items ("Cow Plushie" vs "Cod Plushie"
+	// vs "Crow Plushie", "Amethyst Sword" vs "Amethyst Shard", the Pride Duck
+	// set) that land in the same similarity range as genuine typo fixes —
+	// no threshold cleanly separates the two.
+	function rareNormalize(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9']/g, ""); }
+	function isRareNameMatch(a, b){
+		var na = rareNormalize(a), nb = rareNormalize(b);
+		return !!na && na === nb;
+	}
+	// Merges several /items/history result arrays (one per distinct
+	// baseItem+name pair currently matched to a rare item) into one series —
+	// needed because the backend still keys history by exact (baseItem, name),
+	// not by the fuzzy-matched rare item, so a typo'd listing's history lives
+	// under its own separate key.
+	function mergeHistoryArrays(arrays){
+		var byKey = {}, order = [];
+		arrays.forEach(function(arr){
+			arr.forEach(function(h){
+				var k = h.date + "|" + h.world;
+				var g = byKey[k];
+				if(!g){
+					g = { date: h.date, world: h.world, avgPrice: 0, lowestPrice: h.lowestPrice, highestPrice: h.highestPrice, listingCount: 0, sellerCount: 0, totalStock: 0, _weighted: 0 };
+					byKey[k] = g;
+					order.push(k);
+				}
+				g._weighted += h.avgPrice * h.listingCount;
+				g.listingCount += h.listingCount;
+				g.lowestPrice = Math.min(g.lowestPrice, h.lowestPrice);
+				g.highestPrice = Math.max(g.highestPrice, h.highestPrice);
+				g.sellerCount = Math.max(g.sellerCount, h.sellerCount);
+				g.totalStock += h.totalStock;
+			});
+		});
+		return order.map(function(k){
+			var g = byKey[k];
+			g.avgPrice = g.listingCount > 0 ? g._weighted / g.listingCount : 0;
+			delete g._weighted;
+			return g;
+		});
+	}
 	// Manually-added listings (admin.html) store an "M001"-style id in
 	// lastSeen instead of a real scan timestamp.
 	function isManualListing(r){
@@ -536,6 +593,7 @@
 		document.title = "Item — SC Trading Post";
 
 		var catalogEntry = null;
+		var isRare = false;
 		var itemKey = null;
 		var currentListings = []; // both worlds, normalized
 		var worldFilter = ""; // "" = both, else "Firefly" or "Honeybee"
@@ -545,12 +603,30 @@
 			return s ? "/s/" + s + "/" + encodeURIComponent(r.seller) : "";
 		}
 
+		function rareInfoHtml(entry){
+			var fields = [
+				{ label: "Category", value: entry.category },
+				{ label: "Effect", value: entry.effect },
+				{ label: "Release date", value: entry.releaseDate },
+				{ label: "Obtained from", value: entry.obtainedFrom },
+				{ label: "Glow/Particles", value: entry.glowParticles },
+				{ label: "Type/Slot", value: entry.typeSlot },
+				{ label: "Dyeable", value: entry.dyeable },
+			].filter(function(f){ return f.value; });
+			if(fields.length === 0) return "";
+			return '<div class="rare-info">' + fields.map(function(f){
+				return '<div class="f"><span class="f-label">'+esc(f.label)+'</span><span class="f-value">'+esc(f.value)+'</span></div>';
+			}).join("") + '</div>';
+		}
+
 		function renderSkeleton(entry){
+			var subtitle = isRare ? esc(entry.category) : esc(entry.baseItem);
 			var html = '<div class="item-header">'+
 					'<img src="'+esc(entry.texture)+'" class="item-header-icon" alt="" onerror="this.style.visibility=\'hidden\'">'+
 					'<div><h1 class="item-header-name">'+esc(entry.name)+'</h1>'+
-					'<p class="tag">'+esc(entry.baseItem)+' &middot; <a href="/items/">&larr; Item Library</a></p></div>'+
+					'<p class="tag">'+subtitle+' &middot; <a href="/items/">&larr; Item Library</a></p></div>'+
 				'</div>'+
+				(isRare ? rareInfoHtml(entry) : '')+
 				'<p class="history-note" id="historyNote"></p>'+
 				'<div class="charts-grid">'+
 					'<div class="chart-card"><h3>Average price (dia/item)</h3><div class="chart-wrap"><canvas id="chartAvgPrice"></canvas></div></div>'+
@@ -661,13 +737,17 @@
 		}
 
 		async function loadItem(){
-			var catalog = [];
-			try {
-				var catalogRes = await fetch("/data/vanilla-items.json");
-				catalog = catalogRes.ok ? await catalogRes.json() : [];
-			} catch(e){ catalog = []; }
+			var catalogResults = await Promise.all([
+				fetch("/data/vanilla-items.json").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+				fetch("/data/rare-items.json").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+			]);
+			var vanillaCatalog = catalogResults[0], rareCatalog = catalogResults[1];
 
-			catalogEntry = catalog.filter(function(it){ return it.id === slug; })[0] || null;
+			catalogEntry = vanillaCatalog.filter(function(it){ return it.id === slug; })[0] || null;
+			if(!catalogEntry){
+				catalogEntry = rareCatalog.filter(function(it){ return it.id === slug; })[0] || null;
+				isRare = !!catalogEntry;
+			}
 			if(!catalogEntry){
 				document.getElementById("app").innerHTML =
 					'<div class="notfound"><h1>Item not found</h1>'+
@@ -677,26 +757,49 @@
 			}
 
 			document.title = catalogEntry.name + " — SC Trading Post";
-			// Matches worker.js's computeDailySnapshots() exactly — see its
-			// comment for why baseItem + exact normalized name, not just baseItem.
-			itemKey = "v:" + catalogEntry.baseItem.toLowerCase() + "|" + catalogEntry.name.toLowerCase();
-
 			renderSkeleton(catalogEntry);
 
 			await loadItemLangTable();
 
-			var results = await Promise.all([
-				fetch(DATA_URL).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-				fetch(API_BASE + "/items/history?itemKey=" + encodeURIComponent(itemKey)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
-			]);
-			var listingsRaw = results[0], history = results[1];
+			var listingsRaw = await fetch(DATA_URL).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; });
+			var history;
 
-			var canonicalName = catalogEntry.name.toLowerCase();
-			currentListings = listingsRaw.filter(function(r){
-				if(String(r.baseItem||"").toLowerCase() !== catalogEntry.baseItem.toLowerCase()) return false;
-				var display = localizedNameToEnglish(r.baseItem, r.itemName);
-				return display.toLowerCase() === canonicalName;
-			}).map(normalizeRow);
+			if(isRare){
+				// No baseItem worth matching on for a rare item (many share a
+				// generic vanilla item id) — match on display name alone, with
+				// fuzzy tolerance for hand-typed shop-sign typos.
+				currentListings = listingsRaw.filter(function(r){
+					var display = localizedNameToEnglish(r.baseItem, r.itemName);
+					return isRareNameMatch(display, catalogEntry.name);
+				}).map(normalizeRow);
+
+				// The backend still keys price history by exact (baseItem, name)
+				// — same rule computeDailySnapshots() uses — so a typo'd listing's
+				// history lives under its own key. Fetch every distinct key among
+				// today's fuzzy-matched listings and merge them into one series.
+				var keys = [], seenKeys = {};
+				listingsRaw.forEach(function(r){
+					var display = localizedNameToEnglish(r.baseItem, r.itemName);
+					if(!isRareNameMatch(display, catalogEntry.name)) return;
+					var k = "v:" + String(r.baseItem||"").toLowerCase() + "|" + display.toLowerCase();
+					if(!seenKeys[k]){ seenKeys[k] = true; keys.push(k); }
+				});
+				var histArrays = await Promise.all(keys.map(function(k){
+					return fetch(API_BASE + "/items/history?itemKey=" + encodeURIComponent(k)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; });
+				}));
+				history = mergeHistoryArrays(histArrays);
+			} else {
+				// Matches worker.js's computeDailySnapshots() exactly — see its
+				// comment for why baseItem + exact normalized name, not just baseItem.
+				itemKey = "v:" + catalogEntry.baseItem.toLowerCase() + "|" + catalogEntry.name.toLowerCase();
+				var canonicalName = catalogEntry.name.toLowerCase();
+				currentListings = listingsRaw.filter(function(r){
+					if(String(r.baseItem||"").toLowerCase() !== catalogEntry.baseItem.toLowerCase()) return false;
+					var display = localizedNameToEnglish(r.baseItem, r.itemName);
+					return display.toLowerCase() === canonicalName;
+				}).map(normalizeRow);
+				history = await fetch(API_BASE + "/items/history?itemKey=" + encodeURIComponent(itemKey)).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; });
+			}
 
 			renderGraphs(history);
 			renderItemTable();

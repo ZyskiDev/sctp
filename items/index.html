@@ -79,6 +79,20 @@
 
 	.item-count{color:var(--muted);font-size:13px;margin:0 0 14px;}
 
+	.rare-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+	.rare-filters select{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:8px 10px;font-family:var(--font-body);font-size:13px;cursor:pointer;
+		max-width:200px;
+	}
+	.rare-filters select:focus{outline:none;border-color:var(--accent-dim);}
+	.rare-filters-reset{background:transparent;border:1px dashed var(--line);color:var(--muted);border-radius:8px;padding:8px 12px;font-size:12.5px;cursor:pointer;}
+	.rare-filters-reset:hover{color:var(--text);border-color:var(--accent-dim);}
+	.item-card .cat-pill{
+		display:inline-block;font-size:10px;font-family:var(--font-mono);color:var(--muted);
+		background:var(--panel-alt);border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-top:2px;
+	}
+
 	.empty-state{padding:60px 24px;text-align:center;color:var(--muted);}
 	.empty-state h3{font-family:var(--font-display);color:var(--text);font-size:19px;margin:0 0 8px;}
 
@@ -112,10 +126,18 @@
 	</div>
 
 	<div id="rarePane" hidden>
-		<div class="empty-state">
-			<h3>Rare items coming soon</h3>
-			<p>This tab will list custom/rare items once their data is added.</p>
+		<input type="text" class="item-search" id="rareSearch" placeholder="Search rare items or effects…">
+		<div class="rare-filters" id="rareFilters">
+			<select id="fCategory"><option value="">All categories</option></select>
+			<select id="fObtainedFrom"><option value="">Obtained from: any</option></select>
+			<select id="fReleaseDate"><option value="">Release: any</option></select>
+			<select id="fGlowParticles"><option value="">Glow/Particles: any</option></select>
+			<select id="fTypeSlot"><option value="">Type/Slot: any</option></select>
+			<select id="fDyeable"><option value="">Dyeable: any</option></select>
+			<button type="button" class="rare-filters-reset" id="fRareReset">Reset filters</button>
 		</div>
+		<p class="item-count" id="rareCount"></p>
+		<div class="item-grid" id="rareGrid"></div>
 	</div>
 </main>
 
@@ -169,12 +191,108 @@
 
 	document.getElementById("itemSearch").addEventListener("input", applySearch);
 
+	// ---------------- rare items ----------------
+	var allRareItems = [];
+	var rareLoaded = false;
+	var RARE_FILTER_FIELDS = [
+		{ id: "fCategory", key: "category" },
+		{ id: "fObtainedFrom", key: "obtainedFrom" },
+		{ id: "fReleaseDate", key: "releaseDate" },
+		{ id: "fGlowParticles", key: "glowParticles" },
+		{ id: "fTypeSlot", key: "typeSlot" },
+		{ id: "fDyeable", key: "dyeable" },
+	];
+
+	var MONTHS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+	function releaseSortKey(s){
+		var m = /^([a-z]{3})\w*\s+(\d{4})$/i.exec(String(s||"").trim());
+		if(!m) return 0;
+		var mi = MONTHS.indexOf(m[1].toLowerCase());
+		return parseInt(m[2], 10) * 100 + (mi === -1 ? 0 : mi);
+	}
+
+	function renderRareGrid(items){
+		document.getElementById("rareCount").textContent = items.length + " item" + (items.length === 1 ? "" : "s");
+		document.getElementById("rareGrid").innerHTML = items.map(function(it){
+			return '<a class="item-card" href="/items/' + esc(it.id) + '">' +
+				'<img src="' + esc(it.texture) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + PLACEHOLDER_ICON + '\';">' +
+				'<span>' + esc(it.name) + '<br><span class="cat-pill">' + esc(it.category) + '</span></span>' +
+			'</a>';
+		}).join("");
+	}
+
+	function populateRareFilters(){
+		RARE_FILTER_FIELDS.forEach(function(f){
+			var values = [];
+			var seen = {};
+			allRareItems.forEach(function(it){
+				var v = it[f.key];
+				if(!v) return;
+				var vKey = v.toLowerCase();
+				if(!seen[vKey]){ seen[vKey] = v; values.push(v); }
+			});
+			if(f.key === "releaseDate") values.sort(function(a,b){ return releaseSortKey(a) - releaseSortKey(b); });
+			else values.sort(function(a,b){ return a.localeCompare(b); });
+
+			var select = document.getElementById(f.id);
+			values.forEach(function(v){
+				var opt = document.createElement("option");
+				opt.value = v.toLowerCase();
+				opt.textContent = v;
+				select.appendChild(opt);
+			});
+		});
+	}
+
+	function applyRareFilters(){
+		var q = document.getElementById("rareSearch").value.trim().toLowerCase();
+		var active = {};
+		RARE_FILTER_FIELDS.forEach(function(f){ active[f.key] = document.getElementById(f.id).value; });
+
+		var filtered = allRareItems.filter(function(it){
+			if(q){
+				var haystack = (it.name + " " + (it.effect||"")).toLowerCase();
+				if(haystack.indexOf(q) === -1) return false;
+			}
+			for(var i = 0; i < RARE_FILTER_FIELDS.length; i++){
+				var f = RARE_FILTER_FIELDS[i];
+				if(active[f.key] && (!it[f.key] || it[f.key].toLowerCase() !== active[f.key])) return false;
+			}
+			return true;
+		});
+		renderRareGrid(filtered);
+	}
+
+	async function loadRareItems(){
+		if(rareLoaded) return;
+		rareLoaded = true;
+		try {
+			var res = await fetch("/data/rare-items.json");
+			allRareItems = res.ok ? await res.json() : [];
+		} catch(e){
+			allRareItems = [];
+		}
+		populateRareFilters();
+		renderRareGrid(allRareItems);
+	}
+
+	document.getElementById("rareSearch").addEventListener("input", applyRareFilters);
+	RARE_FILTER_FIELDS.forEach(function(f){
+		document.getElementById(f.id).addEventListener("change", applyRareFilters);
+	});
+	document.getElementById("fRareReset").addEventListener("click", function(){
+		document.getElementById("rareSearch").value = "";
+		RARE_FILTER_FIELDS.forEach(function(f){ document.getElementById(f.id).value = ""; });
+		applyRareFilters();
+	});
+
 	function switchTab(which){
 		var isVanilla = which === "vanilla";
 		document.getElementById("tabVanilla").classList.toggle("active", isVanilla);
 		document.getElementById("tabRare").classList.toggle("active", !isVanilla);
 		document.getElementById("vanillaPane").hidden = !isVanilla;
 		document.getElementById("rarePane").hidden = isVanilla;
+		if(!isVanilla) loadRareItems();
 	}
 	document.getElementById("tabVanilla").addEventListener("click", function(){ switchTab("vanilla"); });
 	document.getElementById("tabRare").addEventListener("click", function(){ switchTab("rare"); });
