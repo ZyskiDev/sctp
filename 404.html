@@ -99,6 +99,11 @@
 	.table-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
 	.table-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line);}
 	.table-toolbar .count{color:var(--muted);font-size:13px;}
+	.world-filter{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:7px 10px;font-family:var(--font-body);font-size:13px;cursor:pointer;
+	}
+	.world-filter:focus{outline:none;border-color:var(--accent-dim);}
 	.table-scroll{overflow-x:auto;}
 	table{width:100%;border-collapse:collapse;font-size:13.5px;}
 	th{
@@ -533,6 +538,7 @@
 		var catalogEntry = null;
 		var itemKey = null;
 		var currentListings = []; // both worlds, normalized
+		var worldFilter = ""; // "" = both, else "Firefly" or "Honeybee"
 
 		function sellerUrlFor(r){
 			var s = r.world === "Honeybee" ? "hb" : r.world === "Firefly" ? "ff" : "";
@@ -553,10 +559,20 @@
 					'<div class="chart-card"><h3>Total stock</h3><div class="chart-wrap"><canvas id="chartStock"></canvas></div></div>'+
 				'</div>'+
 				'<section class="table-card">'+
-					'<div class="table-toolbar"><span class="count" id="itemResultCount"></span></div>'+
+					'<div class="table-toolbar"><span class="count" id="itemResultCount"></span>'+
+						'<select id="itemWorldFilter" class="world-filter">'+
+							'<option value="">All worlds</option>'+
+							'<option value="Firefly">Firefly</option>'+
+							'<option value="Honeybee">Honeybee</option>'+
+						'</select>'+
+					'</div>'+
 					'<div id="itemTableArea"></div>'+
 				'</section>';
 			document.getElementById("app").insertAdjacentHTML("beforeend", html);
+			document.getElementById("itemWorldFilter").addEventListener("change", function(){
+				worldFilter = this.value;
+				renderItemTable();
+			});
 		}
 
 		function renderGraphs(history){
@@ -606,15 +622,18 @@
 
 		function renderItemTable(){
 			var area = document.getElementById("itemTableArea");
-			document.getElementById("itemResultCount").textContent = fmtNum(currentListings.length) + " current listing" + (currentListings.length===1?"":"s");
-			if(currentListings.length === 0){
-				area.innerHTML = '<div class="empty-state"><h3>No current listings</h3><p>Nobody is currently selling this exact item on either world.</p></div>';
+			var rows = worldFilter ? currentListings.filter(function(r){ return r.world === worldFilter; }) : currentListings;
+			document.getElementById("itemResultCount").textContent = fmtNum(rows.length) + " current listing" + (rows.length===1?"":"s");
+			if(rows.length === 0){
+				area.innerHTML = currentListings.length === 0
+					? '<div class="empty-state"><h3>No current listings</h3><p>Nobody is currently selling this exact item on either world.</p></div>'
+					: '<div class="empty-state"><h3>No listings on '+esc(worldFilter)+'</h3><p>Try switching the world filter above.</p></div>';
 				return;
 			}
 			var html = '<div class="table-scroll"><table><thead><tr>'+
 				'<th>Seller</th><th>World</th><th>Type</th><th>Currency</th><th>Price</th><th>In stock</th><th>Position</th><th>Last seen</th>'+
 				'</tr></thead><tbody>';
-			currentListings.forEach(function(r){
+			rows.forEach(function(r){
 				var manual = isManualListing(r);
 				var stockCell = manual
 					? '&infin;'+manualIcon("Added manually by an admin — stock isn't tracked for this listing.")
