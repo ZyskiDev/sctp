@@ -13,6 +13,7 @@ public record ShopEntry(
 		int stackSize,          // how many the shop stocks per slot — what the price above buys
 		double stacksInStock,   // amountAvailable / stackSize, rounded to 2 decimals
 		boolean bulk,           // true if this item was found inside a shulker box
+		boolean bundled,        // true if this item was found inside a bundle
 		String currency,        // currency type from the sign, e.g. "diamond"
 		String seller,
 		String world,           // "Firefly" or "Honeybee" — see WorldSelection

@@ -116,6 +116,7 @@
 	.price-sub{color:var(--muted);font-size:11.5px;}
 	.badge{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;}
 	.badge.bulk{background:rgba(140,147,232,0.16);color:var(--info);}
+	.badge.bundled{background:rgba(183,226,61,0.16);color:var(--accent);}
 	.badge.mixed{background:rgba(226,163,61,0.16);color:var(--warn);margin-left:4px;}
 	.badge.single{background:rgba(143,165,147,0.16);color:var(--muted);}
 	.badge.display{background:rgba(217,200,154,0.16);color:var(--shell);}
@@ -329,6 +330,7 @@
 			itemName: String(raw.itemName||""),
 			baseItem: String(raw.baseItem||"—"),
 			bulk: raw.bulk === true,
+			bundled: raw.bundled === true,
 			mixedContents: raw.mixedContents === true,
 			price: Number(raw.price) || 0,
 			priceLabel: String(raw.priceLabel||""),
@@ -462,6 +464,7 @@
 				'<div class="f-group"><label for="fSearch">Search their items</label><input type="text" id="fSearch" placeholder="e.g. diamond sword"></div>'+
 				'<div class="f-group"><label for="fBulk">Listing type</label><select id="fBulk">'+
 					'<option value="">All listings</option><option value="bulk">Bulk (shulker) only</option>'+
+					'<option value="bundled">Bundled only</option>'+
 					'<option value="single">Non-bulk only</option><option value="nonstacked">Non-stacked items only</option>'+
 				'</select></div>'+
 				'<div class="f-group"><label class="f-checkbox"><input type="checkbox" id="fHideDisplay"> Hide display-only listings</label></div>'+
@@ -535,6 +538,7 @@
 		filtered = allListings.filter(function(r){
 			if(q && r.itemNameDisplay.toLowerCase().indexOf(q) === -1 && r.baseItem.toLowerCase().indexOf(q) === -1) return false;
 			if(bulkMode === "bulk" && !r.bulk) return false;
+			if(bulkMode === "bundled" && !r.bundled) return false;
 			if(bulkMode === "single" && r.bulk) return false;
 			if(bulkMode === "nonstacked" && r.stackSize === 64) return false;
 			var currency = String(r.currency||"").toLowerCase();
@@ -579,7 +583,7 @@
 				'<td>'+esc(r.itemNameDisplay)+'</td>'+
 				'<td class="position">'+esc(r.baseItem)+'</td>'+
 				'<td>'+
-					(String(r.currency).toLowerCase() === "display" ? '<span class="badge display">Display</span>' : (r.bulk ? '<span class="badge bulk">Bulk</span>' : '<span class="badge single">Single</span>'))+
+					(String(r.currency).toLowerCase() === "display" ? '<span class="badge display">Display</span>' : (r.bulk ? '<span class="badge bulk">Bulk</span>' : r.bundled ? '<span class="badge bundled">Bundled</span>' : '<span class="badge single">Single</span>'))+
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '')+
 				'</td>'+
 				'<td class="currency-cell">'+esc(r.currency)+'</td>'+
@@ -629,6 +633,7 @@
 
 		function renderSkeleton(entry){
 			var subtitle = isRare ? esc(entry.category) : esc(entry.baseItem);
+			var priceUnit = isRare ? "dia or DB/item" : "dia or DB/stack of 64";
 			var html = '<div class="item-header">'+
 					'<img src="'+esc(entry.texture)+'" class="item-header-icon" alt="" onerror="this.style.visibility=\'hidden\'">'+
 					'<div><h1 class="item-header-name">'+esc(entry.name)+'</h1>'+
@@ -637,8 +642,8 @@
 				(isRare ? rareInfoHtml(entry) : '')+
 				'<p class="history-note" id="historyNote"></p>'+
 				'<div class="charts-grid">'+
-					'<div class="chart-card"><h3>Average price (dia or DB/item)</h3><div class="chart-wrap"><canvas id="chartAvgPrice"></canvas></div></div>'+
-					'<div class="chart-card"><h3>Lowest price (dia or DB/item)</h3><div class="chart-wrap"><canvas id="chartLowestPrice"></canvas></div></div>'+
+					'<div class="chart-card"><h3>Average price ('+priceUnit+')</h3><div class="chart-wrap"><canvas id="chartAvgPrice"></canvas></div></div>'+
+					'<div class="chart-card"><h3>Lowest price ('+priceUnit+')</h3><div class="chart-wrap"><canvas id="chartLowestPrice"></canvas></div></div>'+
 					'<div class="chart-card"><h3>Distinct sellers</h3><div class="chart-wrap"><canvas id="chartSellers"></canvas></div></div>'+
 					'<div class="chart-card"><h3>Total stock</h3><div class="chart-wrap"><canvas id="chartStock"></canvas></div></div>'+
 				'</div>'+
@@ -670,10 +675,20 @@
 			history.forEach(function(h){ if(!seen[h.date]){ seen[h.date] = true; dates.push(h.date); } });
 			dates.sort();
 
-			function seriesFor(world, field){
+			// Vanilla items are usually traded by the stack, so their price
+			// charts read more naturally per stack of 64 than per single item
+			// (rare items are almost always sold individually, so they keep
+			// the raw per-item basis computeDailySnapshots() stores).
+			var priceScale = isRare ? 1 : 64;
+
+			function seriesFor(world, field, scale){
 				var byDate = {};
 				history.forEach(function(h){ if(h.world === world) byDate[h.date] = h[field]; });
-				return dates.map(function(d){ return byDate.hasOwnProperty(d) ? byDate[d] : null; });
+				return dates.map(function(d){
+					if(!byDate.hasOwnProperty(d)) return null;
+					var v = byDate[d];
+					return v === null || v === undefined ? v : v * (scale || 1);
+				});
 			}
 
 			[
@@ -695,8 +710,8 @@
 					data: {
 						labels: dates,
 						datasets: [
-							{ label: "Firefly", data: seriesFor("Firefly", cfg.field), borderColor: "#E2A33D", backgroundColor: "rgba(226,163,61,0.12)", tension: 0.25, spanGaps: true },
-							{ label: "Honeybee", data: seriesFor("Honeybee", cfg.field), borderColor: "#B7E23D", backgroundColor: "rgba(183,226,61,0.12)", tension: 0.25, spanGaps: true },
+							{ label: "Firefly", data: seriesFor("Firefly", cfg.field, cfg.isPrice ? priceScale : 1), borderColor: "#E2A33D", backgroundColor: "rgba(226,163,61,0.12)", tension: 0.25, spanGaps: true },
+							{ label: "Honeybee", data: seriesFor("Honeybee", cfg.field, cfg.isPrice ? priceScale : 1), borderColor: "#B7E23D", backgroundColor: "rgba(183,226,61,0.12)", tension: 0.25, spanGaps: true },
 						]
 					},
 					options: {
@@ -738,7 +753,7 @@
 					'<td class="seller">'+(sellerUrl ? '<a href="'+sellerUrl+'">'+esc(r.seller)+'</a>' : esc(r.seller))+'</td>'+
 					'<td>'+esc(r.world)+'</td>'+
 					'<td>'+
-						(String(r.currency).toLowerCase() === "display" ? '<span class="badge display">Display</span>' : (r.bulk ? '<span class="badge bulk">Bulk</span>' : '<span class="badge single">Single</span>'))+
+						(String(r.currency).toLowerCase() === "display" ? '<span class="badge display">Display</span>' : (r.bulk ? '<span class="badge bulk">Bulk</span>' : r.bundled ? '<span class="badge bundled">Bundled</span>' : '<span class="badge single">Single</span>'))+
 						(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '')+
 					'</td>'+
 					'<td class="currency-cell">'+esc(r.currency)+'</td>'+

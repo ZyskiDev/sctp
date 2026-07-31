@@ -46,6 +46,16 @@ public class ShopLoggerClient implements ClientModInitializer {
 	private KeyBinding uploadKey;
 	private KeyBinding toggleMarkersKey;
 	private KeyBinding togglePrintKey;
+	private KeyBinding openLibraryKey;
+
+	/**
+	 * Set by /search when GUI mode is on, consumed on the next client tick.
+	 * Opening a Screen synchronously from inside a chat command's dispatch
+	 * races with ChatScreen's own close-on-submit logic (it runs right after
+	 * and would immediately undo our setScreen) — deferring to the next tick,
+	 * same as the hotkeys below, sidesteps that race.
+	 */
+	private static volatile String pendingSearchQuery;
 
 	/** How often (in ticks) to auto-upload to the Trading Post, in addition to the manual keybind. 20 ticks = 1s. */
 	private static final int AUTO_UPLOAD_INTERVAL_TICKS = 20 * 60 * 15; // 15 minutes
@@ -88,6 +98,13 @@ public class ShopLoggerClient implements ClientModInitializer {
 				"key.shoplogger.toggle_print",
 				InputUtil.Type.KEYSYM,
 				GLFW.GLFW_KEY_UNKNOWN, // unbound by default; set it in Controls
+				KEY_CATEGORY
+		));
+
+		openLibraryKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+				"key.shoplogger.open_library",
+				InputUtil.Type.KEYSYM,
+				GLFW.GLFW_KEY_X,
 				KEY_CATEGORY
 		));
 
@@ -157,6 +174,14 @@ public class ShopLoggerClient implements ClientModInitializer {
 			if (togglePrintKey != null && togglePrintKey.wasPressed()) {
 				togglePrint(client);
 			}
+			if (openLibraryKey != null && openLibraryKey.wasPressed() && client.currentScreen == null) {
+				client.setScreen(new com.snailtools.shoplogger.gui.HomeScreen());
+			}
+			if (pendingSearchQuery != null) {
+				String query = pendingSearchQuery;
+				pendingSearchQuery = null;
+				client.setScreen(new com.snailtools.shoplogger.gui.ListingsScreen(null, query));
+			}
 
 			if (client.player != null) {
 				uploadTickCounter++;
@@ -186,7 +211,11 @@ public class ShopLoggerClient implements ClientModInitializer {
 
 	private static int search(CommandContext<FabricClientCommandSource> ctx) {
 		String item = StringArgumentType.getString(ctx, "item");
-		ShopSearch.searchAsync(ctx.getSource().getClient(), item);
+		if (SearchPreferences.isGuiSearch()) {
+			pendingSearchQuery = item;
+		} else {
+			ShopSearch.searchAsync(ctx.getSource().getClient(), item);
+		}
 		return 1;
 	}
 

@@ -49,7 +49,14 @@ public final class ShopMarkerRenderer {
 		Vec3d eye = client.player.getEyePos();
 		DustParticleEffect effect = new DustParticleEffect(COLOR, SCALE);
 
-		for (BlockPos pos : ShopAutoScanner.getInstance().getRecentlyScannedPositions()) {
+		for (BlockPos containerPos : ShopAutoScanner.getInstance().getRecentlyScannedPositions()) {
+			// Mark the sign, not the container — that's what the player is
+			// actually reading while walking a shop route. Falls back to the
+			// container position if this container has no known sign yet
+			// (e.g. a manually-opened chest ShopAutoScanner never discovered).
+			ShopSign sign = ShopAutoScanner.getInstance().getKnownSign(containerPos);
+			BlockPos pos = sign != null ? sign.signPos() : containerPos;
+
 			if (!pos.isWithinDistance(eye, MAX_DISTANCE)) continue;
 
 			double x = pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.6;

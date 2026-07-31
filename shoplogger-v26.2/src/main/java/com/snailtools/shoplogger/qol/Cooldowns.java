@@ -2,7 +2,7 @@ package com.snailtools.shoplogger.qol;
 
 
 
-import com.snailtools.shoplogger.qol.uitls.Util;
+import com.snailtools.shoplogger.qol.utils.Util;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;

@@ -36,8 +36,9 @@ public class ShopAutoScanner implements SilentScreenCoordinator.Listener {
 
 	/** How close the player must be before we'll silently open a shop. */
 	private static final double INTERACT_RANGE = 4.5;
-	/** Minimum time between re-scanning the *same* container. */
-	private static final long PER_SHOP_COOLDOWN_MS = 5 * 60 * 1000L;
+	/** Minimum time between re-scanning the *same* container. Configurable — see getPerShopCooldownMs(). */
+	private static final int DEFAULT_PER_SHOP_COOLDOWN_MINUTES = 5;
+	private static final String CONFIG_COOLDOWN_MINUTES = "scanning/cooldownMinutes";
 	/** Minimum time between any two silent opens, regardless of container. */
 	private static final long GLOBAL_COOLDOWN_MS = 750L;
 	/** How often (in ticks) we rescan nearby chunks for new shop signs. */
@@ -112,16 +113,32 @@ public class ShopAutoScanner implements SilentScreenCoordinator.Listener {
 		lastScanned.put(pos.immutable(), System.currentTimeMillis());
 	}
 
+	/** How long a container counts as "recently scanned" — configurable via the settings screen, defaults to 5 minutes. */
+	public static long getPerShopCooldownMs() {
+		int minutes = com.snailtools.shoplogger.config.Config.getOrCreate(CONFIG_COOLDOWN_MINUTES, Integer.class, DEFAULT_PER_SHOP_COOLDOWN_MINUTES);
+		return minutes * 60 * 1000L;
+	}
+
+	public static void setPerShopCooldownMinutes(int minutes) {
+		com.snailtools.shoplogger.config.Config.update(CONFIG_COOLDOWN_MINUTES, minutes);
+	}
+
 	/** Positions still within the per-shop cooldown window, i.e. "freshly done, no need to recheck yet." */
 	public Set<BlockPos> getRecentlyScannedPositions() {
 		long now = System.currentTimeMillis();
+		long cooldownMs = getPerShopCooldownMs();
 		Set<BlockPos> recent = new HashSet<>();
 		for (Map.Entry<BlockPos, Long> e : lastScanned.entrySet()) {
-			if (now - e.getValue() < PER_SHOP_COOLDOWN_MS) {
+			if (now - e.getValue() < cooldownMs) {
 				recent.add(e.getKey());
 			}
 		}
 		return recent;
+	}
+
+	/** The known ShopSign for a container position, if any — used to anchor the scan-marker particle to the sign instead of the container. */
+	public ShopSign getKnownSign(BlockPos containerPos) {
+		return knownShops.get(containerPos);
 	}
 
 	// ---- called every client tick ----
@@ -158,7 +175,7 @@ public class ShopAutoScanner implements SilentScreenCoordinator.Listener {
 		for (Map.Entry<BlockPos, ShopSign> e : knownShops.entrySet()) {
 			BlockPos pos = e.getKey();
 			Long last = lastScanned.get(pos);
-			if (last != null && now - last < PER_SHOP_COOLDOWN_MS) continue;
+			if (last != null && now - last < getPerShopCooldownMs()) continue;
 
 			double dist = Math.sqrt(new Vec3(pos.getX(), pos.getY(), pos.getZ()).distanceToSqr(eye));
 			if (dist > INTERACT_RANGE) continue;

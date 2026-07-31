@@ -113,6 +113,7 @@ public class ShopUploader {
 		m.put("itemName", e.itemName());
 		m.put("baseItem", e.baseItem());
 		m.put("bulk", e.bulk());
+		m.put("bundled", e.bundled());
 		m.put("mixedContents", false);
 		m.put("price", e.price());
 		m.put("priceLabel", e.priceLabel());

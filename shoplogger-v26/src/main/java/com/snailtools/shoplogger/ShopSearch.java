@@ -16,10 +16,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Handles /search <item> — looks the term up against the same shared listing
- * data the website reads, via the Trading Post Worker's public GET /listings
- * endpoint (backed by D1, edge-cached ~30s), no auth needed since it's a
- * public read. Prints matches to chat.
+ * Handles /search <item> when the chat-output preference is chosen instead of
+ * the GUI (see SearchPreferences) — looks the term up against the same shared
+ * listing data the website reads, via the Trading Post Worker's public GET
+ * /listings endpoint (backed by D1, edge-cached ~30s), no auth needed since
+ * it's a public read. Prints matches to chat.
  */
 public final class ShopSearch {
 

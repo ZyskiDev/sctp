@@ -1,6 +1,6 @@
 package com.snailtools.shoplogger.qol;
 
-import com.snailtools.shoplogger.qol.uitls.Util;
+import com.snailtools.shoplogger.qol.utils.Util;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.item.ItemStack;

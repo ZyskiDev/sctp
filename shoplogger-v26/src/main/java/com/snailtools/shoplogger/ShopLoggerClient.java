@@ -46,6 +46,16 @@ public class ShopLoggerClient implements ClientModInitializer {
 	private KeyMapping uploadKey;
 	private KeyMapping toggleMarkersKey;
 	private KeyMapping togglePrintKey;
+	private KeyMapping openLibraryKey;
+
+	/**
+	 * Set by /search when GUI mode is on, consumed on the next client tick.
+	 * Opening a Screen synchronously from inside a chat command's dispatch
+	 * races with ChatScreen's own close-on-submit logic (it runs right after
+	 * and would immediately undo our setScreenAndShow) — deferring to the
+	 * next tick, same as the hotkeys below, sidesteps that race.
+	 */
+	private static volatile String pendingSearchQuery;
 
 	/** How often (in ticks) to auto-upload to the Trading Post, in addition to the manual keybind. 20 ticks = 1s. */
 	private static final int AUTO_UPLOAD_INTERVAL_TICKS = 20 * 60 * 15; // 15 minutes
@@ -53,6 +63,7 @@ public class ShopLoggerClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+
 		//try load config first
 		Config.load();
 
@@ -88,6 +99,13 @@ public class ShopLoggerClient implements ClientModInitializer {
 				"key.shoplogger.toggle_print",
 				InputConstants.Type.KEYSYM,
 				GLFW.GLFW_KEY_UNKNOWN, // unbound by default; set it in Controls
+				KEY_CATEGORY
+		));
+
+		openLibraryKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.shoplogger.open_library",
+				InputConstants.Type.KEYSYM,
+				GLFW.GLFW_KEY_X,
 				KEY_CATEGORY
 		));
 
@@ -157,6 +175,14 @@ public class ShopLoggerClient implements ClientModInitializer {
 			if (togglePrintKey != null && togglePrintKey.consumeClick()) {
 				togglePrint(client);
 			}
+			if (openLibraryKey != null && openLibraryKey.consumeClick()) {
+				client.setScreenAndShow(new com.snailtools.shoplogger.gui.HomeScreen());
+			}
+			if (pendingSearchQuery != null) {
+				String query = pendingSearchQuery;
+				pendingSearchQuery = null;
+				client.setScreenAndShow(new com.snailtools.shoplogger.gui.ListingsScreen(null, query));
+			}
 
 			if (client.player != null) {
 				uploadTickCounter++;
@@ -168,14 +194,12 @@ public class ShopLoggerClient implements ClientModInitializer {
 		});
 
 		ItemTooltipCallback.EVENT.register(new ItemTooltipCallback() {
-
 			@Override
 			public void getTooltip(ItemStack stack, Item.TooltipContext tooltipContext, TooltipFlag tooltipFlag, List<Component> lines) {
 				Cooldowns.addQuestRotation(stack, lines);
 				Cooldowns.addAvailableRareCooldowns(stack, lines);
 			}
 		});
-
 	}
 
 	private static int setWorld(CommandContext<FabricClientCommandSource> ctx, ShopWorld world) {
@@ -186,7 +210,11 @@ public class ShopLoggerClient implements ClientModInitializer {
 
 	private static int search(CommandContext<FabricClientCommandSource> ctx) {
 		String item = StringArgumentType.getString(ctx, "item");
-		ShopSearch.searchAsync(ctx.getSource().getClient(), item);
+		if (SearchPreferences.isGuiSearch()) {
+			pendingSearchQuery = item;
+		} else {
+			ShopSearch.searchAsync(ctx.getSource().getClient(), item);
+		}
 		return 1;
 	}
 

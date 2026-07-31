@@ -6,7 +6,9 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ContainerComponent;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.component.type.BundleContentsComponent;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.BundleItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
@@ -28,7 +30,7 @@ public final class ShopEntryFactory {
 	// batchSize = the largest single-slot quantity seen for this item, i.e. how
 	// many the shop stocks per slot. The sign's price is per this many items,
 	// not necessarily per a full stack — see ShopSign.
-	private record Tally(ItemStack representative, int count, int batchSize, boolean bulk) {}
+	private record Tally(ItemStack representative, int count, int batchSize, boolean bulk, boolean bundled) {}
 
 	public static List<ShopEntry> build(ScreenHandler handler, ShopSign sign, BlockPos containerPos) {
 		if (!(handler instanceof GenericContainerScreenHandler containerHandler)) {
@@ -56,18 +58,28 @@ public final class ShopEntryFactory {
 			if (stack == null || stack.isEmpty()) continue;
 
 			List<ItemStack> shulkerContents = readShulkerContents(stack);
+			List<ItemStack> bundleContents = shulkerContents == null ? readBundleContents(stack) : null;
+
 			if (shulkerContents != null && !shulkerContents.isEmpty() && isSingleItemType(shulkerContents)) {
 				// Bulk item: the whole shulker is one item type — register its
 				// contents instead of the shulker itself.
 				for (ItemStack inner : shulkerContents) {
 					if (inner == null || inner.isEmpty()) continue;
-					addTally(tallies, inner, inner.getCount(), true);
+					addTally(tallies, inner, inner.getCount(), true, false);
+				}
+			} else if (bundleContents != null && !bundleContents.isEmpty() && isSingleItemType(bundleContents)) {
+				// Same idea as a shulker, but marked "bundled" instead of "bulk" so
+				// the site can tell the two apart.
+				for (ItemStack inner : bundleContents) {
+					if (inner == null || inner.isEmpty()) continue;
+					addTally(tallies, inner, inner.getCount(), false, true);
 				}
 			} else {
-				// Empty shulker, or a mixed-contents shulker (e.g. a curated bundle
-				// like a "Lunar New Year Box") — list the shulker itself rather than
-				// decomposing it. "Bulk" specifically means "entirely one item type."
-				addTally(tallies, stack, stack.getCount(), false);
+				// Empty/mixed-contents shulker or bundle (e.g. a curated bundle like
+				// a "Lunar New Year Box") — list the container itself rather than
+				// decomposing it. "Bulk"/"bundled" specifically mean "entirely one
+				// item type."
+				addTally(tallies, stack, stack.getCount(), false, false);
 			}
 		}
 
@@ -91,6 +103,7 @@ public final class ShopEntryFactory {
 					batchSize,
 					stacksInStock,
 					t.bulk(),
+					t.bundled(),
 					sign.currency(),
 					sign.seller(),
 					world.label(),
@@ -101,23 +114,25 @@ public final class ShopEntryFactory {
 		return out;
 	}
 
-	private static void addTally(Map<String, Tally> tallies, ItemStack stack, int amount, boolean bulk) {
+	private static void addTally(Map<String, Tally> tallies, ItemStack stack, int amount, boolean bulk, boolean bundled) {
 		String baseId = Registries.ITEM.getId(stack.getItem()).toString();
 		String displayName = displayNameFor(stack);
 		String key = baseId + "|" + displayName;
 
 		Tally existing = tallies.get(key);
 		if (existing == null) {
-			tallies.put(key, new Tally(stack, amount, amount, bulk));
+			tallies.put(key, new Tally(stack, amount, amount, bulk, bundled));
 		} else {
-			// Once bulk, stays bulk if any contributing stack came from a shulker.
-			// batchSize takes the largest single slot seen — a smaller one is
-			// more likely a partially-sold leftover than the shop's real batch size.
+			// Once bulk/bundled, stays that way if any contributing stack came
+			// from a shulker/bundle. batchSize takes the largest single slot
+			// seen — a smaller one is more likely a partially-sold leftover
+			// than the shop's real batch size.
 			tallies.put(key, new Tally(
 					existing.representative(),
 					existing.count() + amount,
 					Math.max(existing.batchSize(), amount),
-					existing.bulk() || bulk));
+					existing.bulk() || bulk,
+					existing.bundled() || bundled));
 		}
 	}
 
@@ -159,5 +174,17 @@ public final class ShopEntryFactory {
 		if (container == null) return null;
 
 		return container.streamNonEmpty().toList();
+	}
+
+	/** Returns the item stacks inside a bundle, or null if this isn't a (non-empty) bundle. */
+	private static List<ItemStack> readBundleContents(ItemStack stack) {
+		if (!(stack.getItem() instanceof BundleItem)) return null;
+
+		BundleContentsComponent contents = stack.get(DataComponentTypes.BUNDLE_CONTENTS);
+		if (contents == null || contents.isEmpty()) return null;
+
+		List<ItemStack> list = new ArrayList<>();
+		for (ItemStack s : contents.iterateCopy()) list.add(s);
+		return list;
 	}
 }
