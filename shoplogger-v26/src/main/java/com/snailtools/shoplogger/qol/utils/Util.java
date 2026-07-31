@@ -1,4 +1,4 @@
-package com.snailtools.qol.uitls;
+package com.snailtools.shoplogger.qol.utils;
 
 
 import net.minecraft.core.component.DataComponents;

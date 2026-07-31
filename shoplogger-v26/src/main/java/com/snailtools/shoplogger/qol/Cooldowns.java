@@ -1,16 +1,14 @@
-package com.snailtools.qol;
+package com.snailtools.shoplogger.qol;
 
 
 
-import com.snailtools.qol.uitls.Util;
+import com.snailtools.shoplogger.qol.uitls.Util;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 
 import java.text.SimpleDateFormat;
