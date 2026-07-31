@@ -3,7 +3,8 @@ package com.snailtools.shoplogger;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.blaze3d.platform.InputConstants;
-import com.snailtools.qol.Cooldowns;
+import com.snailtools.shoplogger.config.Config;
+import com.snailtools.shoplogger.qol.Cooldowns;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -52,6 +53,8 @@ public class ShopLoggerClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		//try load config first
+		Config.load();
 
 		exportKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.shoplogger.export",

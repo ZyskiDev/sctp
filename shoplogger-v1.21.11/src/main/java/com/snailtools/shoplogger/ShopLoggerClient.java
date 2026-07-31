@@ -2,7 +2,8 @@ package com.snailtools.shoplogger;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import com.snailtools.qol.Cooldowns;
+import com.snailtools.shoplogger.config.Config;
+import com.snailtools.shoplogger.qol.Cooldowns;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -29,7 +30,6 @@ import net.minecraft.util.Identifier;
 
 import org.lwjgl.glfw.GLFW;
 
-import java.awt.*;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -53,6 +53,8 @@ public class ShopLoggerClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		//try load config first
+		Config.load();
 
 		exportKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 				"key.shoplogger.export",

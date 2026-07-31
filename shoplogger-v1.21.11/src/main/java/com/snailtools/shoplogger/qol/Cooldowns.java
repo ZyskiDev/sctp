@@ -1,11 +1,9 @@
-package com.snailtools.qol;
+package com.snailtools.shoplogger.qol;
 
-import com.snailtools.qol.uitls.Util;
+import com.snailtools.shoplogger.qol.uitls.Util;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
