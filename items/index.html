@@ -149,6 +149,11 @@
 	"use strict";
 
 	var PLACEHOLDER_ICON = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2322332A'/><path d='M4 4 L12 12 M12 4 L4 12' stroke='%2333453A' stroke-width='1.5'/></svg>";
+	// PLACEHOLDER_ICON's own single quotes would prematurely close the
+	// single-quoted JS string it gets embedded into below (inside the
+	// double-quoted onerror="..." attribute) — escape them once up front
+	// rather than get a silently-broken fallback on every failed image load.
+	var PLACEHOLDER_ICON_JS = PLACEHOLDER_ICON.replace(/'/g, "\\'");
 
 	function esc(s){
 		return String(s).replace(/[&<>"']/g, function(c){
@@ -166,7 +171,7 @@
 		document.getElementById("itemCount").textContent = items.length + " item" + (items.length === 1 ? "" : "s");
 		document.getElementById("vanillaGrid").innerHTML = items.map(function(it){
 			return '<a class="item-card" href="/items/' + esc(slugFromBaseItem(it.baseItem)) + '">' +
-				'<img src="' + esc(it.texture) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + PLACEHOLDER_ICON + '\';">' +
+				'<img src="' + esc(it.texture) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + PLACEHOLDER_ICON_JS + '\';">' +
 				'<span>' + esc(it.name) + '</span>' +
 			'</a>';
 		}).join("");
@@ -213,7 +218,7 @@
 		document.getElementById("rareCount").textContent = items.length + " item" + (items.length === 1 ? "" : "s");
 		document.getElementById("rareGrid").innerHTML = items.map(function(it){
 			return '<a class="item-card" href="/items/' + esc(it.id) + '">' +
-				'<img src="' + esc(it.texture) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + PLACEHOLDER_ICON + '\';">' +
+				'<img src="' + esc(it.texture) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + PLACEHOLDER_ICON_JS + '\';">' +
 				'<span>' + esc(it.name) + '<br><span class="cat-pill">' + esc(it.category) + '</span></span>' +
 			'</a>';
 		}).join("");

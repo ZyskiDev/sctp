@@ -285,6 +285,8 @@
 	tbody tr:hover{background:rgba(183,226,61,0.045);}
 	tbody td{padding:10px 12px;vertical-align:top;white-space:nowrap;}
 	td.item-name{font-weight:600;color:var(--text);white-space:normal;}
+	td.item-icon{padding-right:0;}
+	td.item-icon img{width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;display:block;}
 	td.base-item, td.position{font-family:var(--font-mono);color:var(--muted);font-size:12.5px;}
 	td.seller{color:var(--shell);}
 	.badge{
@@ -906,6 +908,8 @@
 	var SHARED_SHOPS_URL = API_BASE + "/shared-shops";
 	var RARE_ITEMS_URL = API_BASE + "/rare-items";
 	var ITEM_LANG_URL = "data/item-lang-table.json";
+	var VANILLA_ITEMS_URL = "data/vanilla-items.json";
+	var RARE_ITEMS_CATALOG_URL = "data/rare-items.json";
 	var API_KEY = "JjabYIfRtghvBJNoy6857TFVHbjknlMOi6754E5dcfvhgBHNI6b564"; // only used for manual upload / reports / requests, see notes in each modal
 
 	// seller (lowercased) -> array of shop names, from approved shared-shop requests
@@ -1006,6 +1010,59 @@
 		rareHoneybeeNames = sets.honeybee;
 		updateRareNotice(document.getElementById("searchInput").value.trim().toLowerCase());
 		renderTable(); // re-render so any already-visible rows pick up their info icon
+	}
+
+	// name (lowercased) -> texture, merged from both catalogs — an item's exact
+	// display name is the best match when one exists (rare items in particular
+	// each have their own curated texture, not just a generic base-item one).
+	var textureByName = {};
+	// baseItem (lowercased) -> texture, from the vanilla catalog only — the
+	// fallback for any listing whose exact name isn't in either catalog (a
+	// renamed/enchanted item, a typo'd rare name, etc.).
+	var textureByBaseItem = {};
+	var PLACEHOLDER_ICON = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2322332A'/><path d='M4 4 L12 12 M12 4 L4 12' stroke='%2333453A' stroke-width='1.5'/></svg>";
+	// PLACEHOLDER_ICON's own single quotes would prematurely close the
+	// single-quoted JS string it gets embedded into below (inside the
+	// double-quoted onerror="..." attribute) — escape them once up front
+	// rather than get a silently-broken fallback on every failed image load.
+	var PLACEHOLDER_ICON_JS = PLACEHOLDER_ICON.replace(/'/g, "\\'");
+
+	function iconFor(r){
+		var nameKey = String(r.itemNameDisplay || r.itemName || "").trim().toLowerCase();
+		var tex = textureByName[nameKey];
+		if(!tex){
+			var baseKey = String(r.baseItem || "").trim().toLowerCase();
+			tex = textureByBaseItem[baseKey];
+		}
+		return tex || PLACEHOLDER_ICON;
+	}
+
+	// Static files (not the Worker) — same reasoning as ITEM_LANG_URL: they're
+	// unauthenticated, browser-cacheable, and change rarely, so there's no
+	// reason to route them through the API. Fired off once at startup, same
+	// pattern as loadRareLists() — doesn't block the first table render,
+	// just re-renders once the catalogs are in so visible rows pick up icons.
+	async function loadTextureCatalogs(){
+		try {
+			var results = await Promise.all([fetch(VANILLA_ITEMS_URL), fetch(RARE_ITEMS_CATALOG_URL)]);
+			var vanillaRes = results[0], rareRes = results[1];
+			var vanilla = vanillaRes.ok ? await vanillaRes.json() : [];
+			var rare = rareRes.ok ? await rareRes.json() : [];
+			vanilla.forEach(function(it){
+				if(!it.name || !it.texture) return;
+				var nameKey = String(it.name).toLowerCase();
+				if(!textureByName[nameKey]) textureByName[nameKey] = it.texture;
+				var baseKey = String(it.baseItem || "").toLowerCase();
+				if(baseKey && !textureByBaseItem[baseKey]) textureByBaseItem[baseKey] = it.texture;
+			});
+			rare.forEach(function(it){
+				if(!it.name || !it.texture) return;
+				textureByName[String(it.name).toLowerCase()] = it.texture; // rare names take priority on collision
+			});
+			renderTable();
+		} catch(e){
+			// leave the maps empty — rows just fall back to the placeholder icon
+		}
 	}
 
 	// ---------------- data loading ----------------
@@ -1330,6 +1387,7 @@
 		var pageRows = filtered.slice(start, start+PAGE_SIZE);
 
 		var html = '<div class="table-scroll"><table><thead><tr>'+
+			'<th></th>'+
 			'<th data-k="item-az">Item</th>'+
 			'<th data-k="item-az">Base item</th>'+
 			'<th>Type</th>'+
@@ -1360,6 +1418,7 @@
 				? 'None ('+esc(r.lastSeen)+')'+manualIcon("Added manually by an admin — there's no real scan time for this listing.")
 				: relTime(r.lastSeen);
 			html += '<tr>'+
+				'<td class="item-icon"><img src="'+esc(iconFor(r))+'" alt="" loading="lazy" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';"></td>'+
 				'<td class="item-name">'+esc(r.itemNameDisplay)+rareIcon+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
 				'<td>'+
@@ -1855,6 +1914,7 @@
 	loadListings();
 	setInterval(loadListings, 2 * 60 * 1000); // data updates on its own now — pick it up without a manual refresh
 	loadRareLists();
+	loadTextureCatalogs();
 
 	// Seller pages link here with ?addShop=<username> when a seller has no
 	// shop info yet, so the modal opens pre-filled instead of them retyping it.
