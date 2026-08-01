@@ -1020,6 +1020,11 @@
 	// fallback for any listing whose exact name isn't in either catalog (a
 	// renamed/enchanted item, a typo'd rare name, etc.).
 	var textureByBaseItem = {};
+	// Same idea, but pointing at the catalog entry's id — 404.html's item page
+	// routes on /items/<id> and looks it up in exactly these same two catalog
+	// files by id, so this is what lets an item's name link straight there.
+	var slugByName = {};
+	var slugByBaseItem = {};
 	var PLACEHOLDER_ICON = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2322332A'/><path d='M4 4 L12 12 M12 4 L4 12' stroke='%2333453A' stroke-width='1.5'/></svg>";
 	// PLACEHOLDER_ICON's own single quotes would prematurely close the
 	// single-quoted JS string it gets embedded into below (inside the
@@ -1039,6 +1044,19 @@
 		return tex || PLACEHOLDER_ICON;
 	}
 
+	// Relative path (no leading slash) — same reasoning as the other URLs in
+	// the config block above: resolves correctly regardless of which domain
+	// actually served this page. Returns null (no link) when the listing's
+	// name/baseItem doesn't resolve to any catalog entry at all.
+	function itemLibraryUrlFor(r){
+		var slug = slugByName[alphaOnly(r.itemNameDisplay || r.itemName)];
+		if(!slug){
+			var baseKey = String(r.baseItem || "").trim().toLowerCase();
+			slug = slugByBaseItem[baseKey];
+		}
+		return slug ? "items/" + encodeURIComponent(slug) : null;
+	}
+
 	// Static files (not the Worker) — same reasoning as ITEM_LANG_URL: they're
 	// unauthenticated, browser-cacheable, and change rarely, so there's no
 	// reason to route them through the API. Fired off once at startup, same
@@ -1051,16 +1069,16 @@
 			var vanilla = vanillaRes.ok ? await vanillaRes.json() : [];
 			var rare = rareRes.ok ? await rareRes.json() : [];
 			vanilla.forEach(function(it){
-				if(!it.name || !it.texture) return;
+				if(!it.name || !it.texture || !it.id) return;
 				var nameKey = alphaOnly(it.name);
-				if(nameKey && !textureByName[nameKey]) textureByName[nameKey] = it.texture;
+				if(nameKey && !textureByName[nameKey]){ textureByName[nameKey] = it.texture; slugByName[nameKey] = it.id; }
 				var baseKey = String(it.baseItem || "").toLowerCase();
-				if(baseKey && !textureByBaseItem[baseKey]) textureByBaseItem[baseKey] = it.texture;
+				if(baseKey && !textureByBaseItem[baseKey]){ textureByBaseItem[baseKey] = it.texture; slugByBaseItem[baseKey] = it.id; }
 			});
 			rare.forEach(function(it){
-				if(!it.name || !it.texture) return;
+				if(!it.name || !it.texture || !it.id) return;
 				var nameKey = alphaOnly(it.name);
-				if(nameKey) textureByName[nameKey] = it.texture; // rare names take priority on collision
+				if(nameKey){ textureByName[nameKey] = it.texture; slugByName[nameKey] = it.id; } // rare names take priority on collision
 			});
 			renderTable();
 		} catch(e){
@@ -1420,9 +1438,13 @@
 			var lastSeenCell = manual
 				? 'None ('+esc(r.lastSeen)+')'+manualIcon("Added manually by an admin — there's no real scan time for this listing.")
 				: relTime(r.lastSeen);
+			var itemUrl = itemLibraryUrlFor(r);
+			var itemNameHtml = itemUrl
+				? '<a href="'+esc(itemUrl)+'">'+esc(r.itemNameDisplay)+'</a>'
+				: esc(r.itemNameDisplay);
 			html += '<tr>'+
 				'<td class="item-icon"><img src="'+esc(iconFor(r))+'" alt="" loading="lazy" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';"></td>'+
-				'<td class="item-name">'+esc(r.itemNameDisplay)+rareIcon+'</td>'+
+				'<td class="item-name">'+itemNameHtml+rareIcon+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
 				'<td>'+
 					(r.bulk ? '<span class="badge bulk">Bulk</span>' : r.bundled ? '<span class="badge bundled">Bundled</span>' : '<span class="badge single">Single</span>')+
