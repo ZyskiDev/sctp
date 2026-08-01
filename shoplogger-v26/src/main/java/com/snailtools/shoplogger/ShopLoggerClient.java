@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.snailtools.shoplogger.config.Config;
 import com.snailtools.shoplogger.qol.Cooldowns;
+import com.snailtools.shoplogger.qol.QolHookManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -14,6 +15,7 @@ import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.client.KeyMapping;
@@ -66,6 +68,7 @@ public class ShopLoggerClient implements ClientModInitializer {
 
 		//try load config first
 		Config.load();
+		QolHookManager.onInit();
 
 		exportKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.shoplogger.export",
@@ -159,6 +162,8 @@ public class ShopLoggerClient implements ClientModInitializer {
 			ShopAutoScanner.getInstance().tick(client);
 			ShopMarkerRenderer.getInstance().tick(client);
 			WorldDetector.getInstance().tick(client);
+			QolHookManager.onTick();
+
 
 			if (exportKey != null && exportKey.consumeClick()) {
 				exportBoth(client);
@@ -192,6 +197,9 @@ public class ShopLoggerClient implements ClientModInitializer {
 				}
 			}
 		});
+
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("sctp", "hudlayer"), QolHookManager::onHudRender);
+
 
 		ItemTooltipCallback.EVENT.register(new ItemTooltipCallback() {
 			@Override
