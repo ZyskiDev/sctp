@@ -5,7 +5,9 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "ClientPlayNetworkHandlerMixin",
-    "MinecraftClientMixin"
+    "MinecraftClientMixin",
+    "MouseHandlerMixin",
+    "ScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

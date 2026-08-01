@@ -5,7 +5,9 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "ClientPlayNetworkHandlerMixin",
-    "GuiScreenMixin"
+    "GuiScreenMixin",
+    "MouseHandlerMixin",
+    "ScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

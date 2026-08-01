@@ -1,0 +1,772 @@
+package com.snailtools.shoplogger.qol;
+
+import com.google.common.primitives.Shorts;
+import com.snailtools.shoplogger.config.Config;
+import com.snailtools.shoplogger.qol.utils.Util;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.input.MouseInput;
+import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtString;
+import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.slot.Slot;
+import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.screen.sync.ItemStackHash;
+import net.minecraft.text.Text;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+
+public class ButterflyGarden {
+
+    private  final String CONFIG_SCALE_PATH = "Garden/scoreboard-scale";
+    private  final String CONFIG_VISIBLE_PATH = "Garden/scoreboard-visible";
+    private final int PANEL_MARGIN_RIGHT = 8;
+    private final int PANEL_MIN_WIDTH = 118;
+    private final int PANEL_PADDING = 7;
+    private final int HEADER_HEIGHT = 18;
+    private final int ROW_HEIGHT = 19;
+    private final int FOOTER_HEIGHT = 19;
+    private final int SCOREBOARD_TOGGLE_SIZE = 11;
+    private final int SCOREBOARD_TOGGLE_MARGIN = 4;
+    private final int SHADOW_COLOR = 0x60000000;
+    private final int BORDER_COLOR = 0xE34B2D45;
+    private final int PANEL_COLOR = 0xD8211822;
+    private final int HEADER_COLOR = 0xE07C4B78;
+    private final int ROW_ALT_COLOR = 0x26000000;
+    private final int TEXT_COLOR = 0xFFF8E8F6;
+    private final int MUTED_TEXT_COLOR = 0xFFDAB8D6;
+    private final int POINTS_COLOR = 0xFFFFD56A;
+    private final int SELLABLE_SLOT_HIGHLIGHT_COLOR = 0x55F3A6C8;
+    private final int SELLABLE_SLOT_BORDER_COLOR = 0xFFC6F6C8;
+    private final int WRONG_OWNER_SLOT_HIGHLIGHT_COLOR = 0x66FFD36A;
+    private final int WRONG_OWNER_SLOT_BORDER_COLOR = 0xFFFF7A45;
+    private final int EXCHANGE_BUTTON_WIDTH = 70;
+    private final int EXCHANGE_BUTTON_HEIGHT = 20;
+    private final int EXCHANGE_BUTTON_GAP = 6;
+    private final int SCALE_SLIDER_WIDTH = EXCHANGE_BUTTON_WIDTH;
+    private final int SCALE_SLIDER_HEIGHT = EXCHANGE_BUTTON_HEIGHT;
+    private final int SCALE_TRACK_HEIGHT = 3;
+    private final int SCALE_KNOB_WIDTH = 5;
+    private final float MIN_HUD_SCALE = 0.5f;
+    private final float MAX_HUD_SCALE = 2.0f;
+    private final long EXCHANGE_CLICK_WAIT_MILLIS = 5000L;
+    private final String OWNER_UUID_DATA = "escargold:owner-uuid";
+    private final String BUTTERFLY_GARDEN_LEVEL = "minecraft:butterflygarden";
+    private  float HUD_SCALE;
+    private  boolean scoreboardVisible;
+    private boolean exchangeSelling = false;
+    private String currentExchangeType = null;
+    private int exchangeButtonX = 0;
+    private int exchangeButtonY = 0;
+    private int scaleSliderX = 0;
+    private int scaleSliderY = 0;
+    private boolean scaleSliderDragging = false;
+    private int scoreboardToggleX = 0;
+    private int scoreboardToggleY = 0;
+    private int scoreboardToggleSize = 0;
+    private String waitingExchangeType = null;
+    private int waitingCountBeforeClick = 0;
+    private long exchangeClickWaitUntilMillis = 0L;
+
+    public ButterflyGarden() {
+        HUD_SCALE = Config.getOrDefault(CONFIG_SCALE_PATH,  Float.class,1.0F);
+        scoreboardVisible = Config.getOrDefault(CONFIG_VISIBLE_PATH,  boolean.class,true);
+    }
+
+    public void tick() {
+        if (!isInButterflyGardenLevel()) {
+            exchangeSelling = false;
+            currentExchangeType = null;
+            clearExchangeWait();
+            return;
+        }
+
+        if (MinecraftClient.getInstance().currentScreen == null && exchangeSelling) {
+            exchangeSelling = false;
+        }
+
+        if (!exchangeSelling) return;
+
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+        if (minecraft.interactionManager == null || minecraft.player == null) return;
+        if (!(minecraft.currentScreen instanceof HandledScreen<?> screen) || !isButterflyExchangeScreen(screen)) {
+            exchangeSelling = false;
+            currentExchangeType = null;
+            clearExchangeWait();
+            return;
+        }
+
+        if (hasWrongOwnerInventoryButterfly(screen)) {
+            exchangeSelling = false;
+            currentExchangeType = null;
+            clearExchangeWait();
+            return;
+        }
+
+        if (isWaitingForExchangeUpdate(screen)) return;
+
+        Slot slot = findNextExchangeSlot(screen);
+        if (slot == null) {
+            exchangeSelling = false;
+            currentExchangeType = null;
+            clearExchangeWait();
+            return;
+        }
+
+        String clickedType = currentExchangeType;
+        int countBeforeClick = clickedType == null ? 0 : countInventoryButterflies(screen, clickedType);
+        sendExchangeClickPacket(minecraft, screen.getScreenHandler(), slot);
+        waitForExchangeUpdate(clickedType, countBeforeClick);
+    }
+
+    public void onScreenRender(Screen screen, DrawContext gui, int mouseX, int mouseY, float delta) {
+        if (!isInButterflyGardenLevel()) {
+            scaleSliderDragging = false;
+            return;
+        }
+
+        if (screen instanceof HandledScreen<?> containerScreen && isButterflyExchangeScreen(containerScreen)) {
+            renderExchangeControls(containerScreen, gui, mouseX, mouseY);
+        } else {
+            scaleSliderDragging = false;
+        }
+    }
+
+    public void onMouseEvent(long window, MouseInput button, int action) {
+        if (button != null) {
+            onMouseEvent(window, button.button(), action);
+        }
+    }
+
+    public void onMouseEvent(long window, int button, int action) {
+        if (!isInButterflyGardenLevel()) return;
+
+        if (button != 0) return;
+
+        if (action == 0) {
+            scaleSliderDragging = false;
+            return;
+        }
+
+        if (action == 1 && MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?> screen && isButterflyExchangeScreen(screen)) {
+            updateExchangeControlBounds(screen);
+            double mouseX = scaledMouseX();
+            double mouseY = scaledMouseY();
+            updateScoreboardToggleBounds(MinecraftClient.getInstance(), collectButterflies(MinecraftClient.getInstance().player.getInventory()));
+
+            if (isInside(mouseX, mouseY, scoreboardToggleX, scoreboardToggleY, scoreboardToggleSize, scoreboardToggleSize)) {
+                scoreboardVisible = !scoreboardVisible;
+                Config.update(CONFIG_VISIBLE_PATH, scoreboardVisible);
+                return;
+            }
+
+            if (isInside(mouseX, mouseY, scaleSliderX, scaleSliderY, SCALE_SLIDER_WIDTH, SCALE_SLIDER_HEIGHT)) {
+                scaleSliderDragging = true;
+                updateHudScaleFromMouse(mouseX);
+                return;
+            }
+
+            if (mouseX >= exchangeButtonX && mouseX < exchangeButtonX + EXCHANGE_BUTTON_WIDTH
+                    && mouseY >= exchangeButtonY && mouseY < exchangeButtonY + EXCHANGE_BUTTON_HEIGHT) {
+                if (hasWrongOwnerInventoryButterfly(screen)) {
+                    exchangeSelling = false;
+                    currentExchangeType = null;
+                    clearExchangeWait();
+                    return;
+                }
+
+                exchangeSelling = !exchangeSelling;
+                currentExchangeType = null;
+                clearExchangeWait();
+            }
+        }
+    }
+
+    public void onHUDRender(DrawContext graphics) {
+        if (!isInButterflyGardenLevel()) return;
+
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+        if (minecraft.player == null || minecraft.textRenderer == null) return;
+
+        List<ButterflyCount> counts = collectButterflies(minecraft.player.getInventory());
+        boolean showToggle = isButterflyExchangeScreen(minecraft.currentScreen);
+        updateScoreboardToggleBounds(minecraft, counts);
+
+        if (scoreboardVisible && !counts.isEmpty()) {
+            renderButterflyHud(graphics, minecraft, counts, showToggle);
+        } else if (showToggle) {
+            renderCollapsedScoreboardToggle(graphics, minecraft, counts);
+        }
+    }
+
+    public boolean isExchangeSelling() {
+        return exchangeSelling;
+    }
+
+    public void setExchangeSelling(boolean exchangeSelling) {
+        this.exchangeSelling = exchangeSelling;
+        if (!exchangeSelling) {
+            currentExchangeType = null;
+            clearExchangeWait();
+        }
+    }
+
+
+    private void renderExchangeControls(HandledScreen<?> screen, DrawContext gui, int mouseX, int mouseY) {
+        updateExchangeControlBounds(screen);
+        boolean sellingBlocked = hasWrongOwnerInventoryButterfly(screen);
+
+        if (scaleSliderDragging) {
+            updateHudScaleFromMouse(mouseX);
+        }
+
+        renderExchangeSlotHighlights(screen, gui);
+        renderExchangeButton(gui, mouseX, mouseY, sellingBlocked);
+        renderBlockedSellingWarning(gui, mouseX, mouseY, sellingBlocked);
+        renderScaleSlider(gui, mouseX, mouseY);
+    }
+
+    private void renderExchangeSlotHighlights(HandledScreen<?> screen, DrawContext gui) {
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+        if (minecraft.player == null) return;
+
+        int leftPos = getScreenField(screen, "field_2776");
+        int topPos = getScreenField(screen, "field_2800");
+
+        for (Slot slot : screen.getScreenHandler().slots) {
+            ItemStack stack = slot.getStack();
+            if (slot.inventory == minecraft.player.getInventory()) {
+                if (hasButterflyOrMothName(stack) && !isOwnedByCurrentPlayer(stack)) {
+                    int x = leftPos + slot.x;
+                    int y = topPos + slot.y;
+                    gui.fill(x, y, x + 16, y + 16, WRONG_OWNER_SLOT_HIGHLIGHT_COLOR);
+                    drawSlotBorder(gui, x, y, WRONG_OWNER_SLOT_BORDER_COLOR);
+                }
+                continue;
+            }
+
+            if (!hasButterflyOrMothName(stack)) continue;
+            boolean sellable = hasInventoryButterfly(screen, typeName(stack));
+            int x = leftPos + slot.x;
+            int y = topPos + slot.y;
+
+            if (sellable) {
+                gui.fill(x, y, x + 16, y + 16, SELLABLE_SLOT_HIGHLIGHT_COLOR);
+                drawSlotBorder(gui, x, y, SELLABLE_SLOT_BORDER_COLOR);
+            }
+        }
+    }
+
+    private void drawSlotBorder(DrawContext gui, int x, int y, int color) {
+        gui.fill(x - 1, y - 1, x + 17, y, color);
+        gui.fill(x - 1, y + 16, x + 17, y + 17, color);
+        gui.fill(x - 1, y, x, y + 16, color);
+        gui.fill(x + 16, y, x + 17, y + 16, color);
+    }
+
+    private void updateExchangeControlBounds(HandledScreen<?> screen) {
+        int leftPos = getScreenField(screen, "field_2776");
+        int topPos = getScreenField(screen, "field_2800");
+        int uiWidth = 176;
+
+        for (Slot slot : screen.getScreenHandler().slots) {
+            uiWidth = Math.max(uiWidth, slot.x + 16);
+        }
+
+        exchangeButtonX = leftPos + uiWidth + EXCHANGE_BUTTON_GAP;
+        exchangeButtonY = topPos + 4;
+        scaleSliderX = exchangeButtonX;
+        scaleSliderY = exchangeButtonY + EXCHANGE_BUTTON_HEIGHT + EXCHANGE_BUTTON_GAP;
+    }
+
+    private void renderExchangeButton(DrawContext gui, int mouseX, int mouseY, boolean disabled) {
+        boolean hovered = mouseX >= exchangeButtonX && mouseX < exchangeButtonX + EXCHANGE_BUTTON_WIDTH
+                && mouseY >= exchangeButtonY && mouseY < exchangeButtonY + EXCHANGE_BUTTON_HEIGHT;
+        int fillColor = disabled ? 0xD84B4248 : exchangeSelling ? 0xE04C7A4F : hovered ? 0xE05A4A64 : 0xD8342C3A;
+        int borderColor = disabled ? WRONG_OWNER_SLOT_BORDER_COLOR : hovered ? 0xFFFFFFFF : 0xE0DAB8D6;
+        int textColor = disabled ? 0xFFFFD36A : TEXT_COLOR;
+
+        gui.fill(exchangeButtonX, exchangeButtonY, exchangeButtonX + EXCHANGE_BUTTON_WIDTH, exchangeButtonY + EXCHANGE_BUTTON_HEIGHT, borderColor);
+        gui.fill(exchangeButtonX + 1, exchangeButtonY + 1, exchangeButtonX + EXCHANGE_BUTTON_WIDTH - 1, exchangeButtonY + EXCHANGE_BUTTON_HEIGHT - 1, fillColor);
+
+        gui.drawCenteredTextWithShadow(
+                MinecraftClient.getInstance().textRenderer,
+                exchangeButtonLabel(disabled),
+                exchangeButtonX + EXCHANGE_BUTTON_WIDTH / 2,
+                exchangeButtonY + (EXCHANGE_BUTTON_HEIGHT - MinecraftClient.getInstance().textRenderer.fontHeight) / 2,
+                textColor
+        );
+    }
+
+    private void renderBlockedSellingWarning(DrawContext gui, int mouseX, int mouseY, boolean sellingBlocked) {
+        if (!sellingBlocked || MinecraftClient.getInstance().textRenderer == null) return;
+
+        String warning = "Remove wrong-owner butterflies to sell";
+        int warningX = exchangeButtonX;
+        int warningY = scaleSliderY + SCALE_SLIDER_HEIGHT + 4;
+        int warningWidth = MinecraftClient.getInstance().textRenderer.getWidth(warning);
+
+        gui.fill(warningX - 2, warningY - 2, warningX + warningWidth + 2, warningY + MinecraftClient.getInstance().textRenderer.fontHeight + 2, 0xCC2B2024);
+        gui.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, warning, warningX, warningY, WRONG_OWNER_SLOT_BORDER_COLOR);
+
+        if (mouseX >= exchangeButtonX && mouseX < exchangeButtonX + EXCHANGE_BUTTON_WIDTH
+                && mouseY >= exchangeButtonY && mouseY < exchangeButtonY + EXCHANGE_BUTTON_HEIGHT) {
+            gui.drawTooltip(MinecraftClient.getInstance().textRenderer, Text.literal(warning), mouseX, mouseY);
+        }
+    }
+
+    private void renderScaleSlider(DrawContext gui, int mouseX, int mouseY) {
+        boolean hovered = isInside(mouseX, mouseY, scaleSliderX, scaleSliderY, SCALE_SLIDER_WIDTH, SCALE_SLIDER_HEIGHT);
+        int borderColor = hovered || scaleSliderDragging ? 0xFFFFFFFF : 0xE0DAB8D6;
+        int fillColor = scaleSliderDragging ? 0xE04C5F7A : hovered ? 0xE05A4A64 : 0xD8342C3A;
+        int trackX = scaleSliderX + 7;
+        int trackY = scaleSliderY + SCALE_SLIDER_HEIGHT - 5;
+        int trackWidth = SCALE_SLIDER_WIDTH - 14;
+        int knobX = trackX + Math.round((HUD_SCALE - MIN_HUD_SCALE) / (MAX_HUD_SCALE - MIN_HUD_SCALE) * trackWidth) - SCALE_KNOB_WIDTH / 2;
+        String label = String.format(Locale.ROOT, "%.1fx", HUD_SCALE);
+
+        gui.fill(scaleSliderX, scaleSliderY, scaleSliderX + SCALE_SLIDER_WIDTH, scaleSliderY + SCALE_SLIDER_HEIGHT, borderColor);
+        gui.fill(scaleSliderX + 1, scaleSliderY + 1, scaleSliderX + SCALE_SLIDER_WIDTH - 1, scaleSliderY + SCALE_SLIDER_HEIGHT - 1, fillColor);
+        gui.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer, label, scaleSliderX + SCALE_SLIDER_WIDTH / 2, scaleSliderY + 3, TEXT_COLOR);
+        gui.fill(trackX, trackY, trackX + trackWidth, trackY + SCALE_TRACK_HEIGHT, 0xAA201822);
+        gui.fill(trackX, trackY, knobX + SCALE_KNOB_WIDTH / 2, trackY + SCALE_TRACK_HEIGHT, POINTS_COLOR);
+        gui.fill(knobX, trackY - 2, knobX + SCALE_KNOB_WIDTH, trackY + SCALE_TRACK_HEIGHT + 2, 0xFFFFFFFF);
+    }
+
+    private Text exchangeButtonLabel(boolean disabled) {
+        return Text.literal(disabled ? "Blocked" : exchangeSelling ? "Selling" : "Sell");
+    }
+
+    private boolean isButterflyExchangeScreen(Screen screen) {
+        return screen instanceof HandledScreen<?> containerScreen
+                && containerScreen.getTitle().getString().contains("Butterfly Exchange");
+    }
+
+    private Slot findNextExchangeSlot(HandledScreen<?> screen) {
+        if (currentExchangeType != null && hasInventoryButterfly(screen, currentExchangeType)) {
+            Slot currentSlot = findTopExchangeSlot(screen, currentExchangeType);
+            if (currentSlot != null) return currentSlot;
+        }
+
+        currentExchangeType = null;
+        Slot bestExchangeSlot = null;
+        String bestTypeName = null;
+        int bestPointsEach = Integer.MIN_VALUE;
+
+        for (Slot inventorySlot : screen.getScreenHandler().slots) {
+            if (inventorySlot.inventory != MinecraftClient.getInstance().player.getInventory()) continue;
+            ItemStack stack = inventorySlot.getStack();
+            if (!isOwnedButterflyOrMoth(stack)) continue;
+
+            String typeName = typeName(stack);
+            Slot exchangeSlot = findTopExchangeSlot(screen, typeName);
+            if (exchangeSlot == null) continue;
+
+            int pointsEach = pointsPerItem(stack);
+            if (pointsEach > bestPointsEach) {
+                bestPointsEach = pointsEach;
+                bestTypeName = typeName;
+                bestExchangeSlot = exchangeSlot;
+            }
+        }
+
+        currentExchangeType = bestTypeName;
+        return bestExchangeSlot;
+    }
+
+    private boolean hasInventoryButterfly(HandledScreen<?> screen, String typeName) {
+        return countInventoryButterflies(screen, typeName) > 0;
+    }
+
+    private boolean hasWrongOwnerInventoryButterfly(HandledScreen<?> screen) {
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+        if (minecraft.player == null) return false;
+
+        for (Slot slot : screen.getScreenHandler().slots) {
+            if (slot.inventory != minecraft.player.getInventory()) continue;
+
+            ItemStack stack = slot.getStack();
+            if (hasButterflyOrMothName(stack) && !isOwnedByCurrentPlayer(stack)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private int countInventoryButterflies(HandledScreen<?> screen, String typeName) {
+        int count = 0;
+        for (Slot slot : screen.getScreenHandler().slots) {
+            if (slot.inventory != MinecraftClient.getInstance().player.getInventory()) continue;
+            if (matchesOwnedButterflyType(slot.getStack(), typeName)) {
+                count += slot.getStack().getCount();
+            }
+        }
+        return count;
+    }
+
+    private Slot findTopExchangeSlot(HandledScreen<?> screen, String typeName) {
+
+        for (Slot slot : screen.getScreenHandler().slots) {
+            if (slot.inventory == MinecraftClient.getInstance().player.getInventory()) continue;
+            if (matchesExchangeButterflyType(slot.getStack(), typeName)) return slot;
+        }
+        return null;
+    }
+
+    private void sendExchangeClickPacket(MinecraftClient minecraft, ScreenHandler menu, Slot slot) {
+        if (minecraft.getNetworkHandler() == null) return;
+
+        Int2ObjectMap<ItemStackHash> changedSlots = new Int2ObjectOpenHashMap<>();
+        ItemStackHash carriedItem = ItemStackHash.fromItemStack(slot.getStack(), minecraft.getNetworkHandler().getComponentHasher());
+        minecraft.getNetworkHandler().sendPacket(new ClickSlotC2SPacket(
+                menu.syncId,
+                menu.getRevision(),
+                Shorts.checkedCast(slot.getIndex()),
+                (byte) 0,
+                SlotActionType.PICKUP,
+                changedSlots,
+                carriedItem
+        ));
+    }
+
+    private boolean matchesOwnedButterflyType(ItemStack stack, String typeName) {
+        if (stack == null || stack.isEmpty() || !isOwnedButterflyOrMoth(stack)) return false;
+
+        String stackName = normalizeName(typeName(stack));
+        String targetName = normalizeName(typeName);
+        return stackName.equals(targetName)
+                || stackName.contains(targetName)
+                || targetName.contains(stackName);
+    }
+
+    private boolean matchesExchangeButterflyType(ItemStack stack, String typeName) {
+        if (stack == null || stack.isEmpty() || !hasButterflyOrMothName(stack)) return false;
+
+        String stackName = normalizeName(typeName(stack));
+        String targetName = normalizeName(typeName);
+        return stackName.equals(targetName)
+                || stackName.contains(targetName)
+                || targetName.contains(stackName);
+    }
+
+    private String normalizeName(String name) {
+        return name.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
+    }
+
+    private void updateHudScaleFromMouse(double mouseX) {
+        int trackX = scaleSliderX + 7;
+        int trackWidth = SCALE_SLIDER_WIDTH - 14;
+        float percent = clamp((float) ((mouseX - trackX) / trackWidth), 0.0f, 1.0f);
+        HUD_SCALE = MIN_HUD_SCALE + percent * (MAX_HUD_SCALE - MIN_HUD_SCALE);
+        Config.update(CONFIG_SCALE_PATH, HUD_SCALE);
+    }
+
+    private double scaledMouseX() {
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+        return minecraft.mouse.getX() * minecraft.getWindow().getScaledWidth() / minecraft.getWindow().getWidth();
+    }
+
+    private double scaledMouseY() {
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+        return minecraft.mouse.getY() * minecraft.getWindow().getScaledHeight() / minecraft.getWindow().getHeight();
+    }
+
+    private boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {
+        return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+    }
+
+    private float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private int getScreenField(HandledScreen<?> screen, String name) {
+        try {
+            Field field = HandledScreen.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return (int) field.get(screen);
+        } catch (Exception exception) {
+            return 0;
+        }
+    }
+
+    private List<ButterflyCount> collectButterflies(PlayerInventory inventory) {
+        List<ButterflyCount> counts = new ArrayList<>();
+
+        for (ItemStack stack : inventory) {
+            if (!isOwnedButterflyOrMoth(stack)) continue;
+
+            String typeName = typeName(stack);
+            ButterflyCount existing = findCount(counts, typeName);
+            if (existing == null) {
+                ItemStack displayStack = stack.copy();
+                displayStack.setCount(1);
+                counts.add(new ButterflyCount(typeName, displayStack, stack.getCount(), pointsPerItem(stack)));
+            } else {
+                existing.count += stack.getCount();
+            }
+        }
+
+        counts.sort(Comparator.comparing(ButterflyCount::name, String.CASE_INSENSITIVE_ORDER));
+        return counts;
+    }
+
+    private ButterflyCount findCount(List<ButterflyCount> counts, String typeName) {
+        for (ButterflyCount count : counts) {
+            if (count.name.equals(typeName)) {
+                return count;
+            }
+        }
+        return null;
+    }
+
+    private boolean isOwnedButterflyOrMoth(ItemStack stack) {
+        return hasButterflyOrMothName(stack) && isOwnedByCurrentPlayer(stack);
+    }
+
+    private boolean hasButterflyOrMothName(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || stack.getCustomName() == null) return false;
+
+        String name = stack.getCustomName().getString();
+        return name.contains("Moth")
+                || (name.contains("Butterfly") && !name.contains("Net"))
+                || name.contains("Cabbage")
+                || name.contains("Morpho")
+                || name.contains("Swallowtail");
+    }
+
+    private boolean isOwnedByCurrentPlayer(ItemStack stack) {
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+        if (minecraft.player == null) return false;
+
+        NbtString owner = Util.getCustomDataVar(stack, OWNER_UUID_DATA, NbtString.class);
+        if (owner == null) return false;
+
+        String playerUuid = minecraft.player.getUuid().toString().toLowerCase(Locale.ROOT);
+        return owner.value().toLowerCase(Locale.ROOT).equals(playerUuid);
+    }
+
+    private boolean isInButterflyGardenLevel() {
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+
+        return minecraft.player != null
+                && BUTTERFLY_GARDEN_LEVEL.equals(minecraft.player.getEntityWorld().getRegistryKey().getValue().toString());
+    }
+
+    private int pointsPerItem(ItemStack stack) {
+        Text customName = stack.getCustomName();
+        if (customName == null) return 0;
+
+        String name = customName.getString();
+        if (name.contains("Moth")) return 20;
+        if (name.contains("Cabbage") || name.contains("Morpho")) return 1;
+        return 2;
+    }
+
+    private String typeName(ItemStack stack) {
+        Text customName = stack.getCustomName();
+        if (customName != null && !customName.getString().isBlank()) {
+            return customName.getString();
+        }
+        return stack.getName().getString();
+    }
+
+    private HudLayout calculateHudLayout(MinecraftClient minecraft, List<ButterflyCount> counts) {
+        int totalPoints = 0;
+        int maxNameWidth = minecraft.textRenderer.getWidth("Butterflies");
+        int maxCountWidth = minecraft.textRenderer.getWidth("x999");
+
+        for (ButterflyCount count : counts) {
+            totalPoints += count.count * count.pointsEach;
+            maxNameWidth = Math.max(maxNameWidth, minecraft.textRenderer.getWidth(count.name));
+            maxCountWidth = Math.max(maxCountWidth, minecraft.textRenderer.getWidth("x" + count.count));
+        }
+
+        int screenWidth = Math.round(minecraft.getWindow().getScaledWidth() / HUD_SCALE);
+        int screenHeight = Math.round(minecraft.getWindow().getScaledHeight() / HUD_SCALE);
+        int panelMarginRight = Math.round(PANEL_MARGIN_RIGHT / HUD_SCALE);
+        int contentWidth = 16 + 6 + maxNameWidth + 10 + maxCountWidth;
+        int maxPanelWidth = Math.max(PANEL_MIN_WIDTH, screenWidth - Math.round(16 / HUD_SCALE));
+        int panelWidth = Math.min(maxPanelWidth, Math.max(PANEL_MIN_WIDTH, PANEL_PADDING * 2 + contentWidth));
+        int panelHeight = HEADER_HEIGHT + PANEL_PADDING + counts.size() * ROW_HEIGHT + FOOTER_HEIGHT + PANEL_PADDING;
+        int panelX = screenWidth - panelMarginRight - panelWidth;
+        int panelY = Math.max(4, screenHeight / 2 - panelHeight / 2);
+
+        return new HudLayout(panelX, panelY, panelWidth, panelHeight, totalPoints);
+    }
+
+    private void updateScoreboardToggleBounds(MinecraftClient minecraft, List<ButterflyCount> counts) {
+        HudLayout layout = calculateHudLayout(minecraft, counts);
+        scoreboardToggleSize = Math.max(8, Math.round(SCOREBOARD_TOGGLE_SIZE * HUD_SCALE));
+        scoreboardToggleX = Math.round((layout.panelX() + layout.panelWidth() - SCOREBOARD_TOGGLE_MARGIN - SCOREBOARD_TOGGLE_SIZE) * HUD_SCALE);
+        scoreboardToggleY = Math.round((layout.panelY() + SCOREBOARD_TOGGLE_MARGIN) * HUD_SCALE);
+    }
+
+    private void renderButterflyHud(DrawContext graphics, MinecraftClient minecraft, List<ButterflyCount> counts, boolean showToggle) {
+        HudLayout layout = calculateHudLayout(minecraft, counts);
+        int panelX = layout.panelX();
+        int panelY = layout.panelY();
+        int panelWidth = layout.panelWidth();
+        int panelHeight = layout.panelHeight();
+
+        graphics.getMatrices().pushMatrix();
+        graphics.getMatrices().scale(HUD_SCALE, HUD_SCALE);
+
+        graphics.fill(panelX + 2, panelY + 2, panelX + panelWidth + 2, panelY + panelHeight + 2, SHADOW_COLOR);
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BORDER_COLOR);
+        graphics.fill(panelX + 1, panelY + 1, panelX + panelWidth - 1, panelY + panelHeight - 1, PANEL_COLOR);
+        graphics.fill(panelX + 1, panelY + 1, panelX + panelWidth - 1, panelY + HEADER_HEIGHT, HEADER_COLOR);
+
+        int titleX = panelX + PANEL_PADDING;
+        int titleY = panelY + (HEADER_HEIGHT - minecraft.textRenderer.fontHeight) / 2;
+        graphics.drawText(minecraft.textRenderer, "Butterflies", titleX, titleY, TEXT_COLOR, true);
+        if (showToggle) {
+            renderScoreboardToggle(graphics, minecraft, panelX + panelWidth - SCOREBOARD_TOGGLE_MARGIN - SCOREBOARD_TOGGLE_SIZE, panelY + SCOREBOARD_TOGGLE_MARGIN);
+        }
+
+        int rowY = panelY + HEADER_HEIGHT + PANEL_PADDING;
+        for (int i = 0; i < counts.size(); i++) {
+            ButterflyCount count = counts.get(i);
+            if (i % 2 == 1) {
+                graphics.fill(panelX + 2, rowY - 1, panelX + panelWidth - 2, rowY + ROW_HEIGHT - 2, ROW_ALT_COLOR);
+            }
+
+            int iconX = panelX + PANEL_PADDING;
+            int iconY = rowY;
+            graphics.drawItem(count.displayStack, iconX, iconY);
+            int nameX = iconX + 22;
+            int textY = rowY + (16 - minecraft.textRenderer.fontHeight) / 2;
+            int countTextWidth = minecraft.textRenderer.getWidth("x" + count.count);
+            int countX = panelX + panelWidth - PANEL_PADDING - countTextWidth;
+            String displayName = fitText(minecraft, count.name, Math.max(12, countX - nameX - 6));
+            graphics.drawText(minecraft.textRenderer, displayName, nameX, textY, MUTED_TEXT_COLOR, false);
+            graphics.drawText(minecraft.textRenderer, "x" + count.count, countX, textY, TEXT_COLOR, true);
+
+            rowY += ROW_HEIGHT;
+        }
+
+        int footerY = rowY + 3;
+        graphics.fill(panelX + PANEL_PADDING, footerY - 4, panelX + panelWidth - PANEL_PADDING, footerY - 3, 0x55FFFFFF);
+
+        String label = "Points";
+        String value = Integer.toString(layout.totalPoints());
+        graphics.drawText(minecraft.textRenderer, label, panelX + PANEL_PADDING, footerY, TEXT_COLOR, true);
+        graphics.drawText(
+                minecraft.textRenderer,
+                value,
+                panelX + panelWidth - PANEL_PADDING - minecraft.textRenderer.getWidth(value),
+                footerY,
+                POINTS_COLOR,
+                true
+        );
+
+        graphics.getMatrices().popMatrix();
+    }
+
+    private void renderCollapsedScoreboardToggle(DrawContext graphics, MinecraftClient minecraft, List<ButterflyCount> counts) {
+        HudLayout layout = calculateHudLayout(minecraft, counts);
+
+        graphics.getMatrices().pushMatrix();
+        graphics.getMatrices().scale(HUD_SCALE, HUD_SCALE);
+        renderScoreboardToggle(
+                graphics,
+                minecraft,
+                layout.panelX() + layout.panelWidth() - SCOREBOARD_TOGGLE_MARGIN - SCOREBOARD_TOGGLE_SIZE,
+                layout.panelY() + SCOREBOARD_TOGGLE_MARGIN
+        );
+        graphics.getMatrices().popMatrix();
+    }
+
+    private void renderScoreboardToggle(DrawContext graphics, MinecraftClient minecraft, int x, int y) {
+        graphics.fill(x, y, x + SCOREBOARD_TOGGLE_SIZE, y + SCOREBOARD_TOGGLE_SIZE, 0xE0DAB8D6);
+        graphics.fill(x + 1, y + 1, x + SCOREBOARD_TOGGLE_SIZE - 1, y + SCOREBOARD_TOGGLE_SIZE - 1, scoreboardVisible ? 0xD8342C3A : 0xE05A4A64);
+        int midY = y + SCOREBOARD_TOGGLE_SIZE / 2;
+        graphics.fill(x + 3, midY, x + SCOREBOARD_TOGGLE_SIZE - 3, midY + 1, TEXT_COLOR);
+        if (!scoreboardVisible) {
+            int midX = x + SCOREBOARD_TOGGLE_SIZE / 2;
+            graphics.fill(midX, y + 3, midX + 1, y + SCOREBOARD_TOGGLE_SIZE - 3, TEXT_COLOR);
+        }
+    }
+
+    private String fitText(MinecraftClient minecraft, String text, int maxWidth) {
+        if (minecraft.textRenderer.getWidth(text) <= maxWidth) return text;
+
+        String suffix = "...";
+        int suffixWidth = minecraft.textRenderer.getWidth(suffix);
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            String candidate = builder.toString() + text.charAt(i);
+            if (minecraft.textRenderer.getWidth(candidate) + suffixWidth > maxWidth) break;
+            builder.append(text.charAt(i));
+        }
+        return builder + suffix;
+    }
+
+    private boolean isWaitingForExchangeUpdate(HandledScreen<?> screen) {
+        if (waitingExchangeType == null) return false;
+
+        if (countInventoryButterflies(screen, waitingExchangeType) < waitingCountBeforeClick) {
+            clearExchangeWait();
+            return false;
+        }
+
+        if (System.currentTimeMillis() >= exchangeClickWaitUntilMillis) {
+            exchangeSelling = false;
+            currentExchangeType = null;
+            clearExchangeWait();
+            return true;
+        }
+
+        return true;
+    }
+
+    private void waitForExchangeUpdate(String clickedType, int countBeforeClick) {
+        if (clickedType == null) {
+            clearExchangeWait();
+            return;
+        }
+
+        waitingExchangeType = clickedType;
+        waitingCountBeforeClick = countBeforeClick;
+        exchangeClickWaitUntilMillis = System.currentTimeMillis() + EXCHANGE_CLICK_WAIT_MILLIS;
+    }
+
+    private void clearExchangeWait() {
+        waitingExchangeType = null;
+        waitingCountBeforeClick = 0;
+        exchangeClickWaitUntilMillis = 0L;
+    }
+
+    private static final class ButterflyCount {
+        private final String name;
+        private final ItemStack displayStack;
+        private final int pointsEach;
+        private int count;
+
+        private ButterflyCount(String name, ItemStack displayStack, int count, int pointsEach) {
+            this.name = name;
+            this.displayStack = displayStack;
+            this.count = count;
+            this.pointsEach = pointsEach;
+        }
+
+        private String name() {
+            return name;
+        }
+    }
+
+    private record HudLayout(int panelX, int panelY, int panelWidth, int panelHeight, int totalPoints) {
+    }
+
+
+}
