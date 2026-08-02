@@ -20,6 +20,9 @@ public final class ShopMarkerRenderer {
 	public static ShopMarkerRenderer getInstance() { return INSTANCE; }
 
 	private static final int COLOR = 0xB33A3A; // muted brick red, not alarm-red
+	// Own shops with an uncollected payment sitting in them (see
+	// OwnShopSaleTracker) get this instead — same muted styling, green.
+	private static final int SALE_COLOR = 0x3AB35A;
 	private static final float SCALE = 1.25f;
 	/** How often (in ticks) each marked chest gets a fresh particle. 60 ticks = 3s. */
 	private static final int SPAWN_INTERVAL_TICKS = 20;
@@ -47,7 +50,6 @@ public final class ShopMarkerRenderer {
 		if (tickCounter % SPAWN_INTERVAL_TICKS != 0) return;
 
 		Vec3 eye = client.player.getEyePosition();
-		DustParticleOptions effect = new DustParticleOptions(COLOR, SCALE);
 
 		for (BlockPos containerPos : ShopAutoScanner.getInstance().getRecentlyScannedPositions()) {
 			// Mark the sign, not the container — that's what the player is
@@ -58,6 +60,9 @@ public final class ShopMarkerRenderer {
 			BlockPos pos = sign != null ? sign.signPos() : containerPos;
 
 			if (new Vec3(pos.getX(), pos.getY(), pos.getZ()).distanceToSqr(eye) > MAX_DISTANCE * MAX_DISTANCE) continue;
+
+			int color = OwnShopSaleTracker.hasPendingPayment(containerPos) ? SALE_COLOR : COLOR;
+			DustParticleOptions effect = new DustParticleOptions(color, SCALE);
 
 			double x = pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.6;
 			double y = pos.getY() + 0.85;
