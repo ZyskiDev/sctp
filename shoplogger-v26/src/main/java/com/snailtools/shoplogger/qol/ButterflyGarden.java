@@ -30,14 +30,17 @@ public class ButterflyGarden {
 
     private  final String CONFIG_SCALE_PATH = "Garden/scoreboard-scale";
     private  final String CONFIG_VISIBLE_PATH = "Garden/scoreboard-visible";
+    private  final String CONFIG_COMPACT_PATH = "Garden/scoreboard-compact";
     private final int PANEL_MARGIN_RIGHT = 8;
     private final int PANEL_MIN_WIDTH = 118;
+    private static final int PANEL_COMPACT_MIN_WIDTH = 78;
     private final int PANEL_PADDING = 7;
     private final int HEADER_HEIGHT = 18;
     private final int ROW_HEIGHT = 19;
     private final int FOOTER_HEIGHT = 19;
     private final int SCOREBOARD_TOGGLE_SIZE = 11;
     private final int SCOREBOARD_TOGGLE_MARGIN = 4;
+    private static final int SCOREBOARD_TOGGLE_GAP = 3;
     private final int SHADOW_COLOR = 0x60000000;
     private final int BORDER_COLOR = 0xE34B2D45;
     private final int PANEL_COLOR = 0xD8211822;
@@ -62,11 +65,9 @@ public class ButterflyGarden {
     private final long EXCHANGE_CLICK_WAIT_MILLIS = 5000L;
     private final String OWNER_UUID_DATA = "escargold:owner-uuid";
     private final String BUTTERFLY_GARDEN_LEVEL = "minecraft:butterflygarden";
-
-
     private  float HUD_SCALE;
     private  boolean scoreboardVisible;
-
+    private boolean scoreboardVerbose;
     private boolean exchangeSelling = false;
     private String currentExchangeType = null;
     private int exchangeButtonX = 0;
@@ -77,6 +78,8 @@ public class ButterflyGarden {
     private int scoreboardToggleX = 0;
     private int scoreboardToggleY = 0;
     private int scoreboardToggleSize = 0;
+    private int scoreboardVerboseToggleX = 0;
+    private int scoreboardVerboseToggleY = 0;
     private String waitingExchangeType = null;
     private int waitingCountBeforeClick = 0;
     private long exchangeClickWaitUntilMillis = 0L;
@@ -84,6 +87,7 @@ public class ButterflyGarden {
     public ButterflyGarden() {
         HUD_SCALE = Config.getOrDefault(CONFIG_SCALE_PATH,  Float.class,1.0F);
         scoreboardVisible = Config.getOrDefault(CONFIG_VISIBLE_PATH,  boolean.class,true);
+        scoreboardVerbose = Config.getOrDefault(CONFIG_COMPACT_PATH,  boolean.class,true);
     }
 
     public void tick() {
@@ -173,7 +177,13 @@ public class ButterflyGarden {
                 return;
             }
 
-            if (isInside(mouseX, mouseY, scaleSliderX, scaleSliderY, SCALE_SLIDER_WIDTH, SCALE_SLIDER_HEIGHT)) {
+            if (scoreboardVisible && isInside(mouseX, mouseY, scoreboardVerboseToggleX, scoreboardVerboseToggleY, scoreboardToggleSize, scoreboardToggleSize)) {
+                scoreboardVerbose = !scoreboardVerbose;
+                Config.update(CONFIG_COMPACT_PATH, scoreboardVerbose);
+                return;
+            }
+
+            if (scoreboardVisible && isInside(mouseX, mouseY, scaleSliderX, scaleSliderY, SCALE_SLIDER_WIDTH, SCALE_SLIDER_HEIGHT)) {
                 scaleSliderDragging = true;
                 updateHudScaleFromMouse(mouseX);
                 return;
@@ -225,10 +235,15 @@ public class ButterflyGarden {
     }
 
 
-    //onScreenRender hook
     private void renderExchangeControls(AbstractContainerScreen<?> screen, GuiGraphicsExtractor gui, int mouseX, int mouseY) {
         updateExchangeControlBounds(screen);
         boolean sellingBlocked = hasWrongOwnerInventoryButterfly(screen);
+
+        if (scoreboardVisible && scaleSliderDragging) {
+            updateHudScaleFromMouse(mouseX);
+        } else if (!scoreboardVisible) {
+            scaleSliderDragging = false;
+        }
 
         if (scaleSliderDragging) {
             updateHudScaleFromMouse(mouseX);
@@ -237,7 +252,10 @@ public class ButterflyGarden {
         renderExchangeSlotHighlights(screen, gui);
         renderExchangeButton(gui, mouseX, mouseY, sellingBlocked);
         renderBlockedSellingWarning(gui, mouseX, mouseY, sellingBlocked);
-        renderScaleSlider(gui, mouseX, mouseY);
+
+        if (scoreboardVisible) {
+            renderScaleSlider(gui, mouseX, mouseY);
+        }
     }
 
     private void renderExchangeSlotHighlights(AbstractContainerScreen<?> screen, GuiGraphicsExtractor gui) {
@@ -597,9 +615,16 @@ public class ButterflyGarden {
         int screenWidth = Math.round(minecraft.getWindow().getGuiScaledWidth() / HUD_SCALE);
         int screenHeight = Math.round(minecraft.getWindow().getGuiScaledHeight() / HUD_SCALE);
         int panelMarginRight = Math.round(PANEL_MARGIN_RIGHT / HUD_SCALE);
-        int contentWidth = 16 + 6 + maxNameWidth + 10 + maxCountWidth;
-        int maxPanelWidth = Math.max(PANEL_MIN_WIDTH, screenWidth - Math.round(16 / HUD_SCALE));
-        int panelWidth = Math.min(maxPanelWidth, Math.max(PANEL_MIN_WIDTH, PANEL_PADDING * 2 + contentWidth));
+        int contentWidth = scoreboardVerbose
+                ? 16 + 6 + maxNameWidth + 10 + maxCountWidth
+                : 16 + 6 + maxCountWidth;
+        int titleControlsWidth = minecraft.font.width("Butterflies") + PANEL_PADDING * 2
+                + SCOREBOARD_TOGGLE_SIZE * 2 + SCOREBOARD_TOGGLE_GAP + SCOREBOARD_TOGGLE_MARGIN;
+        int minPanelWidth = scoreboardVerbose
+                ? PANEL_MIN_WIDTH
+                : Math.max(PANEL_COMPACT_MIN_WIDTH, titleControlsWidth);
+        int maxPanelWidth = Math.max(minPanelWidth, screenWidth - Math.round(16 / HUD_SCALE));
+        int panelWidth = Math.min(maxPanelWidth, Math.max(minPanelWidth, PANEL_PADDING * 2 + contentWidth));
         int panelHeight = HEADER_HEIGHT + PANEL_PADDING + counts.size() * ROW_HEIGHT + FOOTER_HEIGHT + PANEL_PADDING;
         int panelX = screenWidth - panelMarginRight - panelWidth;
         int panelY = Math.max(4, screenHeight / 2 - panelHeight / 2);
@@ -610,8 +635,12 @@ public class ButterflyGarden {
     private void updateScoreboardToggleBounds(Minecraft minecraft, List<ButterflyCount> counts) {
         HudLayout layout = calculateHudLayout(minecraft, counts);
         scoreboardToggleSize = Math.max(8, Math.round(SCOREBOARD_TOGGLE_SIZE * HUD_SCALE));
-        scoreboardToggleX = Math.round((layout.panelX() + layout.panelWidth() - SCOREBOARD_TOGGLE_MARGIN - SCOREBOARD_TOGGLE_SIZE) * HUD_SCALE);
-        scoreboardToggleY = Math.round((layout.panelY() + SCOREBOARD_TOGGLE_MARGIN) * HUD_SCALE);
+        int toggleMargin = SCOREBOARD_TOGGLE_MARGIN;
+        int toggleGap = SCOREBOARD_TOGGLE_GAP;
+        scoreboardToggleX = Math.round((layout.panelX() + layout.panelWidth() - toggleMargin - SCOREBOARD_TOGGLE_SIZE) * HUD_SCALE);
+        scoreboardToggleY = Math.round((layout.panelY() + toggleMargin) * HUD_SCALE);
+        scoreboardVerboseToggleX = Math.round((layout.panelX() + layout.panelWidth() - toggleMargin - (SCOREBOARD_TOGGLE_SIZE * 2) - toggleGap) * HUD_SCALE);
+        scoreboardVerboseToggleY = scoreboardToggleY;
     }
 
     private void renderButterflyHud(GuiGraphicsExtractor graphics, Minecraft minecraft, List<ButterflyCount> counts, boolean showToggle) {
@@ -633,6 +662,9 @@ public class ButterflyGarden {
         int titleY = panelY + (HEADER_HEIGHT - minecraft.font.lineHeight) / 2;
         graphics.text(minecraft.font, "Butterflies", titleX, titleY, TEXT_COLOR, true);
         if (showToggle) {
+            int toggleMargin = SCOREBOARD_TOGGLE_MARGIN;
+            int toggleGap = SCOREBOARD_TOGGLE_GAP;
+            renderVerboseScoreboardToggle(graphics, minecraft, panelX + panelWidth - toggleMargin - (SCOREBOARD_TOGGLE_SIZE * 2) - toggleGap, panelY + toggleMargin);
             renderScoreboardToggle(graphics, minecraft, panelX + panelWidth - SCOREBOARD_TOGGLE_MARGIN - SCOREBOARD_TOGGLE_SIZE, panelY + SCOREBOARD_TOGGLE_MARGIN);
         }
 
@@ -643,6 +675,7 @@ public class ButterflyGarden {
                 graphics.fill(panelX + 2, rowY - 1, panelX + panelWidth - 2, rowY + ROW_HEIGHT - 2, ROW_ALT_COLOR);
             }
 
+
             int iconX = panelX + PANEL_PADDING;
             int iconY = rowY;
             graphics.item(count.displayStack, iconX, iconY);
@@ -650,8 +683,10 @@ public class ButterflyGarden {
             int textY = rowY + (16 - minecraft.font.lineHeight) / 2;
             int countTextWidth = minecraft.font.width("x" + count.count);
             int countX = panelX + panelWidth - PANEL_PADDING - countTextWidth;
-            String displayName = fitText(minecraft, count.name, Math.max(12, countX - nameX - 6));
-            graphics.text(minecraft.font, displayName, nameX, textY, MUTED_TEXT_COLOR, false);
+            if (scoreboardVerbose) {
+                String displayName = fitText(minecraft, count.name, Math.max(12, countX - nameX - 6));
+                graphics.text(minecraft.font, displayName, nameX, textY, MUTED_TEXT_COLOR, false);
+            }
             graphics.text(minecraft.font, "x" + count.count, countX, textY, TEXT_COLOR, true);
 
             rowY += ROW_HEIGHT;
@@ -689,6 +724,7 @@ public class ButterflyGarden {
         graphics.pose().popMatrix();
     }
 
+
     private void renderScoreboardToggle(GuiGraphicsExtractor graphics, Minecraft minecraft, int x, int y) {
         graphics.fill(x, y, x + SCOREBOARD_TOGGLE_SIZE, y + SCOREBOARD_TOGGLE_SIZE, 0xE0DAB8D6);
         graphics.fill(x + 1, y + 1, x + SCOREBOARD_TOGGLE_SIZE - 1, y + SCOREBOARD_TOGGLE_SIZE - 1, scoreboardVisible ? 0xD8342C3A : 0xE05A4A64);
@@ -698,6 +734,21 @@ public class ButterflyGarden {
             int midX = x + SCOREBOARD_TOGGLE_SIZE / 2;
             graphics.fill(midX, y + 3, midX + 1, y + SCOREBOARD_TOGGLE_SIZE - 3, TEXT_COLOR);
         }
+    }
+
+    private void renderVerboseScoreboardToggle(GuiGraphicsExtractor graphics, Minecraft minecraft, int x, int y) {
+        graphics.fill(x, y, x + SCOREBOARD_TOGGLE_SIZE, y + SCOREBOARD_TOGGLE_SIZE, 0xE0DAB8D6);
+        graphics.fill(x + 1, y + 1, x + SCOREBOARD_TOGGLE_SIZE - 1, y + SCOREBOARD_TOGGLE_SIZE - 1, scoreboardVerbose ? 0xE04C7A4F : 0xD8342C3A);
+        int iconColor = scoreboardVerbose ? TEXT_COLOR : MUTED_TEXT_COLOR;
+        int dotX = x + 3;
+        int lineX = x + 5;
+        int firstY = y + 3;
+        int secondY = y + 7;
+
+        graphics.fill(dotX, firstY, dotX + 1, firstY + 1, iconColor);
+        graphics.fill(lineX, firstY, x + SCOREBOARD_TOGGLE_SIZE - 3, firstY + 1, iconColor);
+        graphics.fill(dotX, secondY, dotX + 1, secondY + 1, iconColor);
+        graphics.fill(lineX, secondY, x + SCOREBOARD_TOGGLE_SIZE - 3, secondY + 1, iconColor);
     }
 
     private String fitText(Minecraft minecraft, String text, int maxWidth) {
