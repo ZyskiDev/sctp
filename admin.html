@@ -149,6 +149,21 @@
 			</div>
 			<div class="err" id="manualDeleteErr"></div>
 		</div>
+
+		<h2>Delete an entire shop</h2>
+		<div class="card">
+			<div class="meta">Removes every listing for a seller — for a shop that's gone entirely (player quit, moved, torn down), not for clearing one stale item (use a report or the manual-delete box above for that).</div>
+			<label for="shopDeleteSeller">Seller username</label>
+			<input type="text" id="shopDeleteSeller" placeholder="e.g. Steve" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<label for="shopDeleteWorld">World</label>
+			<select id="shopDeleteWorld" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+				<option value="">Both worlds</option>
+				<option value="Firefly">Firefly only</option>
+				<option value="Honeybee">Honeybee only</option>
+			</select>
+			<button id="shopDeleteBtn" type="button" class="deny" style="margin-top:8px;">Delete shop</button>
+			<div class="err" id="shopDeleteErr"></div>
+		</div>
 	</div>
 </div>
 
@@ -534,11 +549,33 @@
 		}
 	}
 
+	async function deleteShopListings(){
+		var errEl = document.getElementById("shopDeleteErr");
+		errEl.style.color = "var(--danger)";
+		var seller = document.getElementById("shopDeleteSeller").value.trim();
+		var world = document.getElementById("shopDeleteWorld").value;
+		if(!seller){ errEl.textContent = "Enter a seller username."; return; }
+		var scopeText = world ? (seller + " on " + world) : (seller + " on both worlds");
+		if(!confirm("Delete every listing for " + scopeText + "? This can't be undone.")) return;
+		try {
+			var res = await api("/admin/listings/delete-shop", {
+				method: "POST", headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ seller: seller, world: world }),
+			});
+			errEl.style.color = "var(--accent)";
+			errEl.textContent = "Deleted " + res.deleted + " listing" + (res.deleted === 1 ? "" : "s") + " for " + scopeText + ".";
+		} catch(err){
+			errEl.style.color = "var(--danger)";
+			errEl.textContent = "Failed: " + err.message;
+		}
+	}
+
 	document.getElementById("manualAddBtn").addEventListener("click", addManualListings);
 	document.getElementById("manualDeleteBtn").addEventListener("click", deleteManualListingById);
 	document.getElementById("manualDeleteId").addEventListener("keydown", function(e){
 		if(e.key === "Enter") deleteManualListingById();
 	});
+	document.getElementById("shopDeleteBtn").addEventListener("click", deleteShopListings);
 
 	document.getElementById("loginBtn").addEventListener("click", login);
 	document.getElementById("adminKeyInput").addEventListener("keydown", function(e){

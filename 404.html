@@ -104,6 +104,13 @@
 		border-radius:8px;padding:7px 10px;font-family:var(--font-body);font-size:13px;cursor:pointer;
 	}
 	.world-filter:focus{outline:none;border-color:var(--accent-dim);}
+	.scale-toggle{display:flex;align-items:center;gap:8px;margin:-4px 0 14px;font-size:12.5px;color:var(--muted);}
+	.scale-toggle .scale-btn{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--muted);
+		border-radius:999px;padding:4px 12px;font-family:var(--font-body);font-size:12px;cursor:pointer;
+	}
+	.scale-toggle .scale-btn.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+	.scale-toggle .scale-btn:not(.active):hover{border-color:var(--accent-dim);color:var(--text);}
 	.table-scroll{overflow-x:auto;}
 	table{width:100%;border-collapse:collapse;font-size:13.5px;}
 	th{
@@ -609,6 +616,13 @@
 		var itemKey = null;
 		var currentListings = []; // both worlds, normalized
 		var worldFilter = ""; // "" = both, else "Firefly" or "Honeybee"
+		// Vanilla items are usually traded by the stack, so their price charts
+		// read more naturally per stack of 64 than per single item (rare items
+		// are almost always sold individually, so they default to per-item) —
+		// the toggle below lets a visitor flip either chart type either way.
+		var priceScale = null; // set from isRare once catalogEntry is known, see loadItem
+		var lastHistory = [];
+		var priceCharts = {}; // canvas id -> live Chart instance, so toggling can destroy+recreate cleanly
 
 		function sellerUrlFor(r){
 			var s = r.world === "Honeybee" ? "hb" : r.world === "Firefly" ? "ff" : "";
@@ -633,7 +647,6 @@
 
 		function renderSkeleton(entry){
 			var subtitle = isRare ? esc(entry.category) : esc(entry.baseItem);
-			var priceUnit = isRare ? "dia or DB/item" : "dia or DB/stack of 64";
 			var html = '<div class="item-header">'+
 					'<img src="'+esc(entry.texture)+'" class="item-header-icon" alt="" onerror="this.style.visibility=\'hidden\'">'+
 					'<div><h1 class="item-header-name">'+esc(entry.name)+'</h1>'+
@@ -641,9 +654,13 @@
 				'</div>'+
 				(isRare ? rareInfoHtml(entry) : '')+
 				'<p class="history-note" id="historyNote"></p>'+
+				'<div class="scale-toggle">Price charts:'+
+					'<button type="button" class="scale-btn" id="scalePer1" data-scale="1">Per item</button>'+
+					'<button type="button" class="scale-btn" id="scalePer64" data-scale="64">Per stack of 64</button>'+
+				'</div>'+
 				'<div class="charts-grid">'+
-					'<div class="chart-card"><h3>Average price ('+priceUnit+')</h3><div class="chart-wrap"><canvas id="chartAvgPrice"></canvas></div></div>'+
-					'<div class="chart-card"><h3>Lowest price ('+priceUnit+')</h3><div class="chart-wrap"><canvas id="chartLowestPrice"></canvas></div></div>'+
+					'<div class="chart-card"><h3>Average price (<span id="avgPriceUnit"></span>)</h3><div class="chart-wrap"><canvas id="chartAvgPrice"></canvas></div></div>'+
+					'<div class="chart-card"><h3>Lowest price (<span id="lowestPriceUnit"></span>)</h3><div class="chart-wrap"><canvas id="chartLowestPrice"></canvas></div></div>'+
 					'<div class="chart-card"><h3>Distinct sellers</h3><div class="chart-wrap"><canvas id="chartSellers"></canvas></div></div>'+
 					'<div class="chart-card"><h3>Total stock</h3><div class="chart-wrap"><canvas id="chartStock"></canvas></div></div>'+
 				'</div>'+
@@ -662,9 +679,31 @@
 				worldFilter = this.value;
 				renderItemTable();
 			});
+			document.getElementById("scalePer1").addEventListener("click", function(){ setPriceScale(1); });
+			document.getElementById("scalePer64").addEventListener("click", function(){ setPriceScale(64); });
+		}
+
+		function setPriceScale(scale){
+			if(priceScale === scale) return;
+			priceScale = scale;
+			renderGraphs(lastHistory);
 		}
 
 		function renderGraphs(history){
+			lastHistory = history;
+
+			// Vanilla items are usually traded by the stack, so their price
+			// charts read more naturally per stack of 64 than per single item
+			// (rare items are almost always sold individually, so they default
+			// to the raw per-item basis computeDailySnapshots() stores) — only
+			// picked once, on the first render; the toggle button owns it after that.
+			if(priceScale === null) priceScale = isRare ? 1 : 64;
+			document.getElementById("scalePer1").classList.toggle("active", priceScale === 1);
+			document.getElementById("scalePer64").classList.toggle("active", priceScale === 64);
+			var unitText = priceScale === 1 ? "dia or DB/item" : "dia or DB/stack of 64";
+			document.getElementById("avgPriceUnit").textContent = unitText;
+			document.getElementById("lowestPriceUnit").textContent = unitText;
+
 			var note = document.getElementById("historyNote");
 			note.textContent = history.length === 0
 				? "No price history yet — a snapshot is taken once daily, so check back after tomorrow's snapshot."
@@ -674,12 +713,6 @@
 			var seen = {};
 			history.forEach(function(h){ if(!seen[h.date]){ seen[h.date] = true; dates.push(h.date); } });
 			dates.sort();
-
-			// Vanilla items are usually traded by the stack, so their price
-			// charts read more naturally per stack of 64 than per single item
-			// (rare items are almost always sold individually, so they keep
-			// the raw per-item basis computeDailySnapshots() stores).
-			var priceScale = isRare ? 1 : 64;
 
 			function seriesFor(world, field, scale){
 				var byDate = {};
@@ -705,7 +738,11 @@
 						return ctx.dataset.label + ": " + formatDiaOrDb(ctx.parsed.y);
 					} } };
 				}
-				new Chart(document.getElementById(cfg.id).getContext("2d"), {
+				// Re-rendered on every toggle click (not just page load) — destroy
+				// whatever's already on this canvas first, or Chart.js throws
+				// "Canvas is already in use" on the second render.
+				if(priceCharts[cfg.id]) priceCharts[cfg.id].destroy();
+				priceCharts[cfg.id] = new Chart(document.getElementById(cfg.id).getContext("2d"), {
 					type: "line",
 					data: {
 						labels: dates,
