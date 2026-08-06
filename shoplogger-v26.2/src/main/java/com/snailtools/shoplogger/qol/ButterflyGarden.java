@@ -81,7 +81,7 @@ public class ButterflyGarden {
     private static final int DRAG_ACTIVE_COLOR = 0xE0DAB8D6;
     private static final int DRAG_FILL_COLOR = 0xD85A4A64;
     private static final float HEADER_ICON_MODEL_DATA = 999551.0F;
-    private final ItemStack headerIcon = createHeaderIcon();
+    private ItemStack headerIcon = ItemStack.EMPTY;
     private int dragHandleX = 0;
     private int dragHandleY = 0;
     private int dragHandleSize = 0;
@@ -321,10 +321,8 @@ public class ButterflyGarden {
     private void renderExchangeSlotHighlights(AbstractContainerScreen<?> screen, GuiGraphicsExtractor gui) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null) return;
-
-        int leftPos = getScreenField(screen, "field_2776");
-        int topPos = getScreenField(screen, "field_2800");
-
+        int leftPos = getScreenField(screen, "leftPos");
+        int topPos = getScreenField(screen, "topPos");
         for (Slot slot : screen.getMenu().slots) {
             ItemStack stack = slot.getItem();
             if (slot.container == minecraft.player.getInventory()) {
@@ -357,10 +355,9 @@ public class ButterflyGarden {
     }
 
     private void updateExchangeControlBounds(AbstractContainerScreen<?> screen) {
-        int leftPos = getScreenField(screen, "field_2776");
-        int topPos = getScreenField(screen, "field_2800");
+        int leftPos = getScreenField(screen, "leftPos");
+        int topPos = getScreenField(screen, "topPos");
         int uiWidth = 176;
-
         for (Slot slot : screen.getMenu().slots) {
             uiWidth = Math.max(uiWidth, slot.x + 16);
         }
@@ -769,8 +766,7 @@ public class ButterflyGarden {
         if (showToggle) {
             renderDragHandle(graphics, panelX, panelY);
         }
-
-        graphics.item(headerIcon, titleX + 2, panelY + 1);
+        graphics.item(headerIcon(), titleX + 2, panelY + 1);
         graphics.text(minecraft.font, "Butterfly Garden", titleX + 22, titleY, TEXT_COLOR, true);
 
         if (showToggle) {
@@ -892,6 +888,13 @@ public class ButterflyGarden {
             builder.append(text.charAt(i));
         }
         return builder + suffix;
+    }
+
+    private ItemStack headerIcon() {
+        if (headerIcon.isEmpty()) {
+            headerIcon = createHeaderIcon();
+        }
+        return headerIcon;
     }
 
     private ItemStack createHeaderIcon() {

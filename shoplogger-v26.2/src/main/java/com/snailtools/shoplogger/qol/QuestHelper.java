@@ -285,8 +285,9 @@ public class QuestHelper {
 
     private void updateScaleControlBounds(Screen screen) {
         if (screen instanceof AbstractContainerScreen<?> containerScreen) {
-            int leftPos = getScreenField(containerScreen, "field_2776");
-            int topPos = getScreenField(containerScreen, "field_2800");
+
+            int leftPos = getScreenField(containerScreen, "leftPos");
+            int topPos = getScreenField(containerScreen, "topPos");
             int uiWidth = 176;
 
             for (Slot slot : containerScreen.getMenu().slots) {
