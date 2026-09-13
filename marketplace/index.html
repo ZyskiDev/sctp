@@ -53,7 +53,10 @@
 	@media (max-width:360px){.card-grid{grid-template-columns:1fr;}} /* 280px min-width columns can overflow the very smallest phones otherwise */
 	.listing-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;}
 	.listing-card .lc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+	.listing-card .lc-heading{display:flex;align-items:center;gap:10px;min-width:0;}
 	.listing-card h3{font-family:var(--font-display);font-size:16px;margin:0;}
+	.lc-icon{flex:0 0 auto;width:36px;height:36px;image-rendering:pixelated;object-fit:contain;background:var(--panel-alt);border-radius:6px;padding:3px;box-sizing:border-box;}
+	.lc-icon-lg{width:56px;height:56px;padding:5px;}
 	.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:0.03em;}
 	.badge.selling{background:rgba(183,226,61,0.15);color:var(--accent);}
 	.badge.lookingfor{background:rgba(140,147,232,0.18);color:#8C93E8;}
@@ -80,6 +83,9 @@
 	.err{color:var(--bad);font-size:12.5px;margin:0 0 10px;}
 	.modal .actions{display:flex;gap:10px;margin-top:16px;}
 	.modal .actions .btn,.modal .actions .btn-ghost{flex:1;}
+	.quickset-row{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 12px;}
+	.quickset-row button{background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+	.quickset-row button:hover{border-color:var(--accent-dim);color:var(--accent);}
 	.type-toggle{display:flex;gap:8px;margin-bottom:14px;}
 	.type-toggle button{flex:1;background:var(--panel-alt);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:10px;font-weight:700;cursor:pointer;font-family:inherit;}
 	.type-toggle button.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
@@ -170,6 +176,7 @@
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var CURRENCY_LABELS = { diamond: "Dia", diamondblock: "DB (9 dia)", diamondstack: "STX (64 DB)" };
+	var BUDGET_QUICKSET_DB = [5, 10, 15, 20, 25, 32, 48];
 	var listings = [];
 	var worldFilter = "Firefly";
 	var typeFilter = "";
@@ -177,10 +184,25 @@
 	var vanillaByNormName = {};
 	var itemCatalog = []; // {name, baseItem} for both vanilla + rare
 
+	// Same placeholder used by items/index.html — a shop-image is nice-to-have,
+	// not guaranteed (a fresh/renamed item might not be in the catalog yet).
+	var PLACEHOLDER_ICON = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2322332A'/><path d='M4 4 L12 12 M12 4 L4 12' stroke='%2333453A' stroke-width='1.5'/></svg>";
+	var PLACEHOLDER_ICON_JS = PLACEHOLDER_ICON.replace(/'/g, "\\'");
+
 	function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 	function fmtNum(n){ return Number(n).toLocaleString(); }
 	function alphaOnly(s){ return String(s||"").toLowerCase().replace(/[^a-z]/g, ""); }
 	function session(){ return window.sctpAccount ? window.sctpAccount.getSession() : null; }
+
+	// Reuses the same vanilla-items.json/rare-items.json textures the Item
+	// Library uses — no separate image storage for marketplace posts.
+	function textureFor(itemName){
+		var it = vanillaByNormName[alphaOnly(itemName)];
+		return (it && it.texture) || PLACEHOLDER_ICON;
+	}
+	function iconImgHtml(itemName, extraClass){
+		return '<img class="lc-icon' + (extraClass ? " " + extraClass : "") + '" src="' + esc(textureFor(itemName)) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + PLACEHOLDER_ICON_JS + '\';">';
+	}
 
 	function authFetch(path, opts){
 		opts = opts || {};
@@ -245,10 +267,20 @@
 	}
 
 	// ---------------- browse ----------------
+	var deepLinkHandled = false;
 	function loadListings(){
 		return fetch(API_BASE + "/marketplace/listings").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }).then(function(rows){
 			listings = rows;
 			renderListings();
+			// Deep link from the mod's in-game marketplace browser
+			// (marketplace/#listing=<id>) — jumps straight to that listing's
+			// popup once the data's actually loaded, instead of just landing on
+			// the generic browse page. Only tried once; if the listing's gone
+			// (expired/fulfilled/cancelled) it just silently does nothing.
+			if(!deepLinkHandled && location.hash.indexOf("#listing=") === 0){
+				deepLinkHandled = true;
+				openListingDetail(decodeURIComponent(location.hash.slice("#listing=".length)));
+			}
 		});
 	}
 
@@ -276,7 +308,7 @@
 				bidLine = parts.join(" · ");
 			}
 			return '<div class="listing-card">' +
-				'<div class="lc-top"><h3>' + esc(l.itemName) + '</h3><span class="badge ' + (l.type === "selling" ? "selling" : "lookingfor") + '">' + (l.type === "selling" ? "Selling" : "Looking for") + '</span></div>' +
+				'<div class="lc-top"><div class="lc-heading">' + iconImgHtml(l.itemName) + '<h3>' + esc(l.itemName) + '</h3></div><span class="badge ' + (l.type === "selling" ? "selling" : "lookingfor") + '">' + (l.type === "selling" ? "Selling" : "Looking for") + '</span></div>' +
 				'<p class="lc-meta">' + esc(l.world) + ' · qty ' + fmtNum(l.quantity) + '</p>' +
 				'<div class="lc-price">' + esc(priceLine || "—") + '</div>' +
 				(bidLine ? '<div class="lc-bid-line">' + esc(bidLine) + '</div>' : '') +
@@ -326,7 +358,7 @@
 			   l.startingBid != null ? currencyText(l.startingBid, l.startingBidCurrency) + " (starting bid)" : null].filter(Boolean).join(" · ")
 			: currencyText(l.budget, l.budgetCurrency) + " (budget)";
 		var html = '<div class="modal">' +
-			'<h2>' + esc(l.itemName) + '</h2>' +
+			'<div class="lc-heading" style="margin-bottom:12px;">' + iconImgHtml(l.itemName, "lc-icon-lg") + '<h2 style="margin:0;">' + esc(l.itemName) + '</h2></div>' +
 			'<p class="lc-meta">' + esc(l.world) + ' · qty ' + fmtNum(l.quantity) + ' · posted by ' + esc(l.seller) + (l.sellerVerified ? ' <span class="verified">&#10003;</span>' : '') + '</p>' +
 			'<p class="lc-meta">Posted ' + esc(new Date(l.createdAt).toLocaleDateString()) + ' · expires ' + esc(new Date(l.expiresAt).toLocaleDateString()) + '</p>' +
 			'<div class="lc-price">' + esc(priceLine || "—") + '</div>' +
@@ -415,7 +447,16 @@
 			} else {
 				area.innerHTML =
 					'<div class="row2"><div class="field"><label>Budget (optional)</label><input type="number" id="nlBudget" min="0" step="any"></div>' +
-					'<div class="field"><label>Currency</label>' + currencySelectHtml("nlBudgetCur", "diamond") + '</div></div>';
+					'<div class="field"><label>Currency</label>' + currencySelectHtml("nlBudgetCur", "diamond") + '</div></div>' +
+					'<div class="quickset-row">' + BUDGET_QUICKSET_DB.map(function(n){
+						return '<button type="button" data-db="' + n + '">' + n + ' DB</button>';
+					}).join("") + '</div>';
+				area.querySelectorAll("[data-db]").forEach(function(btn){
+					btn.addEventListener("click", function(){
+						document.getElementById("nlBudget").value = btn.getAttribute("data-db");
+						document.getElementById("nlBudgetCur").value = "diamondblock";
+					});
+				});
 			}
 		}
 		renderPriceFields();

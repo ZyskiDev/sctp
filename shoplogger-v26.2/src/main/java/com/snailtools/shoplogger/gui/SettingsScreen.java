@@ -13,6 +13,7 @@ import com.snailtools.shoplogger.ShopMarkerRenderer;
 import com.snailtools.shoplogger.ShopUploader;
 import com.snailtools.shoplogger.ShopVisitAlert;
 import com.snailtools.shoplogger.TeleportHighlight;
+import com.snailtools.shoplogger.WatchlistStore;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -130,6 +131,11 @@ public class SettingsScreen extends Screen {
 		addRenderableWidget(CycleButton.onOffBuilder(OwnShopSaleTracker.isMessagesEnabled())
 				.create(rightX, y, colW, 20, Component.literal("Own-shop sale alerts"),
 						(btn, value) -> OwnShopSaleTracker.setMessagesEnabled(value)));
+		y += gap;
+
+		addRenderableWidget(CycleButton.onOffBuilder(WatchlistStore.isMarketplaceAlertsEnabled())
+				.create(rightX, y, colW, 20, Component.literal("Watchlist: include marketplace"),
+						(btn, value) -> WatchlistStore.setMarketplaceAlertsEnabled(value)));
 		y += gap;
 
 		addRenderableWidget(CycleButton.builder((TeleportHighlight.BeamStyle v) -> Component.literal(v.label), TeleportHighlight.getStyle())

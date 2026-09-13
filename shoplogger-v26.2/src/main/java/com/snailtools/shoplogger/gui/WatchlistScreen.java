@@ -38,6 +38,9 @@ public class WatchlistScreen extends Screen {
 	private boolean loadFailed = false;
 	private long searchChangedAtMillis = -1;
 	private static final long SEARCH_DEBOUNCE_MS = 300;
+	// Matches WatchedItemOptionsScreen's own unit — maxPrice is stored in
+	// diamonds, but shown in diamond blocks everywhere in the UI.
+	private static final double DIAMONDS_PER_BLOCK = 9.0;
 
 	public WatchlistScreen(Screen parent) {
 		super(Component.literal("Watchlist"));
@@ -116,28 +119,40 @@ public class WatchlistScreen extends Screen {
 		if (q.isEmpty()) {
 			for (WatchedItem watched : WatchlistStore.getAll()) {
 				String name = watched.itemName;
+				String subtitle = watchedSubtitle(watched);
 				VanillaItem vMatch = findVanillaItem(name);
 				if (vMatch != null) {
-					list.addItemEntry(ItemListWidget.forVanilla(name, vMatch.baseItem, () -> openOptions(watched)));
+					list.addItemEntry(ItemListWidget.forVanilla(name, vMatch.baseItem, subtitle, () -> openOptions(watched)));
 					continue;
 				}
 				RareItem rMatch = findRareItem(name);
 				if (rMatch != null) {
-					list.addItemEntry(ItemListWidget.forRare(name, rMatch.category, rMatch.texture, () -> openOptions(watched)));
+					list.addItemEntry(ItemListWidget.forRare(name, subtitle, rMatch.texture, () -> openOptions(watched)));
 					continue;
 				}
-				list.addItemEntry(ItemListWidget.forVanilla(name, null, () -> openOptions(watched)));
+				list.addItemEntry(ItemListWidget.forVanilla(name, null, subtitle, () -> openOptions(watched)));
 			}
 			return;
 		}
 
+		// Searching also surfaces (and lets you re-open the options for)
+		// anything you're already watching that matches — clicking one of
+		// those opens its options instead of re-adding it, so this one search
+		// box doubles as "find something new to watch" AND "find something you
+		// already watch", instead of needing a separate filter for the latter.
 		for (VanillaItem it : vanillaItems) {
 			if (!it.name.toLowerCase(Locale.ROOT).contains(q)) continue;
-			list.addItemEntry(ItemListWidget.forVanilla(labelFor(it.name), it.baseItem, () -> addWatched(it.name)));
+			WatchedItem existing = WatchlistStore.find(it.name);
+			list.addItemEntry(existing != null
+					? ItemListWidget.forVanilla(labelFor(it.name), it.baseItem, watchedSubtitle(existing), () -> openOptions(existing))
+					: ItemListWidget.forVanilla(labelFor(it.name), it.baseItem, () -> addWatched(it.name)));
 		}
 		for (RareItem it : rareItems) {
 			if (!it.name.toLowerCase(Locale.ROOT).contains(q)) continue;
-			list.addItemEntry(ItemListWidget.forRare(labelFor(it.name), it.category, it.texture, () -> addWatched(it.name)));
+			WatchedItem existing = WatchlistStore.find(it.name);
+			list.addItemEntry(existing != null
+					? ItemListWidget.forRare(labelFor(it.name), watchedSubtitle(existing), it.texture, () -> openOptions(existing))
+					: ItemListWidget.forRare(labelFor(it.name), it.category, it.texture, () -> addWatched(it.name)));
 		}
 	}
 
@@ -145,10 +160,32 @@ public class WatchlistScreen extends Screen {
 		return WatchlistStore.isWatching(name) ? name + " (watching)" : name;
 	}
 
+	/** "Max 2 DB · Skips display/no-price" — shown under an item's name in the watchlist. */
+	private String watchedSubtitle(WatchedItem watched) {
+		StringBuilder sb = new StringBuilder();
+		if (watched.maxPrice != null) {
+			double blocks = watched.maxPrice / DIAMONDS_PER_BLOCK;
+			sb.append("Max ").append(blocks == Math.floor(blocks) ? String.valueOf((long) blocks) : String.valueOf(blocks)).append(" DB");
+		}
+		if (watched.excludeNoPriceOrDisplay) {
+			if (sb.length() > 0) sb.append(" · ");
+			sb.append("Skips display/no-price");
+		}
+		return sb.length() > 0 ? sb.toString() : "No limits set";
+	}
+
 	private void addWatched(String name) {
 		WatchlistStore.add(name);
 		ChatFormat.send(minecraft, ChatFormat.SUCCESS, "Added " + name + " to your watchlist.");
-		refreshList();
+		// Immediately offer the max-price/display options for the item that
+		// was just added, rather than making a second trip back into the
+		// (now-empty-search) watchlist view to configure it.
+		WatchedItem justAdded = WatchlistStore.find(name);
+		if (justAdded != null) {
+			openOptions(justAdded);
+		} else {
+			refreshList();
+		}
 	}
 
 	private void openOptions(WatchedItem watched) {

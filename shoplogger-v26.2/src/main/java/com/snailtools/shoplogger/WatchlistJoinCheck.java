@@ -53,9 +53,11 @@ public final class WatchlistJoinCheck {
 			WebDataClient.fetchListings()
 					.thenAccept(listings -> client.execute(() -> report(client, world.label(), watched, listings)))
 					.exceptionally(ex -> null);
-			WebDataClient.fetchMarketplaceListings()
-					.thenAccept(listings -> client.execute(() -> reportMarketplace(client, world.label(), watched, listings)))
-					.exceptionally(ex -> null);
+			if (WatchlistStore.isMarketplaceAlertsEnabled()) {
+				WebDataClient.fetchMarketplaceListings()
+						.thenAccept(listings -> client.execute(() -> reportMarketplace(client, world.label(), watched, listings)))
+						.exceptionally(ex -> null);
+			}
 		}
 
 		String self = client.getUser().getName();

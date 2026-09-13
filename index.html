@@ -298,6 +298,12 @@
 	.badge.bundled{background:rgba(217,200,154,0.18);color:var(--shell);}
 	.badge.single{background:rgba(140,147,232,0.18);color:var(--info);}
 	.badge.mixed{background:rgba(226,163,61,0.18);color:var(--warn);}
+	/* Deliberately NOT a filled pill like the shop-listing badges above — an
+	   outline reads as "categorically different" at a glance (this is a
+	   marketplace post, not a real shop), not just "a different color". */
+	.badge.marketplace{background:transparent;border:1px solid var(--shell);color:var(--shell);}
+	tr.marketplace-row{background:rgba(217,200,154,0.05);}
+	tr.marketplace-row:hover{background:rgba(217,200,154,0.09);}
 	.price-main{font-family:var(--font-mono);font-weight:600;}
 	.price-sub{font-family:var(--font-mono);color:var(--muted);font-size:11.5px;}
 
@@ -621,9 +627,9 @@
 				<strong>The 26.1 mod will not receive any futher updates past 1.5.2; update to 26.2!</strong>
 				<span>shoplogger-26.1-1.5.2.jar</span>
 			</a>
-			<a class="download-option" href="shoplogger-26.2-1.5.2.jar" download="shoplogger-26.2-1.5.2.jar">
+			<a class="download-option" href="shoplogger-26.2-1.6.jar" download="shoplogger-26.2-1.6.jar">
 				<strong>Minecraft 26.2</strong>
-				<span>shoplogger-26.2-1.5.2.jar</span>
+				<span>shoplogger-26.2-1.6.jar</span>
 			</a>
 		</div>
 		<p class="download-reminder">Requires <strong>Fabric API</strong> installed alongside the mod, and <strong>Fabric Loader 0.19.3</strong> or newer.</p>
@@ -1517,10 +1523,10 @@
 				? '<a href="'+esc(itemUrl)+'">'+esc(r.itemNameDisplay)+'</a>'
 				: esc(r.itemNameDisplay);
 			var typeCell = r.marketplace
-				? '<span class="badge '+(r.marketplaceType === "lookingFor" ? "mixed" : "bulk")+'">'+(r.marketplaceType === "lookingFor" ? "Wanted" : "Marketplace")+'</span>'
+				? '<span class="badge marketplace">'+(r.marketplaceType === "lookingFor" ? "Wanted (Marketplace)" : "Marketplace")+'</span>'
 				: (r.bulk ? '<span class="badge bulk">Bulk</span>' : r.bundled ? '<span class="badge bundled">Bundled</span>' : '<span class="badge single">Single</span>')+
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '');
-			html += '<tr>'+
+			html += '<tr'+(r.marketplace ? ' class="marketplace-row"' : '')+'>'+
 				'<td class="item-icon"><img src="'+esc(iconFor(r))+'" alt="" loading="lazy" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';"></td>'+
 				'<td class="item-name">'+itemNameHtml+rareIcon+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+

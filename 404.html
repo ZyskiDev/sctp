@@ -132,6 +132,7 @@
 	.badge.bulk{background:rgba(140,147,232,0.16);color:var(--info);}
 	.badge.bundled{background:rgba(183,226,61,0.16);color:var(--accent);}
 	.badge.mixed{background:rgba(226,163,61,0.16);color:var(--warn);margin-left:4px;}
+	.badge.marketplace{background:transparent;border:1px solid var(--shell);color:var(--shell);}
 	.badge.single{background:rgba(143,165,147,0.16);color:var(--muted);}
 	.badge.display{background:rgba(217,200,154,0.16);color:var(--shell);}
 	.position{font-family:var(--font-mono);color:var(--muted);font-size:12px;}
@@ -247,7 +248,7 @@
 		var rowsHtml = rows.map(function(r){
 			var typeLabel = r.marketplaceType === "lookingFor" ? "Looking for" : "Selling";
 			var sellerLink = r.seller ? '<a href="/s/'+(r.world === "Honeybee" ? "hb" : "ff")+'/'+encodeURIComponent(r.seller)+'">'+esc(r.seller)+'</a>' : "";
-			return '<tr><td><span class="badge '+(r.marketplaceType === "lookingFor" ? "mixed" : "bulk")+'">'+esc(typeLabel)+'</span></td>'+
+			return '<tr><td><span class="badge marketplace">'+esc(typeLabel)+'</span></td>'+
 				'<td>'+esc(r.itemNameDisplay || r.itemName)+'</td>'+
 				'<td>'+fmtNum(r.amount)+'</td>'+
 				'<td>'+esc(r.priceLabel)+'</td>'+

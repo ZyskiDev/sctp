@@ -43,6 +43,10 @@ public class ItemListWidget extends AbstractSelectionList<ItemListWidget.ItemEnt
 	}
 
 	public static ItemEntry forVanilla(String name, String baseItem, Runnable onClick) {
+		return forVanilla(name, baseItem, null, onClick);
+	}
+
+	public static ItemEntry forVanilla(String name, String baseItem, String subtitle, Runnable onClick) {
 		ItemStack stack = ItemStack.EMPTY;
 		if (baseItem != null) {
 			Identifier id = Identifier.tryParse(baseItem);
@@ -51,7 +55,7 @@ public class ItemListWidget extends AbstractSelectionList<ItemListWidget.ItemEnt
 				if (item != null) stack = new ItemStack(item);
 			}
 		}
-		return new ItemEntry(name, null, stack, null, onClick);
+		return new ItemEntry(name, subtitle, stack, null, onClick);
 	}
 
 	public static ItemEntry forRare(String name, String category, String textureUrl, Runnable onClick) {

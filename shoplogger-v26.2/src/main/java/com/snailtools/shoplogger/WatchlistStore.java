@@ -17,8 +17,18 @@ import java.util.List;
 public final class WatchlistStore {
 
 	private static final String CONFIG_PATH = "watchlist/items";
+	private static final String CONFIG_MARKETPLACE_ALERTS = "watchlist/marketplaceAlertsEnabled";
 
 	private WatchlistStore() {}
+
+	/** Global on/off for matching the watchlist against marketplace posts (see WatchlistJoinCheck) — on by default. Per-item price/display filters still apply either way. */
+	public static boolean isMarketplaceAlertsEnabled() {
+		return Config.getOrCreate(CONFIG_MARKETPLACE_ALERTS, Boolean.class, true);
+	}
+
+	public static void setMarketplaceAlertsEnabled(boolean value) {
+		Config.update(CONFIG_MARKETPLACE_ALERTS, value);
+	}
 
 	public static List<WatchedItem> getAll() {
 		WatchedItem[] stored = Config.getOrCreate(CONFIG_PATH, WatchedItem[].class, new WatchedItem[0]);

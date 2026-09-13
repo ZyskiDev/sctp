@@ -12,5 +12,9 @@ public class WatchedItem {
 
 	public WatchedItem(String itemName) {
 		this.itemName = itemName;
+		// Most listings worth watching have a real price — defaulting this to
+		// "on" means a fresh watch doesn't immediately start pinging for
+		// display-only signs and priceless marketplace posts.
+		this.excludeNoPriceOrDisplay = true;
 	}
 }

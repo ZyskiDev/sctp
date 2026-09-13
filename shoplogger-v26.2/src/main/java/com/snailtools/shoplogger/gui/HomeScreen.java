@@ -46,6 +46,11 @@ public class HomeScreen extends Screen {
 				.bounds(centerX - w / 2, y, w, 20).build());
 		y += 24;
 
+		addRenderableWidget(Button.builder(Component.literal("Marketplace"), btn ->
+				minecraft.setScreenAndShow(new MarketplaceScreen(this)))
+				.bounds(centerX - w / 2, y, w, 20).build());
+		y += 24;
+
 		addRenderableWidget(Button.builder(Component.literal("Settings"), btn ->
 				minecraft.setScreenAndShow(new SettingsScreen(this)))
 				.bounds(centerX - w / 2, y, w, 20).build());
