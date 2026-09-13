@@ -344,8 +344,16 @@
 		<section data-perm="__headAdminOnly__">
 		<details class="section-toggle" open>
 		<summary>Accounts</summary>
-		<div class="meta" style="margin-bottom:10px;">Every account on the site — plain marketplace accounts and admins alike — is created here. There's still no self-service signup; you make every account by hand and link/verify their Minecraft username yourself.</div>
+		<div class="meta" style="margin-bottom:10px;">Every account on the site — self-registered players and admins alike — lives in this same table, so it's too long to just list. Look one up by its exact username below.</div>
 		<div class="card">
+			<label for="adminSearchUsername">Look up an account</label>
+			<input type="text" id="adminSearchUsername" placeholder="exact username, then press Enter" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<button id="adminSearchBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Search</button>
+			<div class="err" id="adminSearchErr"></div>
+		</div>
+		<div id="adminsList"></div>
+		<div class="card">
+			<div class="meta" style="margin-bottom:8px;">Create a new account by hand (most players register themselves at sctp.nl/register — this is for staff accounts, or helping someone who can't self-register).</div>
 			<label for="newAdminUsername">Username</label>
 			<input type="text" id="newAdminUsername" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
 			<label for="newAdminPassword">Password (min 8 characters)</label>
@@ -360,7 +368,6 @@
 			<button id="createAdminBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;margin-top:10px;">Create account</button>
 			<div class="err" id="createAdminErr"></div>
 		</div>
-		<div id="adminsList"></div>
 		</details>
 		</section>
 
@@ -411,6 +418,7 @@
 	var blockedSellers = [];
 	var rareApprovals = [];
 	var admins = [];
+	var adminsSearched = false; // distinguishes "haven't searched yet" from "searched, found nothing"
 	var marketplaceListings = [];
 	var updateNotice = null;
 	var suggestions = [];
@@ -492,7 +500,6 @@
 		if(hasPerm("suggestions")) suggestions = await api("/admin/suggestions");
 		if(hasPerm("bugReports")) bugReports = await api("/admin/bug-reports");
 		if(hasPerm("playerReports")) playerReports = await api("/admin/player-reports");
-		if(session && session.isHeadAdmin) admins = await api("/admin/admins");
 		render();
 	}
 
@@ -1019,7 +1026,9 @@
 			permsEl.dataset.built = "1";
 		}
 
-		el.innerHTML = admins.length ? admins.map(adminCard).join("") : '<div class="empty">No named admins yet — you\'re logged in with the master key.</div>';
+		el.innerHTML = admins.length ? admins.map(adminCard).join("")
+			: adminsSearched ? '<div class="empty">No account with that exact username.</div>'
+			: '<div class="empty">Search for an account above to see it here.</div>';
 
 		document.querySelectorAll(".admin-save-perms").forEach(function(b){
 			b.addEventListener("click", function(){
@@ -1078,13 +1087,40 @@
 		'</div>';
 	}
 
+	var lastAdminSearch = "";
+	// Bound to the search box (Enter/button) — reads whatever's currently typed.
+	async function searchAdmin(){
+		var username = document.getElementById("adminSearchUsername").value.trim();
+		if(!username) return;
+		lastAdminSearch = username;
+		await runAdminSearch(username);
+	}
+	// Called after an action (save permissions, set MC, delete) re-fetches
+	// the SAME account that was being edited, regardless of whatever's
+	// currently typed in the search box (which the admin may have already
+	// started changing before the action's request even finished).
+	async function refreshAdminSearch(){
+		if(lastAdminSearch) await runAdminSearch(lastAdminSearch);
+	}
+	async function runAdminSearch(username){
+		var errEl = document.getElementById("adminSearchErr");
+		errEl.textContent = "";
+		try {
+			admins = await api("/admin/admins?username=" + encodeURIComponent(username));
+			adminsSearched = true;
+			renderAdmins();
+		} catch(err){
+			errEl.textContent = "Failed: " + err.message;
+		}
+	}
+
 	async function setAccountMc(id, currentMc, currentVerified){
 		var mcUsername = prompt("Minecraft username to link (blank to unlink):", currentMc || "");
 		if(mcUsername === null) return;
 		var verified = confirm("Mark as VERIFIED? OK = verified, Cancel = not verified.");
 		try {
 			await api("/admin/admins/set-mc", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id: id, mcUsername: mcUsername.trim() || null, mcVerified: verified }) });
-			await refresh();
+			await refreshAdminSearch();
 		} catch(err){
 			alert("Failed: " + err.message);
 		}
@@ -1116,7 +1152,7 @@
 	async function updateAdminPermissions(id, permissions){
 		try {
 			await api("/admin/admins/update-permissions", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, permissions:permissions }) });
-			await refresh();
+			await refreshAdminSearch();
 		} catch(err){
 			alert("Failed: " + err.message);
 		}
@@ -1125,7 +1161,7 @@
 	async function deleteAdmin(id){
 		try {
 			await api("/admin/admins/delete", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id }) });
-			await refresh();
+			await refreshAdminSearch();
 		} catch(err){
 			alert("Failed: " + err.message);
 		}
@@ -1333,6 +1369,8 @@
 
 	document.getElementById("blockSellerBtn").addEventListener("click", blockSeller);
 	document.getElementById("createAdminBtn").addEventListener("click", createAdmin);
+	document.getElementById("adminSearchBtn").addEventListener("click", searchAdmin);
+	document.getElementById("adminSearchUsername").addEventListener("keydown", function(e){ if(e.key === "Enter") searchAdmin(); });
 	document.getElementById("runSnapshotBtn").addEventListener("click", runSnapshotNow);
 
 	document.getElementById("changePasswordToggle").addEventListener("click", function(){

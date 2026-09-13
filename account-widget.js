@@ -41,7 +41,27 @@
 
 	// Small public surface so a page's own script can read login state (the
 	// marketplace page and admin.html both need this) and react to changes.
-	window.sctpAccount = { getSession: getSession, API_BASE: API_BASE, clearSession: clearSession };
+	// openHelp is also called directly from register/index.html's "Can't
+	// verify?" button, since that page already loads this script for its own
+	// header — one shared popup instead of duplicating the same content twice.
+	window.sctpAccount = { getSession: getSession, API_BASE: API_BASE, clearSession: clearSession, openHelp: openHelp };
+
+	// Same content for "forgot password" and "can't verify" — there's no
+	// self-service recovery for either yet, so both just point at the same
+	// place to actually get help.
+	function openHelp() {
+		var wrap = document.createElement("div");
+		wrap.className = "acct-modal-bg";
+		wrap.innerHTML =
+			'<div class="acct-modal">' +
+				"<h2>Need help?</h2>" +
+				'<p style="color:var(--text,#EAEFE7);font-size:13.5px;line-height:1.5;margin:0 0 16px;">Message <b>ectf</b> on Discord — that\'s the fastest way to get this sorted.</p>' +
+				'<button type="button" class="ghost" id="acctHelpClose">Close</button>' +
+			"</div>";
+		document.body.appendChild(wrap);
+		document.getElementById("acctHelpClose").onclick = function () { wrap.remove(); };
+		wrap.addEventListener("click", function (e) { if (e.target === wrap) wrap.remove(); });
+	}
 
 	function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 
@@ -88,11 +108,14 @@
 				'<input type="text" id="acctUser" placeholder="Username" autocomplete="username">' +
 				'<input type="password" id="acctPass" placeholder="Password" autocomplete="current-password">' +
 				'<button type="button" class="primary" id="acctSubmit">Log in</button>' +
+				'<button type="button" class="ghost" id="acctRegister">Register</button>' +
+				'<button type="button" class="ghost" id="acctForgot">Forgot password?</button>' +
 				'<button type="button" class="ghost" id="acctCancel">Cancel</button>' +
-				'<p style="text-align:center;font-size:12.5px;color:var(--muted,#8FA593);margin:12px 0 0;">New here? <a href="/register/" style="color:var(--accent,#B7E23D);font-weight:600;">Register</a></p>' +
 			"</div>";
 		document.body.appendChild(wrap);
 		document.getElementById("acctCancel").onclick = function () { wrap.remove(); };
+		document.getElementById("acctRegister").onclick = function () { window.location.href = "/register/"; };
+		document.getElementById("acctForgot").onclick = function () { wrap.remove(); openHelp(); };
 		wrap.addEventListener("click", function (e) { if (e.target === wrap) wrap.remove(); });
 
 		function submit() {

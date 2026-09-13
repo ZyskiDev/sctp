@@ -37,7 +37,7 @@
 //
 // Head-admin-only (or master key) — managing other admin accounts:
 //   POST /admin/admins/create                body: {username, password, permissions: [...], isHeadAdmin?} -- isHeadAdmin true mints another head admin (also how the very first one gets created, via the master key)
-//   GET  /admin/admins
+//   GET  /admin/admins                       ?username=<exact> looks up one account; omitted -> every account (see handleAdminListAdmins)
 //   POST /admin/admins/update-permissions    body: {id, permissions: [...]}
 //   POST /admin/admins/delete                body: {id}
 //   POST /admin/run-snapshot                 -> forces an item-history snapshot + full listings.json dump to R2 now (see the daily cron below)
@@ -612,10 +612,25 @@ async function handleAdminSetMc(request, env) {
 	return json({ ok: true });
 }
 
+// ?username=<exact> looks up just that one account (admin.html's account
+// search bar) — with self-registration now live (see /account/register/*),
+// this table is every player who's ever registered, not just a handful of
+// staff, so "list everyone" isn't something the UI should default to
+// anymore. The no-param behavior is kept for any other caller, but
+// admin.html itself never calls it without a username now.
 async function handleAdminListAdmins(request, env) {
 	const auth = await requireAdminAuth(request, env, null);
 	if (!auth.ok) return auth.response;
-	const { results } = await env.DB.prepare("SELECT id, username, isHeadAdmin, permissions, createdAt, createdBy, mcUsername, mcVerified FROM admins ORDER BY createdAt").all();
+	const url = new URL(request.url);
+	const username = (url.searchParams.get("username") || "").trim();
+
+	const { results } = username
+		? (await env.DB.prepare(
+			"SELECT id, username, isHeadAdmin, permissions, createdAt, createdBy, mcUsername, mcVerified FROM admins WHERE lower(username) = ?"
+		).bind(username.toLowerCase()).all())
+		: (await env.DB.prepare(
+			"SELECT id, username, isHeadAdmin, permissions, createdAt, createdBy, mcUsername, mcVerified FROM admins ORDER BY createdAt"
+		).all());
 	return json(results.map((r) => ({ ...r, isHeadAdmin: !!r.isHeadAdmin, mcVerified: !!r.mcVerified, permissions: JSON.parse(r.permissions || "[]") })));
 }
 

@@ -131,7 +131,7 @@
 </main>
 
 <footer class="site">
-	<div class="wrap">Already have an account? <a href="../">Log in from the homepage.</a></div>
+	<div class="wrap">Already have an account? <a href="../">Log in from the homepage.</a> · <a href="#" id="cantVerifyLink">Can't verify?</a></div>
 </footer>
 
 <script src="/site-nav.js" defer></script>
@@ -239,6 +239,11 @@
 				showStep("stepDone");
 			})
 			.catch(function(){ errEl.textContent = "Network error — please try again."; errEl.hidden = false; });
+	});
+
+	document.getElementById("cantVerifyLink").addEventListener("click", function(e){
+		e.preventDefault();
+		if(window.sctpAccount && window.sctpAccount.openHelp) window.sctpAccount.openHelp();
 	});
 
 	setStepDots(1);

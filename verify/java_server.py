@@ -67,7 +67,7 @@ def _handle_status(conn: Connection):
 		pass
 
 
-def _handle_login(conn: Connection, server_address: str):
+def _handle_login(conn: Connection, server_address: str, protocol_version: int):
 	packet_id, buf = conn.read_packet()  # Login Start
 	if packet_id != 0x00:
 		return
@@ -83,6 +83,13 @@ def _handle_login(conn: Connection, server_address: str):
 		+ write_varint(len(PUBLIC_KEY_DER)) + PUBLIC_KEY_DER
 		+ write_varint(len(verify_token)) + verify_token
 	)
+	# Confirmed by real-world testing: 1.20.5+ clients (protocol 766+) add a
+	# trailing "should authenticate" boolean to this packet and fail to
+	# decode it without one. Older clients don't expect this extra byte, so
+	# it has to be conditional on what the client itself declared in the
+	# Handshake, not sent unconditionally either way.
+	if protocol_version >= 766:
+		enc_request += b"\x01"  # true — yes, verify via Mojang (that's the whole point)
 	conn.write_packet(0x01, enc_request)
 
 	packet_id, buf = conn.read_packet()  # Encryption Response
@@ -140,7 +147,7 @@ def _handle_connection(sock: socket.socket, addr):
 		if next_state == 1:
 			_handle_status(conn)
 		elif next_state == 2:
-			_handle_login(conn, server_address)
+			_handle_login(conn, server_address, protocol_version)
 	except (ConnectionError, OSError, ValueError):
 		pass
 	finally:

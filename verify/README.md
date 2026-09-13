@@ -80,15 +80,13 @@ Xbox-authenticated gamertag, not any richer profile data.
 
 ## Known limitations (be aware before relying on this)
 
-- The Java login sequence doesn't send the newer "should authenticate"
-  boolean field some 1.20.5+ clients' Encryption Request may expect. The
-  core handshake has been stable across a huge version range; this specific
-  detail hasn't been tested against a real client. If very recent clients
-  fail, check this first.
-- Everything here has been written carefully against the documented
-  protocol, but has **not** been tested end-to-end against a real
-  Minecraft client (no way to do that in the environment this was written
-  in) — test both paths for real before relying on them.
+- The Java path has been tested end-to-end against a real client (real
+  Java login, real Mojang hasJoined, real account created via
+  sctp.nl/register) — confirmed working, including the 1.20.5+
+  "should authenticate" Encryption Request field, sent conditionally based
+  on the client's declared protocol version (>= 766).
+- The Bedrock path has **not** been tested against a real Bedrock client +
+  Geyser yet — same caveat as before, test it before relying on it.
 - The Bedrock path's security boundary is entirely "nothing but Geyser can
   reach the bridge port" — if you ever expose `VERIFY_BEDROCK_BRIDGE_PORT`
   to the internet, that guarantee is gone and anyone could claim any
