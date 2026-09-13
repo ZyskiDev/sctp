@@ -89,6 +89,7 @@
 				'<input type="password" id="acctPass" placeholder="Password" autocomplete="current-password">' +
 				'<button type="button" class="primary" id="acctSubmit">Log in</button>' +
 				'<button type="button" class="ghost" id="acctCancel">Cancel</button>' +
+				'<p style="text-align:center;font-size:12.5px;color:var(--muted,#8FA593);margin:12px 0 0;">New here? <a href="/register/" style="color:var(--accent,#B7E23D);font-weight:600;">Register</a></p>' +
 			"</div>";
 		document.body.appendChild(wrap);
 		document.getElementById("acctCancel").onclick = function () { wrap.remove(); };

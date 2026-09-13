@@ -69,7 +69,11 @@ public class ShopUploader {
 				.header("Content-Type", "application/json")
 				.header("Authorization", "Bearer " + API_KEY)
 				.POST(HttpRequest.BodyPublishers.ofString(json))
-				.timeout(Duration.ofSeconds(15))
+				// Was 15s — a big scan-session upload legitimately needs several
+				// chunked round-trips server-side (see handleUploadListings), and
+				// 15s cut it close even after parallelizing those. More headroom,
+				// not a fix for anything that should routinely take this long.
+				.timeout(Duration.ofSeconds(30))
 				.build();
 
 		CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())

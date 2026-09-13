@@ -51,6 +51,13 @@
 //   GET  /account/me                         -> {username, isHeadAdmin, mcUsername, mcVerified, contactDiscord, contactTimezone}
 //   POST /account/contact-info               body: {contactDiscord?, contactTimezone?} -- free text, shown to the other party once a trade is confirmed (see contactInfoText)
 //
+// Self-service registration (see register/index.html and /verify at the repo root):
+//   POST /account/register/start             body: {mcUsername} -> {code, joinAddress, expiresAt}
+//   GET  /account/register/status?code=      (public, polled by the website) -> {verified, mcUsername}
+//   POST /account/register/complete          body: {code, password} -> {token, ...} (logs them in immediately)
+//   POST /account/register/verify-callback   (VERIFY_SERVER_SECRET only, called by java_server.py) body: {code, mcUsername, mcUuid?}
+//   GET  /account/register/find-pending      (VERIFY_SERVER_SECRET only, called by bedrock_bridge.py) ?mcUsername= -> {code}
+//
 // Permission bucket "reports":
 //   GET  /admin/reports
 //   POST /admin/reports/resolve              body: {id, action: "approve"|"deny"|"edit", field?, value?}
@@ -724,6 +731,159 @@ async function handleSetAccountContactInfo(request, env) {
 	return json({ ok: true, contactDiscord, contactTimezone });
 }
 
+// ---------------- self-service registration (see /verify at the repo root) ----------------
+//
+// Registration flow: POST /account/register/start (website) -> a code, the
+// player joins <code>.verify.sctp.nl in Minecraft -> the standalone verify
+// server (NOT this Worker — a separate always-on Python process, since a
+// Cloudflare Worker can't hold a raw listening TCP socket open) completes a
+// real Mojang-authenticated login (or, for Bedrock, a Geyser-authenticated
+// one) and calls back here -> website polls GET /account/register/status
+// until verified -> POST /account/register/complete with a chosen password
+// actually creates the account, logged in immediately (mcVerified from the
+// very first second, no head-admin step needed).
+//
+// The two endpoints the verify server itself calls are gated behind
+// VERIFY_SERVER_SECRET (a Cloudflare secret, distinct from every other
+// auth boundary in this file) rather than a real player's session token —
+// this whole flow's security rests on that secret staying private, same as
+// API_KEY/ADMIN_KEY already do for their own boundaries.
+
+const REGISTRATION_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I — easy to misread when copying into a MC server address
+const REGISTRATION_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function newRegistrationCode() {
+	let out = "";
+	const bytes = crypto.getRandomValues(new Uint8Array(6));
+	for (const b of bytes) out += REGISTRATION_CODE_CHARS[b % REGISTRATION_CODE_CHARS.length];
+	return out;
+}
+
+function isAuthorizedVerifyServer(request, env) {
+	return isAuthorized(request, env.VERIFY_SERVER_SECRET);
+}
+
+// A bare MC username, or one Bedrock "." prefix — see WatchedItem-style
+// convention notes elsewhere in this file for why Bedrock accounts always
+// carry that prefix (matches Floodgate's own default on the real server).
+function isValidClaimedMcUsername(name) {
+	const bare = String(name || "").replace(/^\./, "");
+	return isValidUsername(bare);
+}
+
+async function handleStartRegistration(request, env) {
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const claimedMcUsername = String(body.mcUsername || "").trim();
+	if (!isValidClaimedMcUsername(claimedMcUsername)) {
+		return json({ error: "That doesn't look like a valid Minecraft username (Bedrock accounts: include the leading '.')" }, 400);
+	}
+
+	let code;
+	for (let attempt = 0; attempt < 5; attempt++) {
+		code = newRegistrationCode();
+		const existing = await env.DB.prepare("SELECT code FROM pendingRegistrations WHERE code = ?").bind(code).first();
+		if (!existing) break;
+		code = null;
+	}
+	if (!code) return json({ error: "Couldn't generate a registration code, please try again" }, 502);
+
+	const now = new Date();
+	await env.DB.prepare(
+		"INSERT INTO pendingRegistrations (code, claimedMcUsername, verified, createdAt, expiresAt) VALUES (?, ?, 0, ?, ?)"
+	).bind(code, claimedMcUsername, now.toISOString(), new Date(now.getTime() + REGISTRATION_TTL_MS).toISOString()).run();
+
+	return json({ code, joinAddress: `${code}.verify.sctp.nl`, expiresAt: new Date(now.getTime() + REGISTRATION_TTL_MS).toISOString() });
+}
+
+// Called by java_server.py once a real Mojang login succeeds, or by
+// bedrock_bridge.py once it's matched an Xbox-authenticated connection to a
+// pending code via handleFindPendingRegistration below.
+async function handleRegistrationVerifyCallback(request, env) {
+	if (!isAuthorizedVerifyServer(request, env)) return json({ error: "Unauthorized" }, 401);
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const code = String(body.code || "").toUpperCase();
+	const mcUsername = String(body.mcUsername || "").trim();
+	const mcUuid = body.mcUuid ? String(body.mcUuid) : null;
+	if (!code || !mcUsername) return json({ error: "code and mcUsername are required" }, 400);
+
+	const pending = await env.DB.prepare("SELECT * FROM pendingRegistrations WHERE code = ?").bind(code).first();
+	if (!pending) return json({ error: "Unknown or expired code" }, 404);
+	if (Date.parse(pending.expiresAt) < Date.now()) return json({ error: "Code expired" }, 410);
+
+	await env.DB.prepare("UPDATE pendingRegistrations SET mcUsername = ?, mcUuid = ?, verified = 1 WHERE code = ?")
+		.bind(mcUsername, mcUuid, code).run();
+	return json({ ok: true });
+}
+
+// Bedrock-only — see bedrock_bridge.py's docstring for why there's no
+// per-connection code to read the way the Java path has one. Matches by
+// whatever the player typed on the website in step 1 (claimedMcUsername),
+// since the real mcUsername column is still NULL at this point.
+async function handleFindPendingRegistration(request, env) {
+	if (!isAuthorizedVerifyServer(request, env)) return json({ error: "Unauthorized" }, 401);
+	const url = new URL(request.url);
+	const mcUsername = (url.searchParams.get("mcUsername") || "").trim();
+	if (!mcUsername) return json({ error: "mcUsername is required" }, 400);
+
+	const pending = await env.DB.prepare(
+		"SELECT code FROM pendingRegistrations WHERE lower(claimedMcUsername) = ? AND verified = 0 AND expiresAt > ? ORDER BY createdAt DESC LIMIT 1"
+	).bind(mcUsername.toLowerCase(), new Date().toISOString()).first();
+	if (!pending) return json({ error: "No pending registration for that username" }, 404);
+	return json({ code: pending.code });
+}
+
+// Public — the website polls this while the player goes and joins the verify server.
+async function handleGetRegistrationStatus(request, env) {
+	const url = new URL(request.url);
+	const code = (url.searchParams.get("code") || "").trim().toUpperCase();
+	if (!code) return json({ error: "code is required" }, 400);
+
+	const pending = await env.DB.prepare("SELECT verified, mcUsername, expiresAt FROM pendingRegistrations WHERE code = ?").bind(code).first();
+	if (!pending) return json({ error: "Unknown code" }, 404);
+	if (Date.parse(pending.expiresAt) < Date.now()) return json({ error: "Code expired" }, 410);
+	return json({ verified: !!pending.verified, mcUsername: pending.mcUsername || null });
+}
+
+// The actual account-creation step, once verified — the chosen password is
+// the only new input; the login username IS the verified Minecraft
+// username (no separate username to pick, matching the site's own
+// 3-step "enter mc username, join server, pick password" flow exactly).
+async function handleCompleteRegistration(request, env) {
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const code = String(body.code || "").trim().toUpperCase();
+	const password = String(body.password || "");
+	if (!code) return json({ error: "code is required" }, 400);
+	if (password.length < 8) return json({ error: "password must be at least 8 characters" }, 400);
+
+	const pending = await env.DB.prepare("SELECT * FROM pendingRegistrations WHERE code = ?").bind(code).first();
+	if (!pending) return json({ error: "Unknown code" }, 404);
+	if (Date.parse(pending.expiresAt) < Date.now()) return json({ error: "Code expired, please start again" }, 410);
+	if (!pending.verified || !pending.mcUsername) return json({ error: "Not verified yet — join the server first" }, 400);
+
+	const existing = await env.DB.prepare("SELECT id FROM admins WHERE username = ?").bind(pending.mcUsername).first();
+	if (existing) return json({ error: "An account for this Minecraft username already exists — log in instead, or ask a head admin for help." }, 409);
+
+	const id = crypto.randomUUID();
+	const salt = newSaltHex();
+	const hash = await hashPassword(password, salt);
+	const now = new Date().toISOString();
+	await env.DB.prepare(
+		"INSERT INTO admins (id, username, passwordHash, passwordSalt, isHeadAdmin, permissions, createdAt, createdBy, mcUsername, mcVerified) VALUES (?, ?, ?, ?, 0, '[]', ?, 'self-registration', ?, 1)"
+	).bind(id, pending.mcUsername, hash, salt, now, pending.mcUsername).run();
+	await env.DB.prepare("DELETE FROM pendingRegistrations WHERE code = ?").bind(code).run();
+
+	// Log them in immediately — "done" should mean done, not "now go log in separately".
+	const token = newToken();
+	const expiresAt = new Date(Date.now() + ADMIN_SESSION_TTL_MS).toISOString();
+	await env.DB.prepare("INSERT INTO adminSessions (token, adminId, createdAt, expiresAt) VALUES (?, ?, ?, ?)")
+		.bind(token, id, now, expiresAt).run();
+
+	return json({ token, username: pending.mcUsername, isHeadAdmin: false, permissions: [], expiresAt, mcUsername: pending.mcUsername, mcVerified: true });
+}
+
 // ---------------- blocked sellers ----------------
 
 async function handleAdminListBlockedSellers(request, env) {
@@ -885,12 +1045,15 @@ async function handleUploadListings(request, env) {
 
 		if (rareHoldCandidates.length > 0) {
 			const candidateKeys = [...new Set(rareHoldCandidates.map((r) => r._key))];
-			const alreadyApproved = new Set();
-			for (const chunk of chunkArray(candidateKeys, MAX_QUERY_PARAMS_PER_CHUNK)) {
+			// Chunks are independent reads — firing them concurrently instead of
+			// awaiting one at a time inside the loop cuts a big upload's total
+			// round-trip time from O(chunks) sequential waits down to about one.
+			const candidateChunks = await Promise.all(chunkArray(candidateKeys, MAX_QUERY_PARAMS_PER_CHUNK).map((chunk) => {
 				const placeholders = chunk.map(() => "?").join(",");
-				const res = await env.DB.prepare(`SELECT rowKey FROM listings WHERE rowKey IN (${placeholders})`).bind(...chunk).all();
-				for (const row of res.results) alreadyApproved.add(row.rowKey);
-			}
+				return env.DB.prepare(`SELECT rowKey FROM listings WHERE rowKey IN (${placeholders})`).bind(...chunk).all();
+			}));
+			const alreadyApproved = new Set();
+			for (const res of candidateChunks) for (const row of res.results) alreadyApproved.add(row.rowKey);
 			const submittedAt = new Date().toISOString();
 			for (const r of rareHoldCandidates) {
 				if (alreadyApproved.has(r._key)) {
@@ -922,14 +1085,12 @@ async function handleUploadListings(request, env) {
 			// upload can easily have more distinct keys than one statement's
 			// bound-parameter limit allows.
 			const keys = [...new Set(validRows.map((r) => r._key))];
-			const existingMap = new Map();
-			for (const chunk of chunkArray(keys, MAX_QUERY_PARAMS_PER_CHUNK)) {
+			const keyChunks = await Promise.all(chunkArray(keys, MAX_QUERY_PARAMS_PER_CHUNK).map((chunk) => {
 				const placeholders = chunk.map(() => "?").join(",");
-				const existingRes = await env.DB.prepare(
-					`SELECT rowKey, lastSeen FROM listings WHERE rowKey IN (${placeholders})`
-				).bind(...chunk).all();
-				for (const r of existingRes.results) existingMap.set(r.rowKey, r.lastSeen);
-			}
+				return env.DB.prepare(`SELECT rowKey, lastSeen FROM listings WHERE rowKey IN (${placeholders})`).bind(...chunk).all();
+			}));
+			const existingMap = new Map();
+			for (const existingRes of keyChunks) for (const r of existingRes.results) existingMap.set(r.rowKey, r.lastSeen);
 
 			for (const r of validRows) {
 				const prevLastSeen = existingMap.get(r._key);
@@ -964,12 +1125,15 @@ async function handleUploadListings(request, env) {
 				validRows.filter((r) => scannedSet.has(positionKey(r.world, r.position))).map((r) => r._key)
 			);
 			// Chunked two positions' worth of params per slot (world+position),
-			// same reasoning as the keys lookup above.
-			for (const chunk of chunkArray(validScannedPositions, MAX_QUERY_PARAMS_PER_CHUNK)) {
+			// same reasoning as the keys lookup above — and, same as those,
+			// fired concurrently rather than one chunk at a time.
+			const scannedChunks = await Promise.all(chunkArray(validScannedPositions, MAX_QUERY_PARAMS_PER_CHUNK).map((chunk) => {
 				const orClauses = chunk.map(() => "(world = ? AND position = ?)").join(" OR ");
 				const bindArgs = [];
 				for (const sp of chunk) bindArgs.push(sp.world, sp.position);
-				const atScanned = await env.DB.prepare(`SELECT rowKey, missingStreak FROM listings WHERE ${orClauses}`).bind(...bindArgs).all();
+				return env.DB.prepare(`SELECT rowKey, missingStreak FROM listings WHERE ${orClauses}`).bind(...bindArgs).all();
+			}));
+			for (const atScanned of scannedChunks) {
 				for (const row of atScanned.results) {
 					if (freshKeysAtScannedPos.has(row.rowKey)) continue;
 					const streak = (row.missingStreak || 0) + 1;
@@ -2764,6 +2928,11 @@ const ROUTES = [
 	["POST", "/admin/admins/change-password", handleAdminChangePassword],
 	["GET", "/account/me", handleGetAccountMe],
 	["POST", "/account/contact-info", handleSetAccountContactInfo],
+	["POST", "/account/register/start", handleStartRegistration],
+	["GET", "/account/register/status", handleGetRegistrationStatus],
+	["POST", "/account/register/complete", handleCompleteRegistration],
+	["POST", "/account/register/verify-callback", handleRegistrationVerifyCallback],
+	["GET", "/account/register/find-pending", handleFindPendingRegistration],
 	["GET", "/admin/blocked-sellers", handleAdminListBlockedSellers],
 	["POST", "/admin/blocked-sellers/add", handleAdminBlockSeller],
 	["POST", "/admin/blocked-sellers/remove", handleAdminUnblockSeller],
