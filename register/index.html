@@ -53,6 +53,10 @@
 	.ok{color:var(--accent);font-size:13px;margin:0 0 10px;}
 
 	.join-address{font-family:var(--font-mono);font-size:18px;color:var(--accent);background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;padding:14px;text-align:center;margin:14px 0;user-select:all;}
+	.join-address-split{display:flex;gap:10px;margin:14px 0;}
+	.join-address-split div{flex:1;background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-align:center;}
+	.join-address-split .label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;font-family:var(--font-body);user-select:none;}
+	.join-address-split .value{display:block;font-family:var(--font-mono);font-size:17px;color:var(--accent);user-select:all;}
 	.waiting-row{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:14px 0;}
 	.spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin 0.8s linear infinite;flex:0 0 auto;}
 	@keyframes spin{to{transform:rotate(360deg);}}
@@ -105,8 +109,11 @@
 			<div class="join-address" id="joinAddress"></div>
 		</div>
 		<div id="bedrockInstructions" hidden>
-			<p class="lede">Add this server in Minecraft (Bedrock) and join it — you'll see a message and get disconnected right away, that's expected.</p>
-			<div class="join-address" id="bedrockAddress">verify.sctp.nl : 19132</div>
+			<p class="lede">Add this server in Minecraft (Bedrock) — Server Address and Port are two <b>separate</b> fields in the Add Server screen, don't type them together into one box — then join it. You'll see a message and get disconnected right away, that's expected.</p>
+			<div class="join-address-split">
+				<div><span class="label">Server Address</span><span class="value">verify.sctp.nl</span></div>
+				<div><span class="label">Port</span><span class="value">19132</span></div>
+			</div>
 			<p class="lede" style="margin-top:-6px;">Make sure the username you entered matches exactly what you play as.</p>
 		</div>
 		<div class="waiting-row" id="waitingRow"><div class="spinner"></div><span>Waiting for you to join…</span></div>
