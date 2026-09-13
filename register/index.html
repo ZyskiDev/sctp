@@ -88,7 +88,7 @@
 	<!-- Step 1: enter MC username -->
 	<div class="card" id="step1">
 		<h2>What's your Minecraft username?</h2>
-		<p class="lede">We'll verify it's really you by having you join a small verification server — no password needed for that part.</p>
+		<p class="lede">We'll verify it's really you by having you join a MC server.</p>
 		<div class="platform-toggle">
 			<button type="button" class="active" data-platform="java">Java Edition</button>
 			<button type="button" data-platform="bedrock">Bedrock Edition</button>
@@ -105,16 +105,16 @@
 	<div class="card" id="step2" hidden>
 		<h2 id="step2Title">Join the verification server</h2>
 		<div id="javaInstructions" hidden>
-			<p class="lede">Add this as a server in Minecraft and join it — you'll see a message and get disconnected right away, that's expected.</p>
+			<p class="lede">Add this as a server in Minecraft and join it — you'll see a message and get disconnected right away.</p>
 			<div class="join-address" id="joinAddress"></div>
 		</div>
 		<div id="bedrockInstructions" hidden>
-			<p class="lede">Add this server in Minecraft (Bedrock) — Server Address and Port are two <b>separate</b> fields in the Add Server screen, don't type them together into one box — then join it. You'll see a message and get disconnected right away, that's expected.</p>
+			<p class="lede">Add this server in Minecraft (Bedrock) - Server Address and Port are two <b>separate</b> fields in the Add Server screen, don't type them together into one box - then join it. You'll see a message and get disconnected right away.</p>
 			<div class="join-address-split">
 				<div><span class="label">Server Address</span><span class="value">verify.sctp.nl</span></div>
 				<div><span class="label">Port</span><span class="value">19132</span></div>
 			</div>
-			<p class="lede" style="margin-top:-6px;">Make sure the username you entered matches exactly what you play as.</p>
+			<p class="lede" style="margin-top:-6px;">Make sure the username you entered matches exactly what you play as, no . in front!</p>
 		</div>
 		<div class="waiting-row" id="waitingRow"><div class="spinner"></div><span>Waiting for you to join…</span></div>
 		<p class="err" id="step2Err" hidden></p>
