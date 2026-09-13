@@ -26,8 +26,8 @@
 	.wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
 
 	header.site{border-bottom:1px solid var(--line);padding:24px 0;}
-	.header-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-	.brand-row{display:flex;align-items:center;gap:12px;}
+	.header-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:nowrap;}
+	.brand-row{display:flex;align-items:center;gap:12px;min-width:0;}
 	.brand-mark{flex:0 0 auto;width:32px;height:32px;}
 	.brand-mark path{fill:var(--accent);}
 	.brand-row a{color:var(--text);font-family:var(--font-display);font-weight:600;font-size:19px;text-decoration:none;}
@@ -189,6 +189,7 @@
 	.item-stats-row .value{font-family:var(--font-display);font-size:19px;font-weight:600;color:var(--shell);}
 	.item-stats-row .sub{color:var(--muted);font-size:11px;margin-top:5px;}
 	.charts-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;margin-bottom:24px;}
+	@media (max-width:420px){.charts-grid{grid-template-columns:1fr;}} /* 320px min-width columns can overflow narrower phones otherwise */
 	.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;}
 	.chart-card h3{font-family:var(--font-display);font-weight:600;font-size:15px;margin:0 0 12px;color:var(--shell);}
 	.chart-wrap{position:relative;height:220px;}

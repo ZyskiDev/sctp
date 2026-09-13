@@ -1403,6 +1403,22 @@ async function handleAdminRemoveMarketplaceListing(request, env) {
 	return json({ ok: true });
 }
 
+// Daily sweep (piggybacks the existing cron — see scheduled()): a shop
+// listing not re-scanned in NOT_SEEN_REMOVAL_DAYS is deleted outright. This
+// is separate from (and catches more than) the missingStreak mechanism in
+// handleUploadListings, which only fires when the SAME position gets
+// actively re-scanned and comes up empty — a shop nobody scans anymore at
+// all (seller stopped playing, uninstalled the mod, that whole area just
+// isn't visited) would otherwise sit in `listings` forever. No notification
+// here — unlike marketplace listings, a real shop listing isn't tied to any
+// logged-in account to notify.
+const NOT_SEEN_REMOVAL_DAYS = 14;
+async function removeStaleListings(env) {
+	const cutoff = new Date(Date.now() - NOT_SEEN_REMOVAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+	const res = await env.DB.prepare("DELETE FROM listings WHERE lastSeen < ?").bind(cutoff).run();
+	return { removedStale: (res.meta && res.meta.changes) || 0 };
+}
+
 // Daily sweep (piggybacks the existing cron — see scheduled()): flips any
 // listing past its expiresAt to status='expired' and notifies the owner.
 // The active-listing queries above already filter on expiresAt too, so this
@@ -2789,12 +2805,17 @@ export default {
 	// Daily cron trigger (see wrangler.toml) — takes today's snapshot of every
 	// item's price/stock/seller stats (computeDailySnapshots), a full
 	// listings.json dump to R2 (snapshotListingsToR2) for later per-seller
-	// history/diffing, and expires any marketplace listing past its 14-day
-	// lifetime (expireOldMarketplaceListings). Independent waitUntil calls so
-	// one failing doesn't stop the others.
+	// history/diffing, expires any marketplace listing past its 14-day
+	// lifetime (expireOldMarketplaceListings), and removes any shop listing
+	// not re-scanned in 14 days (removeStaleListings). These all run
+	// concurrently (independent waitUntil calls so one failing doesn't stop
+	// the others) — there's no ordering guarantee between them, so a listing
+	// removed by removeStaleListings might or might not still be in that same
+	// day's R2 dump depending on which finishes first; harmless either way.
 	async scheduled(event, env, ctx) {
 		ctx.waitUntil(computeDailySnapshots(env));
 		ctx.waitUntil(snapshotListingsToR2(env));
 		ctx.waitUntil(expireOldMarketplaceListings(env));
+		ctx.waitUntil(removeStaleListings(env));
 	},
 };
