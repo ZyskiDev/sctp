@@ -5,6 +5,6 @@ hero:
   tagline: Documentation for the Snailcraft Trading Post site and Shop Logger mod! Start below.
   actions:
     - theme: brand
-      text: Installation instructions
+      text: Installing the mod
       link: ./installation
 ---
