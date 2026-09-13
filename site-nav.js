@@ -40,6 +40,9 @@
 		"#siteNavMount{display:flex;align-items:center;gap:16px;flex-shrink:0;position:relative;}" +
 		"#siteNavMount a{color:var(--shell,#D9C89A);text-decoration:none;font-size:14px;font-weight:600;}" +
 		"#siteNavMount a:hover,#siteNavMount a.active{color:var(--accent,#B7E23D);}" +
+		// Base (desktop) layout for the link list — the mobile media query
+		// below overrides this to a floating dropdown instead.
+		".site-nav-links{display:flex;align-items:center;gap:16px;}" +
 		".site-nav-row{display:flex;align-items:center;gap:12px;}" +
 		".site-nav-toggle{display:none;background:var(--panel-alt,#22332A);border:1px solid var(--line,#33453A);color:var(--text,#EAEFE7);border-radius:8px;width:38px;height:38px;font-size:17px;line-height:1;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;}" +
 		"@media (max-width:" + MOBILE_BREAKPOINT + "px){" +
@@ -76,11 +79,11 @@
 		}).join("");
 
 		mount.innerHTML =
+			'<div class="site-nav-links" id="siteNavLinks">' + linksHtml + '</div>' +
 			'<div class="site-nav-row">' +
 				'<button type="button" class="site-nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>' +
 				'<div id="accountWidgetMount"></div>' +
-			'</div>' +
-			'<div class="site-nav-links" id="siteNavLinks">' + linksHtml + '</div>';
+			'</div>';
 
 		var toggle = mount.querySelector(".site-nav-toggle");
 		var linksEl = document.getElementById("siteNavLinks");
