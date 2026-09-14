@@ -17,6 +17,7 @@ import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -187,6 +188,20 @@ public final class ShopEntryFactory {
 	 * "Sharpness V", so different enchanted books don't all collapse into one
 	 * listing and buyers can tell what they're actually buying without
 	 * opening the shop.
+	 *
+	 * Music discs have the exact same problem: every single disc's
+	 * getHoverName() is just the generic "Music Disc" (the actual track name,
+	 * e.g. "C418 - cat", is a separate lore/description line, not the hover
+	 * name) — so without this, every disc would upload/search/display as
+	 * plain "Music Disc" regardless of which one it actually is. This version
+	 * of Minecraft has no dedicated "music disc" Item subclass to check
+	 * against (they're plain, component-driven Items) — the item's own
+	 * registry id is the reliable signal instead. Derive the real name from
+	 * it (e.g. "music_disc_cat" -> "Music Disc Cat"), matching the exact
+	 * naming convention data/vanilla-items.json already uses for every disc —
+	 * this also means the site's name-based texture lookup resolves the
+	 * correct per-disc texture automatically, the same way it already does
+	 * for every other item, no separate texture special-case needed.
 	 */
 	private static String displayNameFor(ItemStack stack) {
 		if (stack.getItem() == Items.ENCHANTED_BOOK) {
@@ -197,6 +212,19 @@ public final class ShopEntryFactory {
 						.sorted()
 						.collect(Collectors.joining(", "));
 			}
+		}
+		String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+		// One irregular case: the catalog names this "Music Disc Creator (Music
+		// Box)" (a distinct variant of the Creator disc), not the plain
+		// space-joined title-case every other disc's id produces.
+		if (path.equals("music_disc_creator_music_box")) return "Music Disc Creator (Music Box)";
+		if (path.startsWith("music_disc_")) {
+			String suffix = path.substring("music_disc_".length());
+			String titled = Arrays.stream(suffix.split("_"))
+					.filter(w -> !w.isEmpty())
+					.map(w -> Character.toUpperCase(w.charAt(0)) + w.substring(1))
+					.collect(Collectors.joining(" "));
+			return "Music Disc " + titled;
 		}
 		return stack.getHoverName().getString();
 	}
