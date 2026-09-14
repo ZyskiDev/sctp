@@ -24,7 +24,7 @@
 		{ href: "/", label: "Home" },
 		{ href: "/items/", label: "Items" },
 		{ href: "/list/", label: "Build List" },
-		{ href: "/marketplace/", label: "Marketplace", requireAuth: true },
+		{ href: "/marketplace/", label: "Marketplace" },
 		{ href: "/stats/", label: "Stats" },
 		{ href: "/roadmap/", label: "Roadmap" },
 		{ href: "/docs/", label: "Info" },
