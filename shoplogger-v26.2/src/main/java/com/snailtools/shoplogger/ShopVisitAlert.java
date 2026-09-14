@@ -37,6 +37,7 @@ public final class ShopVisitAlert {
 	private static final long UPLOAD_LAG_GRACE_MS = 20 * 60 * 1000L; // 20 minutes
 	private static final String CONFIG_ENABLED = "visitAlerts/enabled";
 	private static final String CONFIG_RARES_ONLY = "visitAlerts/raresOnly";
+	private static final String CONFIG_SHOP_INFO_ON_VISIT = "visitAlerts/shopInfoOnVisit";
 
 	private ShopVisitAlert() {}
 
@@ -54,6 +55,15 @@ public final class ShopVisitAlert {
 
 	public static void setRaresOnly(boolean value) {
 		Config.update(CONFIG_RARES_ONLY, value);
+	}
+
+	/** Off by default — an extra server command per shop visit is easy chat clutter to not want by surprise. */
+	public static boolean isShopInfoOnVisitEnabled() {
+		return Config.getOrCreate(CONFIG_SHOP_INFO_ON_VISIT, Boolean.class, false);
+	}
+
+	public static void setShopInfoOnVisitEnabled(boolean value) {
+		Config.update(CONFIG_SHOP_INFO_ON_VISIT, value);
 	}
 
 	private static String configKey(String world, String seller) {
@@ -75,6 +85,14 @@ public final class ShopVisitAlert {
 		// the next hour, same as if the check had never happened. Padded by
 		// UPLOAD_LAG_GRACE_MS — see its comment for why.
 		Config.update(key, now + UPLOAD_LAG_GRACE_MS);
+
+		// Rides the same per-(world, seller) cooldown gate as the "what's new"
+		// check above — fires on every qualifying visit, including the very
+		// first (unlike the new-item comparison, there's nothing to wait on).
+		if (isShopInfoOnVisitEnabled() && client.getConnection() != null) {
+			client.getConnection().sendCommand("shops plot info");
+		}
+
 		if (firstVisit) return; // nothing to compare against yet — just start tracking
 
 		long previousVisit = stored;

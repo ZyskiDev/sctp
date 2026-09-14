@@ -6,19 +6,16 @@ import com.snailtools.shoplogger.ExcelExporter;
 import com.snailtools.shoplogger.OwnShopSaleTracker;
 import com.snailtools.shoplogger.RareRentalHighlighter;
 import com.snailtools.shoplogger.ScanChatLogger;
-import com.snailtools.shoplogger.SearchPreferences;
 import com.snailtools.shoplogger.ShopAutoScanner;
 import com.snailtools.shoplogger.ShopLog;
 import com.snailtools.shoplogger.ShopMarkerRenderer;
 import com.snailtools.shoplogger.ShopUploader;
 import com.snailtools.shoplogger.ShopVisitAlert;
-import com.snailtools.shoplogger.TeleportHighlight;
 import com.snailtools.shoplogger.WatchlistStore;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -38,7 +35,6 @@ import java.util.List;
 public class SettingsScreen extends Screen {
 
 	private final Screen parent;
-	private EditBox cooldownField;
 	private final List<HeaderLabel> headers = new ArrayList<>();
 
 	private record HeaderLabel(String text, int x, int y) {}
@@ -77,28 +73,6 @@ public class SettingsScreen extends Screen {
 		addRenderableWidget(CycleButton.onOffBuilder(ScanChatLogger.isEnabled())
 				.create(leftX, y, colW, 20, Component.literal("Print scans in chat"),
 						(btn, value) -> ScanChatLogger.setEnabled(value)));
-		y += gap;
-
-		addRenderableWidget(CycleButton.builder((Boolean v) -> Component.literal(v ? "Single line" : "Multiple lines"), ScanChatLogger.isSingleLine())
-				.withValues(Boolean.FALSE, Boolean.TRUE)
-				.create(leftX, y, colW, 20, Component.literal("Chat log format"),
-						(btn, value) -> ScanChatLogger.setSingleLine(value)));
-		// Extra room here (vs. the plain "gap" used between the toggles above)
-		// because the cooldown field's label is drawn 10px above it — a plain
-		// gap left that label overlapping this row's button.
-		y += gap + 12;
-
-		cooldownField = new EditBox(font, leftX, y, colW, 20, Component.literal("Cooldown (minutes)"));
-		cooldownField.setValue(Integer.toString((int) (ShopAutoScanner.getPerShopCooldownMs() / 60000L)));
-		cooldownField.setResponder(s -> {
-			try {
-				int minutes = Integer.parseInt(s);
-				if (minutes > 0) ShopAutoScanner.setPerShopCooldownMinutes(minutes);
-			} catch (NumberFormatException ignored) {
-				// not a full number yet — wait for more input
-			}
-		});
-		addRenderableWidget(cooldownField);
 		y += gap + 12;
 		int leftBottom = y;
 
@@ -106,12 +80,6 @@ public class SettingsScreen extends Screen {
 		y = topY;
 		headers.add(new HeaderLabel("Search & Alerts", rightX, y));
 		y += 16;
-
-		addRenderableWidget(CycleButton.builder((Boolean v) -> Component.literal(v ? "GUI" : "Chat"), SearchPreferences.isGuiSearch())
-				.withValues(Boolean.TRUE, Boolean.FALSE)
-				.create(rightX, y, colW, 20, Component.literal("/search opens"),
-						(btn, value) -> SearchPreferences.setGuiSearch(value)));
-		y += gap;
 
 		addRenderableWidget(CycleButton.onOffBuilder(ShopVisitAlert.isEnabled())
 				.create(rightX, y, colW, 20, Component.literal("New-item alerts"),
@@ -137,12 +105,6 @@ public class SettingsScreen extends Screen {
 				.create(rightX, y, colW, 20, Component.literal("Watchlist: include marketplace"),
 						(btn, value) -> WatchlistStore.setMarketplaceAlertsEnabled(value)));
 		y += gap;
-
-		addRenderableWidget(CycleButton.builder((TeleportHighlight.BeamStyle v) -> Component.literal(v.label), TeleportHighlight.getStyle())
-				.withValues(TeleportHighlight.BeamStyle.values())
-				.create(rightX, y, colW, 20, Component.literal("Teleport beam style"),
-						(btn, value) -> TeleportHighlight.setStyle(value)));
-		y += gap;
 		int rightBottom = y;
 
 		// ---- bottom: actions, shared full width across both columns ----
@@ -154,6 +116,10 @@ public class SettingsScreen extends Screen {
 		bottomY += gap;
 
 		addRenderableWidget(Button.builder(Component.literal("Upload now to Trading Post"), btn -> ShopUploader.uploadAsync(minecraft, true))
+				.bounds(leftX, bottomY, actionW, 20).build());
+		bottomY += gap;
+
+		addRenderableWidget(Button.builder(Component.literal("Advanced settings..."), btn -> minecraft.setScreenAndShow(new AdvancedSettingsScreen(this)))
 				.bounds(leftX, bottomY, actionW, 20).build());
 		bottomY += gap + 12;
 
@@ -185,10 +151,6 @@ public class SettingsScreen extends Screen {
 		for (HeaderLabel h : headers) {
 			context.text(font, h.text(), h.x(), h.y(), 0xFFB7E23D);
 		}
-		// EditBox has no built-in visible label (its Component constructor arg is
-		// narration-only), unlike the toggle buttons above which show "Label: value"
-		// on their own — so this one needs an explicit label drawn above it.
-		context.text(font, "Recently-scanned cooldown, in minutes:", cooldownField.getX(), cooldownField.getY() - 10, 0xFF8FA593);
 	}
 
 	@Override

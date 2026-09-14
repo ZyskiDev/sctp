@@ -47,6 +47,11 @@ public class ItemListWidget extends AbstractSelectionList<ItemListWidget.ItemEnt
 	}
 
 	public static ItemEntry forVanilla(String name, String baseItem, String subtitle, Runnable onClick) {
+		return forVanilla(name, baseItem, subtitle, onClick, null);
+	}
+
+	/** onOpenPage, if given, draws a secondary "View" button at the row's right edge — see ItemEntry. */
+	public static ItemEntry forVanilla(String name, String baseItem, String subtitle, Runnable onClick, Runnable onOpenPage) {
 		ItemStack stack = ItemStack.EMPTY;
 		if (baseItem != null) {
 			Identifier id = Identifier.tryParse(baseItem);
@@ -55,26 +60,40 @@ public class ItemListWidget extends AbstractSelectionList<ItemListWidget.ItemEnt
 				if (item != null) stack = new ItemStack(item);
 			}
 		}
-		return new ItemEntry(name, subtitle, stack, null, onClick);
+		return new ItemEntry(name, subtitle, stack, null, onClick, onOpenPage);
 	}
 
 	public static ItemEntry forRare(String name, String category, String textureUrl, Runnable onClick) {
-		return new ItemEntry(name, category, ItemStack.EMPTY, textureUrl, onClick);
+		return forRare(name, category, textureUrl, onClick, null);
+	}
+
+	/** onOpenPage, if given, draws a secondary "View" button at the row's right edge — see ItemEntry. */
+	public static ItemEntry forRare(String name, String category, String textureUrl, Runnable onClick, Runnable onOpenPage) {
+		return new ItemEntry(name, category, ItemStack.EMPTY, textureUrl, onClick, onOpenPage);
 	}
 
 	public static final class ItemEntry extends AbstractSelectionList.Entry<ItemEntry> {
+		// Reserved column at the row's right edge for the secondary "Search"
+		// button — jumps straight to the item's detail page (current listings,
+		// price history) instead of whatever the whole-row click does
+		// (add/remove/open options), same pattern as ListingListWidget's own
+		// [TP] button column.
+		private static final int OPEN_PAGE_BUTTON_WIDTH = 50;
+
 		private final String name;
 		private final String subtitle;
 		private final ItemStack vanillaIcon;
 		private final String textureUrl;
 		private final Runnable onClick;
+		private final Runnable onOpenPage;
 
-		private ItemEntry(String name, String subtitle, ItemStack vanillaIcon, String textureUrl, Runnable onClick) {
+		private ItemEntry(String name, String subtitle, ItemStack vanillaIcon, String textureUrl, Runnable onClick, Runnable onOpenPage) {
 			this.name = name;
 			this.subtitle = subtitle;
 			this.vanillaIcon = vanillaIcon;
 			this.textureUrl = textureUrl;
 			this.onClick = onClick;
+			this.onOpenPage = onOpenPage;
 		}
 
 		@Override
@@ -104,10 +123,24 @@ public class ItemListWidget extends AbstractSelectionList<ItemListWidget.ItemEnt
 			if (hovered) {
 				context.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0x22FFFFFF);
 			}
+
+			if (onOpenPage != null) {
+				int btnX = getX() + getWidth() - OPEN_PAGE_BUTTON_WIDTH;
+				context.fill(btnX, getY(), getX() + getWidth(), getY() + getHeight(), 0xFF2E6B45);
+				context.centeredText(client.font, "Search", btnX + OPEN_PAGE_BUTTON_WIDTH / 2, getY() + getHeight() / 2 - 4, 0xFFFFFFFF);
+			}
 		}
 
 		@Override
 		public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+			if (onOpenPage != null) {
+				int btnX = getX() + getWidth() - OPEN_PAGE_BUTTON_WIDTH;
+				if (event.x() >= btnX && event.x() < getX() + getWidth()
+						&& event.y() >= getY() && event.y() < getY() + getHeight()) {
+					onOpenPage.run();
+					return true;
+				}
+			}
 			if (onClick != null) onClick.run();
 			return true;
 		}

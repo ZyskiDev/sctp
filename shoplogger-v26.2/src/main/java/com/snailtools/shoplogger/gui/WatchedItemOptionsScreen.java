@@ -21,6 +21,7 @@ public class WatchedItemOptionsScreen extends Screen {
 	// a price cap), but WatchedItem.maxPrice is still stored in diamonds
 	// internally, matching every price comparison elsewhere in the mod.
 	private static final double DIAMONDS_PER_BLOCK = 9.0;
+	private static final int[] QUICK_PRICES = {1, 5, 10, 15, 20, 25, 32, 48};
 
 	private final Screen parent;
 	private final WatchedItem item;
@@ -44,7 +45,19 @@ public class WatchedItemOptionsScreen extends Screen {
 		maxPriceField.setMaxLength(10);
 		if (item.maxPrice != null) maxPriceField.setValue(formatPrice(item.maxPrice / DIAMONDS_PER_BLOCK));
 		addRenderableWidget(maxPriceField);
-		y += 28;
+		y += 24;
+
+		// Quick-select row — fills the field with a common price (in diamond
+		// blocks, same unit the field itself uses) instead of typing it out.
+		int qGap = 3;
+		int qBtnW = (w - (QUICK_PRICES.length - 1) * qGap) / QUICK_PRICES.length;
+		int qx = centerX - w / 2;
+		for (int price : QUICK_PRICES) {
+			addRenderableWidget(Button.builder(Component.literal(Integer.toString(price)), btn -> maxPriceField.setValue(Integer.toString(price)))
+					.bounds(qx, y, qBtnW, 16).build());
+			qx += qBtnW + qGap;
+		}
+		y += 16 + 16;
 
 		addRenderableWidget(CycleButton.onOffBuilder(excludeNoPriceOrDisplay)
 				.create(centerX - w / 2, y, w, 20, Component.literal("Skip display/no-price"),

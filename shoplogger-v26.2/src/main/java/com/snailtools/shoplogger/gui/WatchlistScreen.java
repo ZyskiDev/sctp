@@ -122,12 +122,14 @@ public class WatchlistScreen extends Screen {
 				String subtitle = watchedSubtitle(watched);
 				VanillaItem vMatch = findVanillaItem(name);
 				if (vMatch != null) {
-					list.addItemEntry(ItemListWidget.forVanilla(name, vMatch.baseItem, subtitle, () -> openOptions(watched)));
+					list.addItemEntry(ItemListWidget.forVanilla(name, vMatch.baseItem, subtitle, () -> openOptions(watched),
+							() -> openItemPage(name, vMatch.baseItem, vMatch.texture, false, null)));
 					continue;
 				}
 				RareItem rMatch = findRareItem(name);
 				if (rMatch != null) {
-					list.addItemEntry(ItemListWidget.forRare(name, subtitle, rMatch.texture, () -> openOptions(watched)));
+					list.addItemEntry(ItemListWidget.forRare(name, subtitle, rMatch.texture, () -> openOptions(watched),
+							() -> openItemPage(name, null, rMatch.texture, true, rMatch)));
 					continue;
 				}
 				list.addItemEntry(ItemListWidget.forVanilla(name, null, subtitle, () -> openOptions(watched)));
@@ -190,6 +192,11 @@ public class WatchlistScreen extends Screen {
 
 	private void openOptions(WatchedItem watched) {
 		minecraft.setScreenAndShow(new WatchedItemOptionsScreen(this, watched));
+	}
+
+	/** The [Search] button on a watched item — jumps straight to its detail page (current listings, price history) instead of the options screen. */
+	private void openItemPage(String name, String baseItem, String textureUrl, boolean isRare, RareItem rareData) {
+		minecraft.setScreenAndShow(new ItemDetailScreen(this, name, baseItem, textureUrl, isRare, rareData));
 	}
 
 	@Override
