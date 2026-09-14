@@ -90,6 +90,7 @@ export default defineConfig({
 			{ text: "Features", link: "/features" },
 			{ text: "FAQ", link: "/faq" },
 			{ text: "Installation", link: "/installation" },
+			{ text: "Registration help", link: "/registration" },
 		],
 		sidebar: [
 		],

@@ -55,7 +55,7 @@
 		wrap.innerHTML =
 			'<div class="acct-modal">' +
 				"<h2>Need help?</h2>" +
-				'<p style="color:var(--text,#EAEFE7);font-size:13.5px;line-height:1.5;margin:0 0 16px;">Message <b>ectf</b> on Discord so we can sort it out!</p>' +
+				'<p style="color:var(--text,#EAEFE7);font-size:13.5px;line-height:1.5;margin:0 0 16px;">Please review the registration helpline at https://sctp.nl/docs/registration!!</p>' +
 				'<button type="button" class="ghost" id="acctHelpClose">Close</button>' +
 			"</div>";
 		document.body.appendChild(wrap);
