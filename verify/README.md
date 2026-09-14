@@ -85,9 +85,36 @@ Xbox-authenticated gamertag, not any richer profile data.
   sctp.nl/register) — confirmed working, including the 1.20.5+
   "should authenticate" Encryption Request field, sent conditionally based
   on the client's declared protocol version (>= 766).
-- The Bedrock path has **not** been tested against a real Bedrock client +
-  Geyser yet — same caveat as before, test it before relying on it.
+- The Bedrock path has been tested end-to-end against a real Bedrock client
+  through Geyser — confirmed working (real Xbox Live auth via Geyser, real
+  account created via sctp.nl/register).
 - The Bedrock path's security boundary is entirely "nothing but Geyser can
   reach the bridge port" — if you ever expose `VERIFY_BEDROCK_BRIDGE_PORT`
   to the internet, that guarantee is gone and anyone could claim any
   Bedrock username. Keep it firewalled to localhost.
+
+## Monitoring / uptime alerts
+
+Two independent layers, because each only catches failures the other can't:
+
+- **External**: a free port monitor (e.g. UptimeRobot) watching
+  `verify.sctp.nl:25565` from the internet — catches the whole Pi/router/ISP
+  going offline, which nothing running on the Pi itself could ever detect or
+  report.
+- **Local**: `watchdog.py` — checks that `java_server` (TCP) and Geyser's
+  Bedrock listener (RakNet UDP ping) are actually up on the Pi itself, and
+  posts to a Discord webhook only when a service's state *changes* (down, or
+  back up), not on every check. Catches a crash-loop the Pi survives but
+  that an external port check might still see as "up" if something else on
+  the port responds, or might be slower to catch depending on check interval.
+
+Run it periodically via a systemd timer:
+
+```
+export WATCHDOG_DISCORD_WEBHOOK_URL="<your Discord webhook URL>"
+python3 watchdog.py
+```
+
+See the deploy notes for the actual timer unit — it needs
+`WATCHDOG_DISCORD_WEBHOOK_URL` set (same idea as `VERIFY_WORKER_SHARED_SECRET`,
+via the service's `Environment=` line or a wrapper like `run.py`).

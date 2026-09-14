@@ -68,6 +68,8 @@ public final class WatchlistAlert {
 				.append(Component.literal(entry.itemName() + " (" + entry.priceLabel() + ") at " + entry.seller() + "'s shop  ").withStyle(ChatFormat.RESULT))
 				.append(buildTpButton(entry.world(), entry.containerPos(), entry.seller()))
 				.append(Component.literal("  "))
+				.append(buildOptionsButton(entry.itemName()))
+				.append(Component.literal("  "))
 				.append(buildRemoveButton(entry.itemName()));
 
 		client.player.sendSystemMessage(msg);
@@ -80,6 +82,24 @@ public final class WatchlistAlert {
 				.withColor(ChatFormatting.AQUA)
 				.withClickEvent(new ClickEvent.RunCommand(tpCommand))
 				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Teleport to this shop"))));
+	}
+
+	/** Same beam as buildTpButton, but doesn't run "/shop <seller>" — for OwnShopSaleTracker's sold-item alert, where the player is presumably already at (or near) their own shop and doesn't need re-teleporting there. */
+	static Component buildBeamButton(String world, BlockPos pos) {
+		String beamCommand = "/watchbeam " + world + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ();
+		return Component.literal("[Beam]").setStyle(Style.EMPTY
+				.withColor(ChatFormatting.AQUA)
+				.withClickEvent(new ClickEvent.RunCommand(beamCommand))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Show a beam to this shop"))));
+	}
+
+	/** Shared with WatchlistJoinCheck, which sources the same [Options] action for its marketplace matches too. */
+	static Component buildOptionsButton(String itemName) {
+		String optionsCommand = "/watchoptions " + itemName;
+		return Component.literal("[Options]").setStyle(Style.EMPTY
+				.withColor(ChatFormatting.YELLOW)
+				.withClickEvent(new ClickEvent.RunCommand(optionsCommand))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Edit max price / settings for this item"))));
 	}
 
 	/** Shared with WatchlistJoinCheck — see buildTpButton. */

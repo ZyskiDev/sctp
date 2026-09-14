@@ -81,6 +81,18 @@ public class ShopUploader {
 					uploadInFlight = false;
 					if (response.statusCode() == 200) {
 						ShopLog.clearScannedPositions();
+						// Clear the local shop log too, not just the scan-position
+						// tracking — otherwise every entry ever scanned this session
+						// keeps getting re-sent (and its lastSeen re-bumped) on every
+						// future upload cycle forever, even for shops the player
+						// hasn't actually revisited in hours. The auto-scanner's own
+						// "known shop" memory (ShopAutoScanner#knownShops) is separate
+						// and unaffected, so it'll keep silently rediscovering/
+						// rescanning nearby known shops on its normal schedule and
+						// repopulating this before the next upload. Only side effect:
+						// the CSV/Excel export hotkey now reflects "since the last
+						// upload" rather than the whole play session.
+						ShopLog.clear();
 					}
 					if (!manual) return;
 					if (response.statusCode() == 200) {

@@ -4,6 +4,8 @@ import com.snailtools.shoplogger.config.Config;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
@@ -51,8 +53,8 @@ public final class OwnShopSaleTracker {
 		Config.update(CONFIG_MESSAGES_ENABLED, value);
 	}
 
-	/** Call after every real (sign-having) scan of a container, manual or silent. */
-	public static void check(Minecraft client, ShopSign sign, BlockPos containerPos, AbstractContainerMenu handler) {
+	/** Call after every real (sign-having) scan of a container, manual or silent. worldLabel may be null (e.g. world not yet detected) — the alert still fires, just without a beam button. */
+	public static void check(Minecraft client, ShopSign sign, BlockPos containerPos, AbstractContainerMenu handler, String worldLabel) {
 		String self = client.getUser().getName();
 		if (self == null || !self.equalsIgnoreCase(sign.seller())) {
 			HAS_PENDING_PAYMENT.remove(containerPos); // not our shop — don't track it
@@ -75,7 +77,12 @@ public final class OwnShopSaleTracker {
 		// floods "Something sold!" for every chest the moment the auto-scanner
 		// discovers them each session, even though nothing new just happened.
 		if (nowHasPayment && Boolean.FALSE.equals(before) && isMessagesEnabled()) {
-			ChatFormat.send(client, ChatFormat.SUCCESS, "Something sold from your shop at " + containerPos.toShortString() + "!");
+			MutableComponent msg = Component.literal("[ShopLogger] ").withStyle(ChatFormat.PREFIX)
+					.append(Component.literal("Something sold from your shop at " + containerPos.toShortString() + "!").withStyle(ChatFormat.SUCCESS));
+			if (worldLabel != null) {
+				msg.append(Component.literal("  ")).append(WatchlistAlert.buildBeamButton(worldLabel, containerPos));
+			}
+			client.player.sendSystemMessage(msg);
 		}
 	}
 

@@ -16,6 +16,7 @@ public final class ChatFormat {
 	public static final ChatFormatting PRICE = ChatFormatting.GOLD;
 	public static final ChatFormatting STACK = ChatFormatting.AQUA;
 	public static final ChatFormatting ITEMS = ChatFormatting.WHITE;
+	public static final ChatFormatting MARKETPLACE = ChatFormatting.LIGHT_PURPLE;
 
 	private ChatFormat() {}
 

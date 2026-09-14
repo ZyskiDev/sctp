@@ -615,28 +615,40 @@
 <div class="modal-backdrop" id="downloadBackdrop">
 	<div class="modal">
 		<h2>Download Shop Logger</h2>
-		<p>Pick the version that matches the Minecraft version you're playing.</p>
+		<p>The current version, for Minecraft 26.2.</p>
 		<div class="download-options">
-			<a class="download-option" href="shoplogger-1.21.11-1.5.2.jar" download="shoplogger-1.21.11-1.5.2.jar">
-				<strong>Minecraft 1.21.11</strong>
-				<strong>The 1.21.11 mod will not receive any futher updates past 1.5.2; update to 26.2!</strong>
-				<span>shoplogger-1.21.11-1.5.2.jar</span>
-			</a>
-			<a class="download-option" href="shoplogger-26.1-1.5.2.jar" download="shoplogger-26.1-1.5.2.jar">
-				<strong>Minecraft 26.1</strong>
-				<strong>The 26.1 mod will not receive any futher updates past 1.5.2; update to 26.2!</strong>
-				<span>shoplogger-26.1-1.5.2.jar</span>
-			</a>
-			<a class="download-option" href="shoplogger-26.2-1.5.2.jar" download="shoplogger-26.2-1.5.2.jar">
+			<a class="download-option" href="shoplogger-26.2-1.6.jar" download="shoplogger-26.2-1.6.jar">
 				<strong>Minecraft 26.2</strong>
-				<span>shoplogger-26.2-1.5.2.jar</span>
+				<span>shoplogger-26.2-1.6.jar</span>
 			</a>
 		</div>
 		<p class="download-reminder">Requires <strong>Fabric API</strong> installed alongside the mod, and <strong>Fabric Loader 0.19.3</strong> or newer.</p>
 		<p class="download-reminder">Thanks to <strong>Zyski</strong> for all the QOL features in the mod!</p>
 		<p class="download-reminder">You can view the <strong>[source code](https://github.com/maxolotled/sctp)</strong> on Github.</p>
+		<p class="download-reminder"><a href="#" id="openArchived">Looking for an older Minecraft version? Archived downloads</a></p>
 		<div class="modal-actions">
 			<button id="closeDownload" type="button">Close</button>
+		</div>
+	</div>
+</div>
+
+<!-- archived downloads modal -->
+<div class="modal-backdrop" id="archivedBackdrop">
+	<div class="modal">
+		<h2>Archived downloads</h2>
+		<p style="color:var(--warn);">These versions are no longer updated and are stuck on 1.5.2 — if you can, update to Minecraft 26.2 instead. They're kept here only for players who can't upgrade their Minecraft version yet.</p>
+		<div class="download-options">
+			<a class="download-option" href="shoplogger-1.21.11-1.5.2.jar" download="shoplogger-1.21.11-1.5.2.jar">
+				<strong>Minecraft 1.21.11</strong>
+				<span>shoplogger-1.21.11-1.5.2.jar</span>
+			</a>
+			<a class="download-option" href="shoplogger-26.1-1.5.2.jar" download="shoplogger-26.1-1.5.2.jar">
+				<strong>Minecraft 26.1</strong>
+				<span>shoplogger-26.1-1.5.2.jar</span>
+			</a>
+		</div>
+		<div class="modal-actions">
+			<button id="closeArchived" type="button">Close</button>
 		</div>
 	</div>
 </div>
@@ -1661,6 +1673,14 @@
 		document.getElementById("downloadBackdrop").classList.remove("open");
 	}
 
+	// ---------------- archived downloads modal ----------------
+	function openArchived(){
+		document.getElementById("archivedBackdrop").classList.add("open");
+	}
+	function closeArchived(){
+		document.getElementById("archivedBackdrop").classList.remove("open");
+	}
+
 	// ---------------- upload modal ----------------
 	function openUpload(){
 		document.getElementById("uploadBackdrop").classList.add("open");
@@ -1887,6 +1907,16 @@
 		if(e.target === this) closeDownload();
 	});
 
+	document.getElementById("openArchived").addEventListener("click", function(e){
+		e.preventDefault();
+		closeDownload();
+		openArchived();
+	});
+	document.getElementById("closeArchived").addEventListener("click", closeArchived);
+	document.getElementById("archivedBackdrop").addEventListener("click", function(e){
+		if(e.target === this) closeArchived();
+	});
+
 	document.getElementById("closeUpload").addEventListener("click", closeUpload);
 	document.getElementById("uploadBackdrop").addEventListener("click", function(e){
 		if(e.target === this) closeUpload();
@@ -1906,7 +1936,7 @@
 	});
 
 	document.addEventListener("keydown", function(e){
-		if(e.key === "Escape"){ closeDownload(); closeUpload(); closeReport(); closeSharedShopRequest(); }
+		if(e.key === "Escape"){ closeDownload(); closeArchived(); closeUpload(); closeReport(); closeSharedShopRequest(); }
 	});
 
 	var dropzone = document.getElementById("dropzone");

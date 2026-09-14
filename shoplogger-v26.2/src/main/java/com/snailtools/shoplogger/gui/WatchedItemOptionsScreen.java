@@ -98,6 +98,7 @@ public class WatchedItemOptionsScreen extends Screen {
 		super.extractRenderState(context, mouseX, mouseY, delta);
 		context.centeredText(font, title, width / 2, height / 2 - 92, 0xFFFFFFFF);
 		context.centeredText(font, "Max price is in diamond blocks (e.g. 2 = 18 diamonds)", width / 2, height / 2 - 78, 0xFF8FA593);
+		context.centeredText(font, "This is the price per single item, not per stack", width / 2, height / 2 - 66, 0xFF8FA593);
 	}
 
 	@Override

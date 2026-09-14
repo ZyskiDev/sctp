@@ -37,13 +37,25 @@ public final class WorldDetector implements SilentScreenCoordinator.Listener {
 	private boolean armed = false;
 	private int armedSyncId = -1;
 	private long lastAttemptAt = 0L;
+	// True only once THIS connection's "/help" round-trip actually found the
+	// "Current World:" lore line — i.e. we're really on Snailcraft right now,
+	// as opposed to WorldSelection.get() just returning a value persisted from
+	// some earlier session on a different server. Reset on every fresh
+	// join/reconfigure so a stale confirmation never carries over.
+	private boolean confirmedThisSession = false;
 
 	private WorldDetector() {}
 
 	/** Call whenever we know (or suspect) the player's world may have changed. */
 	public void requestRedetect() {
 		pendingRequest = true;
+		confirmedThisSession = false;
 		WorldSelection.startDetectionGrace();
+	}
+
+	/** True only after a real "Current World:" signal was read on this exact connection — not just because a world was persisted from a previous session. See callers like WatchlistJoinCheck that must stay silent off Snailcraft. */
+	public boolean isConfirmedThisSession() {
+		return confirmedThisSession;
 	}
 
 	public void tick(Minecraft client) {
@@ -125,6 +137,7 @@ public final class WorldDetector implements SilentScreenCoordinator.Listener {
 				ShopWorld world = ShopWorld.fromString(name);
 				if (world != null) {
 					WorldSelection.set(world);
+					confirmedThisSession = true;
 				}
 				return;
 			}

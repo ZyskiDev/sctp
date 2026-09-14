@@ -60,6 +60,9 @@ public class ShopLoggerClient implements ClientModInitializer {
 	 */
 	private static volatile String pendingSearchQuery;
 
+	/** Same deferred-open reasoning as pendingSearchQuery, for watchlist alerts' [Options] button. */
+	private static volatile String pendingWatchOptionsItem;
+
 	/** How often (in ticks) to auto-upload to the Trading Post, in addition to the manual keybind. 20 ticks = 1s. */
 	private static final int AUTO_UPLOAD_INTERVAL_TICKS = 20 * 60 * 15; // 15 minutes
 	private int uploadTickCounter = 0;
@@ -176,6 +179,17 @@ public class ShopLoggerClient implements ClientModInitializer {
 			dispatcher.register(ClientCommands.literal("watchremove")
 					.then(ClientCommands.argument("item", StringArgumentType.greedyString())
 							.executes(ShopLoggerClient::watchRemove)));
+
+			dispatcher.register(ClientCommands.literal("watchoptions")
+					.then(ClientCommands.argument("item", StringArgumentType.greedyString())
+							.executes(ShopLoggerClient::watchOptions)));
+
+			dispatcher.register(ClientCommands.literal("watchbeam")
+					.then(ClientCommands.argument("world", StringArgumentType.word())
+							.then(ClientCommands.argument("x", IntegerArgumentType.integer())
+									.then(ClientCommands.argument("y", IntegerArgumentType.integer())
+											.then(ClientCommands.argument("z", IntegerArgumentType.integer())
+													.executes(ShopLoggerClient::watchBeam))))));
 		});
 
 		// Redetect the world on every fresh join (covers singleplayer -> a real
@@ -230,6 +244,16 @@ public class ShopLoggerClient implements ClientModInitializer {
 				String query = pendingSearchQuery;
 				pendingSearchQuery = null;
 				client.setScreenAndShow(new com.snailtools.shoplogger.gui.ListingsScreen(null, query));
+			}
+			if (pendingWatchOptionsItem != null) {
+				String itemName = pendingWatchOptionsItem;
+				pendingWatchOptionsItem = null;
+				WatchedItem item = WatchlistStore.find(itemName);
+				if (item != null) {
+					client.setScreenAndShow(new com.snailtools.shoplogger.gui.WatchedItemOptionsScreen(client.gui.screen(), item));
+				} else {
+					ChatFormat.send(client, ChatFormat.NEUTRAL, "You're no longer watching " + itemName + ".");
+				}
 			}
 
 			if (client.player != null) {
@@ -289,6 +313,20 @@ public class ShopLoggerClient implements ClientModInitializer {
 		String item = StringArgumentType.getString(ctx, "item");
 		WatchlistStore.remove(item);
 		ctx.getSource().sendFeedback(ChatFormat.prefixed(ChatFormat.NEUTRAL, "Stopped watching " + item + "."));
+		return 1;
+	}
+
+	private static int watchOptions(CommandContext<FabricClientCommandSource> ctx) {
+		pendingWatchOptionsItem = StringArgumentType.getString(ctx, "item");
+		return 1;
+	}
+
+	private static int watchBeam(CommandContext<FabricClientCommandSource> ctx) {
+		String world = StringArgumentType.getString(ctx, "world");
+		int x = IntegerArgumentType.getInteger(ctx, "x");
+		int y = IntegerArgumentType.getInteger(ctx, "y");
+		int z = IntegerArgumentType.getInteger(ctx, "z");
+		TeleportHighlight.getInstance().arm(world, new BlockPos(x, y, z));
 		return 1;
 	}
 
