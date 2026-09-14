@@ -91,6 +91,12 @@
 	.count-badge:empty{display:none;}
 	.count-badge.attn{background:rgba(226,163,61,.18);color:var(--warn);}
 	.area-badge{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;}
+	/* The generated poster SVG carries its own width/height="1080" attributes
+	   (needed so a downloaded file opens at full size) — without this, the
+	   browser renders it at that native 1080px size inside the much narrower
+	   preview box, and overflow:hidden just clips most of it off instead of
+	   scaling it down. */
+	#tipPreviewWrap svg{width:100%;height:auto;display:block;}
 </style>
 </head>
 <body>
