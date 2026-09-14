@@ -5,3 +5,4 @@ shoplogger-v*/*.log
 .claude/
 trading-post-api/**/.wrangler/
 .vscode/
+/tips/

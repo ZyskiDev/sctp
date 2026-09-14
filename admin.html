@@ -149,14 +149,6 @@
 		</details>
 		</section>
 
-		<section data-perm="rareApprovals">
-		<details class="section-toggle" open>
-		<summary>Rare item approvals <span class="count-badge" id="rareApprovalsCountBadge"></span></summary>
-		<div class="meta" style="margin-bottom:8px;">Rare-catalog items priced at exactly 1 or 2 diamond are held here instead of showing up publicly, since that's suspiciously cheap for a rare — approve or deny each one.</div>
-		<div id="rareApprovalsList"></div>
-		</details>
-		</section>
-
 		<section data-perm="blockedSellers">
 		<details class="section-toggle" open>
 		<summary>Blocked sellers</summary>
@@ -211,45 +203,6 @@
 			<summary>Resolved shared-shop requests</summary>
 			<div id="requestsResolved" style="margin-top:12px;"></div>
 		</details>
-		</details>
-		</section>
-
-		<section data-perm="faq">
-		<details class="section-toggle" open>
-		<summary>FAQ (shown on docs.html)</summary>
-		<div class="card">
-			<label for="faqQuestionInput">Question</label>
-			<input type="text" id="faqQuestionInput" placeholder="e.g. Does the mod work on servers other than Snailcraft?" style="width:100%;margin:6px 0;">
-			<label for="faqAnswerInput">Answer</label>
-			<textarea id="faqAnswerInput" placeholder="Answer text" rows="3" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;"></textarea>
-			<button id="faqAddBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Add FAQ entry</button>
-			<div class="err" id="faqAddErr"></div>
-		</div>
-		<div id="faqList"></div>
-		</details>
-		</section>
-
-		<section data-perm="worldMap">
-		<details class="section-toggle" open>
-		<summary>World map override</summary>
-		<div class="card">
-			<label for="worldMapCoordInput">Grid coordinate (e.g. 12x7)</label>
-			<div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;">
-				<input type="text" id="worldMapCoordInput" placeholder="12x7" style="flex:1;min-width:120px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
-				<button id="worldMapLookupBtn" type="button">Look up</button>
-			</div>
-			<div class="meta" id="worldMapCurrent"></div>
-			<div style="display:flex;gap:8px;margin:12px 0 6px;flex-wrap:wrap;align-items:center;">
-				<select id="worldMapStatusSelect" style="background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;font-size:13.5px;">
-					<option value="unclaimed">Unclaimed</option>
-					<option value="claimed">Claimed</option>
-					<option value="done">Done</option>
-				</select>
-				<input type="text" id="worldMapUsernameInput" placeholder="Minecraft username" style="flex:1;min-width:140px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
-			</div>
-			<button id="worldMapSaveBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Save</button>
-			<div class="err" id="worldMapErr"></div>
-		</div>
 		</details>
 		</section>
 
@@ -310,7 +263,13 @@
 		<section data-perm="marketplaceListings">
 		<details class="section-toggle" open>
 		<summary>Marketplace moderation</summary>
-		<div class="meta" style="margin-bottom:8px;">Every listing, any status — remove one that breaks the rules; the poster gets notified why.</div>
+		<div class="meta" style="margin-bottom:8px;">Look up a poster's listings (any status) by their exact username — remove one that breaks the rules; the poster gets notified why.</div>
+		<div class="card">
+			<label for="marketplaceModSearchUsername">Poster's username</label>
+			<input type="text" id="marketplaceModSearchUsername" placeholder="exact username, then press Enter" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<button id="marketplaceModSearchBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Search</button>
+			<div class="err" id="marketplaceModSearchErr"></div>
+		</div>
 		<div id="marketplaceModList"></div>
 		</details>
 		</section>
@@ -384,6 +343,37 @@
 
 		</div>
 		</details>
+
+		<details class="category" open>
+		<summary>Content tools</summary>
+		<div class="category-body">
+
+		<section data-perm="__headAdminOnly__">
+		<details class="section-toggle" open>
+		<summary>Tip of the Week poster</summary>
+		<div class="card">
+			<div class="meta" style="margin-bottom:10px;">Generates a 1080&times;1080 promo graphic (SVG) in the site's own brand style. Fill in the fields, hit Generate, then download.</div>
+			<label for="tipTitle">Title (small label at top)</label>
+			<input type="text" id="tipTitle" value="TIP OF THE WEEK" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<label for="tipHeader1">Header (white)</label>
+			<input type="text" id="tipHeader1" placeholder="e.g. Advertise on the" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<label for="tipHeader2">Header 2 (colored)</label>
+			<input type="text" id="tipHeader2" placeholder="e.g. Marketplace" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<label for="tipBody">Body text</label>
+			<textarea id="tipBody" rows="3" placeholder="Wraps automatically to fit the poster." style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;"></textarea>
+			<label for="tipCircleText">Circle text (the pill badge)</label>
+			<input type="text" id="tipCircleText" placeholder="e.g. 350+ players reached" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<label for="tipFooterText">Bottom-left text</label>
+			<input type="text" id="tipFooterText" placeholder="e.g. sctp.nl/marketplace" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<button id="tipGenerateBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;margin-top:10px;">Generate</button>
+			<button id="tipDownloadBtn" type="button" style="margin-top:10px;margin-left:8px;" disabled>Download SVG</button>
+			<div id="tipPreviewWrap" style="margin-top:16px;max-width:380px;border:1px solid var(--line);border-radius:12px;overflow:hidden;"></div>
+		</div>
+		</details>
+		</section>
+
+		</div>
+		</details>
 	</div>
 </div>
 
@@ -394,11 +384,10 @@
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var EDITABLE_FIELDS = ["itemName","baseItem","price","priceLabel","stackSize","amount","stacksInStock","currency","seller","world","position"];
-	var ALL_PERMS = ["reports","sharedShopRequests","faq","worldMap","manualListings","blockedSellers","rareApprovals","marketplaceListings","updateNotice","suggestions","bugReports","playerReports"];
+	var ALL_PERMS = ["reports","sharedShopRequests","manualListings","blockedSellers","marketplaceListings","updateNotice","suggestions","bugReports","playerReports"];
 	var PERM_LABELS = {
-		reports: "Reports", sharedShopRequests: "Shared-shop requests", faq: "FAQ",
-		worldMap: "World map", manualListings: "Manual listings",
-		blockedSellers: "Blocked sellers", rareApprovals: "Rare approvals",
+		reports: "Reports", sharedShopRequests: "Shared-shop requests",
+		manualListings: "Manual listings", blockedSellers: "Blocked sellers",
 		marketplaceListings: "Marketplace listings", updateNotice: "Update notice",
 		suggestions: "Suggestions", bugReports: "Bug reports", playerReports: "Player reports",
 	};
@@ -414,12 +403,12 @@
 	var session = window.sctpAccount ? window.sctpAccount.getSession() : null;
 	var reports = [];
 	var requests = [];
-	var faqs = [];
 	var blockedSellers = [];
-	var rareApprovals = [];
 	var admins = [];
 	var adminsSearched = false; // distinguishes "haven't searched yet" from "searched, found nothing"
 	var marketplaceListings = [];
+	var marketplaceModSearched = false; // same "haven't searched yet" vs "found nothing" distinction as adminsSearched
+	var lastMarketplaceModSearch = "";
 	var updateNotice = null;
 	var suggestions = [];
 	var bugReports = [];
@@ -492,10 +481,7 @@
 	async function refresh(){
 		if(hasPerm("reports")) reports = await api("/admin/reports");
 		if(hasPerm("sharedShopRequests")) requests = await api("/admin/shared-shop-requests");
-		if(hasPerm("faq")) faqs = await api("/admin/faq");
 		if(hasPerm("blockedSellers")) blockedSellers = await api("/admin/blocked-sellers");
-		if(hasPerm("rareApprovals")) rareApprovals = await api("/admin/rare-approvals");
-		if(hasPerm("marketplaceListings")) marketplaceListings = await api("/admin/marketplace/listings");
 		if(hasPerm("updateNotice")) updateNotice = await api("/admin/update-notice");
 		if(hasPerm("suggestions")) suggestions = await api("/admin/suggestions");
 		if(hasPerm("bugReports")) bugReports = await api("/admin/bug-reports");
@@ -506,9 +492,7 @@
 	function render(){
 		renderReports();
 		renderRequests();
-		renderFaq();
 		renderBlockedSellers();
-		renderRareApprovals();
 		renderAdmins();
 		renderMarketplaceMod();
 		renderUpdateNotice();
@@ -689,7 +673,12 @@
 	function renderMarketplaceMod(){
 		var host = document.getElementById("marketplaceModList");
 		if(!host) return;
-		if(!marketplaceListings.length){ host.innerHTML = '<div class="empty">No listings yet.</div>'; return; }
+		if(!marketplaceListings.length){
+			host.innerHTML = marketplaceModSearched
+				? '<div class="empty">No listings from that username.</div>'
+				: '<div class="empty">Search a poster\'s username above to see their listings here.</div>';
+			return;
+		}
 		host.innerHTML = marketplaceListings.map(function(l){
 			var priceText = l.type === "selling"
 				? [l.askingPrice != null ? l.askingPrice + " " + esc(l.askingCurrency) + " asking" : null, l.startingBid != null ? l.startingBid + " " + esc(l.startingBidCurrency) + " starting bid" : null].filter(Boolean).join(" · ")
@@ -704,9 +693,32 @@
 			btn.addEventListener("click", function(){
 				var reason = prompt("Reason for removing this listing?") || "";
 				api("/admin/marketplace/listings/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: btn.getAttribute("data-remove-listing"), reason: reason }) })
-					.then(refresh).catch(function(err){ alert(err.message); });
+					.then(refreshMarketplaceModSearch).catch(function(err){ alert(err.message); });
 			});
 		});
+	}
+
+	async function searchMarketplaceMod(){
+		var username = document.getElementById("marketplaceModSearchUsername").value.trim();
+		if(!username) return;
+		lastMarketplaceModSearch = username;
+		await runMarketplaceModSearch(username);
+	}
+	// Same reasoning as refreshAdminSearch — re-fetches the username that was
+	// actually searched, not whatever's currently typed in the box.
+	async function refreshMarketplaceModSearch(){
+		if(lastMarketplaceModSearch) await runMarketplaceModSearch(lastMarketplaceModSearch);
+	}
+	async function runMarketplaceModSearch(username){
+		var errEl = document.getElementById("marketplaceModSearchErr");
+		errEl.textContent = "";
+		try {
+			marketplaceListings = await api("/admin/marketplace/listings?username=" + encodeURIComponent(username));
+			marketplaceModSearched = true;
+			renderMarketplaceMod();
+		} catch(err){
+			errEl.textContent = "Failed: " + err.message;
+		}
 	}
 
 	function renderReports(){
@@ -836,85 +848,6 @@
 		}
 	}
 
-	function renderFaq(){
-		var list = faqs.slice().reverse(); // newest first
-		document.getElementById("faqList").innerHTML = list.length
-			? list.map(faqCard).join("")
-			: '<div class="empty">No FAQ entries yet.</div>';
-
-		document.querySelectorAll(".faq-edit-toggle").forEach(function(b){
-			b.addEventListener("click", function(){
-				document.getElementById("faq-edit-" + b.getAttribute("data-id")).classList.toggle("open");
-			});
-		});
-		document.querySelectorAll(".faq-save").forEach(function(b){
-			b.addEventListener("click", function(){
-				var id = b.getAttribute("data-id");
-				var q = document.getElementById("faq-q-" + id).value.trim();
-				var a = document.getElementById("faq-a-" + id).value.trim();
-				if(!q || !a){ alert("Both question and answer are required."); return; }
-				updateFaqEntry(id, q, a);
-			});
-		});
-		document.querySelectorAll(".faq-delete").forEach(function(b){
-			b.addEventListener("click", function(){
-				if(confirm("Delete this FAQ entry?")) deleteFaqEntry(b.getAttribute("data-id"));
-			});
-		});
-	}
-
-	function faqCard(f){
-		return '<div class="card">'+
-			'<div class="title">'+esc(f.question)+'</div>'+
-			'<div class="details">'+esc(f.answer)+'</div>'+
-			'<div class="actions" style="margin-top:10px;">'+
-				'<button class="change faq-edit-toggle" data-id="'+f.id+'" type="button">Edit</button>'+
-				'<button class="deny faq-delete" data-id="'+f.id+'" type="button">Delete</button>'+
-			'</div>'+
-			'<div class="edit-form" id="faq-edit-'+f.id+'" style="flex-direction:column;align-items:stretch;">'+
-				'<input type="text" id="faq-q-'+f.id+'" value="'+esc(f.question)+'">'+
-				'<textarea id="faq-a-'+f.id+'" rows="3" style="background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit;">'+esc(f.answer)+'</textarea>'+
-				'<button class="approve faq-save" data-id="'+f.id+'" type="button" style="align-self:flex-start;">Save</button>'+
-			'</div>'+
-		'</div>';
-	}
-
-	async function addFaq(){
-		var qInput = document.getElementById("faqQuestionInput");
-		var aInput = document.getElementById("faqAnswerInput");
-		var errEl = document.getElementById("faqAddErr");
-		var question = qInput.value.trim();
-		var answer = aInput.value.trim();
-		if(!question || !answer){ errEl.textContent = "Both question and answer are required."; return; }
-		errEl.textContent = "";
-		try {
-			await api("/admin/faq/add", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ question:question, answer:answer }) });
-			qInput.value = "";
-			aInput.value = "";
-			await refresh();
-		} catch(err){
-			errEl.textContent = "Failed: " + err.message;
-		}
-	}
-
-	async function updateFaqEntry(id, question, answer){
-		try {
-			await api("/admin/faq/update", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, question:question, answer:answer }) });
-			await refresh();
-		} catch(err){
-			alert("Failed: " + err.message);
-		}
-	}
-
-	async function deleteFaqEntry(id){
-		try {
-			await api("/admin/faq/delete", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id }) });
-			await refresh();
-		} catch(err){
-			alert("Failed: " + err.message);
-		}
-	}
-
 	// ---------------- blocked sellers ----------------
 
 	function renderBlockedSellers(){
@@ -967,47 +900,6 @@
 	}
 
 	// ---------------- rare item approvals ----------------
-
-	function renderRareApprovals(){
-		var el = document.getElementById("rareApprovalsList");
-		if(!el) return;
-		var badge = document.getElementById("rareApprovalsCountBadge");
-		badge.textContent = rareApprovals.length ? rareApprovals.length : "";
-		badge.classList.toggle("attn", rareApprovals.length > 0);
-		el.innerHTML = rareApprovals.length
-			? rareApprovals.map(rareApprovalCard).join("")
-			: '<div class="empty">Nothing pending approval.</div>';
-		document.querySelectorAll(".rare-approve").forEach(function(b){
-			b.addEventListener("click", function(){ resolveRareApproval(b.getAttribute("data-id"), "approve"); });
-		});
-		document.querySelectorAll(".rare-deny").forEach(function(b){
-			b.addEventListener("click", function(){ resolveRareApproval(b.getAttribute("data-id"), "deny"); });
-		});
-	}
-
-	function rareApprovalCard(r){
-		return '<div class="card">'+
-			'<div class="row">'+
-				'<div>'+
-					'<div class="title">'+esc(r.itemName)+' — '+esc(r.seller)+' ('+esc(r.world)+')</div>'+
-					'<div class="meta">'+esc(r.priceLabel || (r.price + " " + r.currency))+' &middot; submitted '+esc(r.submittedAt)+'</div>'+
-				'</div>'+
-				'<div class="actions">'+
-					'<button class="approve rare-approve" data-id="'+r.id+'" type="button">Approve</button>'+
-					'<button class="deny rare-deny" data-id="'+r.id+'" type="button">Deny</button>'+
-				'</div>'+
-			'</div>'+
-		'</div>';
-	}
-
-	async function resolveRareApproval(id, action){
-		try {
-			await api("/admin/rare-approvals/resolve", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, action:action }) });
-			await refresh();
-		} catch(err){
-			alert("Failed: " + err.message);
-		}
-	}
 
 	// ---------------- admin accounts (head admin only) ----------------
 
@@ -1191,6 +1083,131 @@
 		}
 	}
 
+	// ---------------- tip of the week poster ----------------
+
+	// Greedy word-wrap using a real canvas text measurement, so lines actually
+	// fit the poster's usable width instead of guessing a character count.
+	var tipWrapCanvas = document.createElement("canvas");
+	function wrapText(text, maxWidth, font){
+		var ctx = tipWrapCanvas.getContext("2d");
+		ctx.font = font;
+		var words = String(text || "").split(/\s+/).filter(Boolean);
+		var lines = [];
+		var current = "";
+		words.forEach(function(word){
+			var test = current ? current + " " + word : word;
+			if(current && ctx.measureText(test).width > maxWidth){
+				lines.push(current);
+				current = word;
+			} else {
+				current = test;
+			}
+		});
+		if(current) lines.push(current);
+		return lines;
+	}
+
+	function escXml(s){
+		return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+			return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c];
+		});
+	}
+
+	// Same visual template as the hand-made sctp-tip-*.svg files: brand mark,
+	// eyebrow bar, white/gradient two-line headline, auto-wrapped body, a
+	// pill-shaped "circle text" badge, and a footer bar with bottom-left text.
+	function buildTipSvg(fields){
+		var bodyLines = wrapText(fields.body, 928, "36px Arial, Helvetica, sans-serif");
+		var bodyY = [650, 700, 750, 800, 850];
+		var bodySvg = bodyLines.slice(0, bodyY.length).map(function(line, i){
+			return '\t<text x="76" y="' + bodyY[i] + '" font-family="Arial, Helvetica, sans-serif" font-size="36" fill="#EAEFE7">' + escXml(line) + '</text>';
+		}).join("\n");
+
+		var ctx = tipWrapCanvas.getContext("2d");
+		ctx.font = "800 28px Arial, Helvetica, sans-serif";
+		var circleTextWidth = ctx.measureText(fields.circleText || "").width;
+		var chipWidth = Math.max(180, Math.round(circleTextWidth) + 60);
+
+		return '<svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">\n' +
+			'\t<defs>\n' +
+			'\t\t<radialGradient id="glow" cx="18%" cy="8%" r="75%">\n' +
+			'\t\t\t<stop offset="0%" stop-color="#B7E23D" stop-opacity="0.16"/>\n' +
+			'\t\t\t<stop offset="55%" stop-color="#B7E23D" stop-opacity="0.04"/>\n' +
+			'\t\t\t<stop offset="100%" stop-color="#B7E23D" stop-opacity="0"/>\n' +
+			'\t\t</radialGradient>\n' +
+			'\t\t<linearGradient id="accentText" x1="0%" y1="0%" x2="100%" y2="0%">\n' +
+			'\t\t\t<stop offset="0%" stop-color="#B7E23D"/>\n' +
+			'\t\t\t<stop offset="55%" stop-color="#6FE3C8"/>\n' +
+			'\t\t\t<stop offset="100%" stop-color="#4FC3F7"/>\n' +
+			'\t\t</linearGradient>\n' +
+			'\t\t<linearGradient id="markGrad" x1="0%" y1="0%" x2="100%" y2="100%">\n' +
+			'\t\t\t<stop offset="0%" stop-color="#B7E23D"/>\n' +
+			'\t\t\t<stop offset="100%" stop-color="#87AE29"/>\n' +
+			'\t\t</linearGradient>\n' +
+			'\t\t<filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">\n' +
+			'\t\t\t<feGaussianBlur stdDeviation="18" result="blur"/>\n' +
+			'\t\t\t<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>\n' +
+			'\t\t</filter>\n' +
+			'\t</defs>\n' +
+			'\t<rect width="1080" height="1080" fill="#101B14"/>\n' +
+			'\t<rect width="1080" height="1080" fill="url(#glow)"/>\n' +
+			'\t<g opacity="0.10" fill="#B7E23D">\n' +
+			'\t\t<rect x="880" y="120" width="26" height="26" transform="rotate(45 893 133)"/>\n' +
+			'\t\t<rect x="940" y="200" width="16" height="16" transform="rotate(45 948 208)"/>\n' +
+			'\t\t<rect x="80" y="900" width="20" height="20" transform="rotate(45 90 910)"/>\n' +
+			'\t\t<rect x="150" y="960" width="14" height="14" transform="rotate(45 157 967)"/>\n' +
+			'\t\t<rect x="960" y="920" width="30" height="30" transform="rotate(45 975 935)"/>\n' +
+			'\t</g>\n' +
+			'\t<rect x="28" y="28" width="1024" height="1024" rx="36" fill="none" stroke="#33453A" stroke-width="2"/>\n' +
+			'\t<rect x="76" y="80" width="64" height="64" rx="14" fill="url(#markGrad)"/>\n' +
+			'\t<text x="108" y="124" font-family="Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji, sans-serif" font-size="34" text-anchor="middle">🛒</text>\n' +
+			'\t<text x="156" y="103" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" letter-spacing="1" fill="#D9C89A">SNAILCRAFT</text>\n' +
+			'\t<text x="156" y="128" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" letter-spacing="1" fill="#D9C89A">TRADING POST</text>\n' +
+			'\t<text x="76" y="330" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" letter-spacing="6" fill="url(#accentText)">' + escXml(fields.title) + '</text>\n' +
+			'\t<rect x="76" y="352" width="120" height="6" rx="3" fill="url(#accentText)"/>\n' +
+			'\t<text x="76" y="470" font-family="Georgia, \'Times New Roman\', serif" font-size="84" font-weight="700" fill="#EAEFE7">' + escXml(fields.header1) + '</text>\n' +
+			'\t<text x="76" y="562" font-family="Georgia, \'Times New Roman\', serif" font-size="84" font-weight="700" fill="url(#accentText)" filter="url(#softGlow)">' + escXml(fields.header2) + '</text>\n' +
+			bodySvg + '\n' +
+			'\t<rect x="76" y="864" width="' + chipWidth + '" height="70" rx="35" fill="#1B2A20" stroke="#B7E23D" stroke-width="2"/>\n' +
+			'\t<text x="106" y="909" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800" fill="#B7E23D">' + escXml(fields.circleText) + '</text>\n' +
+			'\t<rect x="0" y="984" width="1080" height="96" fill="#0C140F"/>\n' +
+			'\t<line x1="0" y1="984" x2="1080" y2="984" stroke="#33453A" stroke-width="2"/>\n' +
+			'\t<text x="76" y="1041" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#D9C89A">' + escXml(fields.footer) + '</text>\n' +
+			'\t<text x="1004" y="1041" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#8FA593" text-anchor="end">snailcraft trading post</text>\n' +
+			'</svg>';
+	}
+
+	var lastTipSvg = null;
+
+	function generateTipPoster(){
+		var fields = {
+			title: document.getElementById("tipTitle").value.trim() || "TIP OF THE WEEK",
+			header1: document.getElementById("tipHeader1").value.trim(),
+			header2: document.getElementById("tipHeader2").value.trim(),
+			body: document.getElementById("tipBody").value.trim(),
+			circleText: document.getElementById("tipCircleText").value.trim(),
+			footer: document.getElementById("tipFooterText").value.trim(),
+		};
+		lastTipSvg = buildTipSvg(fields);
+		document.getElementById("tipPreviewWrap").innerHTML = lastTipSvg;
+		document.getElementById("tipDownloadBtn").disabled = false;
+	}
+
+	function downloadTipPoster(){
+		if(!lastTipSvg) return;
+		var blob = new Blob([lastTipSvg], { type: "image/svg+xml" });
+		var url = URL.createObjectURL(blob);
+		var a = document.createElement("a");
+		var slug = (document.getElementById("tipHeader1").value + "-" + document.getElementById("tipHeader2").value)
+			.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "poster";
+		a.href = url;
+		a.download = "sctp-tip-" + slug + ".svg";
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	}
+
 	// ---------------- own password ----------------
 
 	async function changeOwnPassword(){
@@ -1211,60 +1228,6 @@
 		}
 	}
 
-	// ---------------- world map override ----------------
-
-	function parseGridCoord(str){
-		var m = /^\s*(\d{1,2})\s*x\s*(\d{1,2})\s*$/i.exec(String(str || ""));
-		if(!m) return null;
-		var col = parseInt(m[1], 10), row = parseInt(m[2], 10);
-		if(col < 0 || col > 48 || row < 0 || row > 48) return null;
-		return { col: col, row: row };
-	}
-
-	async function lookupWorldMapSquare(){
-		var errEl = document.getElementById("worldMapErr");
-		var curEl = document.getElementById("worldMapCurrent");
-		errEl.style.color = "var(--danger)";
-		errEl.textContent = "";
-		var coord = parseGridCoord(document.getElementById("worldMapCoordInput").value);
-		if(!coord){ errEl.textContent = "Enter a coordinate like 12x7 (0-48 for both)."; return; }
-		try {
-			var res = await fetch(API_BASE + "/world-map");
-			var data = res.ok ? await res.json() : {};
-			var entry = data[coord.col + "_" + coord.row] || { status: "unclaimed" };
-			curEl.textContent = "Current: " + entry.status + (entry.username ? (" — " + entry.username) : "");
-			document.getElementById("worldMapStatusSelect").value = entry.status;
-			document.getElementById("worldMapUsernameInput").value = entry.username || "";
-		} catch(err){
-			errEl.textContent = "Couldn't load world map data: " + err.message;
-		}
-	}
-
-	async function saveWorldMapSquare(){
-		var errEl = document.getElementById("worldMapErr");
-		errEl.style.color = "var(--danger)";
-		errEl.textContent = "";
-		var coord = parseGridCoord(document.getElementById("worldMapCoordInput").value);
-		if(!coord){ errEl.textContent = "Enter a coordinate like 12x7 (0-48 for both)."; return; }
-		var status = document.getElementById("worldMapStatusSelect").value;
-		var username = document.getElementById("worldMapUsernameInput").value.trim();
-		if(status !== "unclaimed" && !username){ errEl.textContent = "Enter a username for a claimed/done square."; return; }
-		try {
-			await api("/admin/world-map/set", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ squareId: coord.col + "_" + coord.row, status: status, username: username }),
-			});
-			errEl.style.color = "var(--accent)";
-			errEl.textContent = "Saved.";
-		} catch(err){
-			errEl.style.color = "var(--danger)";
-			errEl.textContent = "Failed: " + err.message;
-		}
-	}
-
-	document.getElementById("worldMapLookupBtn").addEventListener("click", lookupWorldMapSquare);
-	document.getElementById("worldMapSaveBtn").addEventListener("click", saveWorldMapSquare);
 	document.getElementById("updateNoticeSaveBtn").addEventListener("click", saveUpdateNotice);
 
 	// ---------------- manually-added listings ----------------
@@ -1371,7 +1334,11 @@
 	document.getElementById("createAdminBtn").addEventListener("click", createAdmin);
 	document.getElementById("adminSearchBtn").addEventListener("click", searchAdmin);
 	document.getElementById("adminSearchUsername").addEventListener("keydown", function(e){ if(e.key === "Enter") searchAdmin(); });
+	document.getElementById("marketplaceModSearchBtn").addEventListener("click", searchMarketplaceMod);
+	document.getElementById("marketplaceModSearchUsername").addEventListener("keydown", function(e){ if(e.key === "Enter") searchMarketplaceMod(); });
 	document.getElementById("runSnapshotBtn").addEventListener("click", runSnapshotNow);
+	document.getElementById("tipGenerateBtn").addEventListener("click", generateTipPoster);
+	document.getElementById("tipDownloadBtn").addEventListener("click", downloadTipPoster);
 
 	document.getElementById("changePasswordToggle").addEventListener("click", function(){
 		document.getElementById("changePasswordCard").classList.toggle("hidden");
@@ -1381,8 +1348,6 @@
 		if(window.sctpAccount) window.sctpAccount.clearSession();
 		checkSession();
 	});
-	document.getElementById("faqAddBtn").addEventListener("click", addFaq);
-
 	// account-widget.js is a deferred script, so it's guaranteed to have run
 	// (and set window.sctpAccount) by DOMContentLoaded — but not necessarily
 	// yet at the point this inline script itself executes.

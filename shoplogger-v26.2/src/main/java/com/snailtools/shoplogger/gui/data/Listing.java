@@ -32,6 +32,16 @@ public class Listing {
 	public String lastSeen;
 	public String availableSince; // null for listings that predate this field
 
+	// Set only for rows GET /listings merges in from the marketplace (see
+	// worker.js's marketplaceRowAsListing) — a real shop listing never has
+	// these. marketplaceType is "selling" or "lookingFor"; position for these
+	// is always the literal text "Marketplace listing" (never real
+	// coordinates), which is also why parsePosition() naturally yields no [TP]
+	// button for them.
+	public boolean marketplace;
+	public String marketplaceType;
+	public String marketplaceListingId;
+
 	/** Price per single item in diamonds — same basis as the website's priceInDiamonds()/stackSize. */
 	public double pricePerItemInDiamonds() {
 		if ("display".equalsIgnoreCase(currency)) return Double.POSITIVE_INFINITY;

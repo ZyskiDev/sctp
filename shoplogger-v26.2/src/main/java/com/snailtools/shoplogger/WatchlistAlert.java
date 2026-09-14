@@ -84,6 +84,21 @@ public final class WatchlistAlert {
 				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Teleport to this shop"))));
 	}
 
+	/**
+	 * For a watchlist match that turned out to be marketplace-sourced (see
+	 * Listing.marketplace) — replaces the usual "at Seller's shop" text with a
+	 * clickable "Seller's marketplace" link straight to that listing, since
+	 * there's no real shop/position to name or teleport to.
+	 */
+	static Component buildMarketplaceLink(String seller, String listingId) {
+		String url = "https://sctp.nl/marketplace/#listing=" + listingId;
+		return Component.literal(seller + "'s marketplace").setStyle(Style.EMPTY
+				.withColor(ChatFormatting.AQUA)
+				.withUnderlined(true)
+				.withClickEvent(new ClickEvent.OpenUrl(java.net.URI.create(url)))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Open this listing on the website"))));
+	}
+
 	/** Same beam as buildTpButton, but doesn't run "/shop <seller>" — for OwnShopSaleTracker's sold-item alert, where the player is presumably already at (or near) their own shop and doesn't need re-teleporting there. */
 	static Component buildBeamButton(String world, BlockPos pos) {
 		String beamCommand = "/watchbeam " + world + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ();

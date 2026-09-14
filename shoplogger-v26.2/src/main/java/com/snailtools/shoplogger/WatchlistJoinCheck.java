@@ -119,11 +119,13 @@ public final class WatchlistJoinCheck {
 		// "lookingFor" posts are filtered out before this is ever called (see
 		// buildMarketplaceMatches) — a watchlist alert should only ever point at
 		// something the player could actually go buy.
-		return Component.literal("[ShopLogger] ").withStyle(ChatFormat.PREFIX)
+		MutableComponent msg = Component.literal("[ShopLogger] ").withStyle(ChatFormat.PREFIX)
 				.append(Component.literal("Marketplace: ").withStyle(ChatFormat.MARKETPLACE))
-				.append(Component.literal("Selling " + m.quantity + "x " + m.itemName
-						+ " by " + m.seller + (m.sellerVerified ? " ✓" : "") + " — " + priceText + bidText + "  ").withStyle(ChatFormat.RESULT))
-				.append(WatchlistAlert.buildOptionsButton(m.itemName));
+				.append(Component.literal("Selling " + m.quantity + "x " + m.itemName + " at ").withStyle(ChatFormat.RESULT))
+				.append(WatchlistAlert.buildMarketplaceLink(m.seller, m.id));
+		msg.append(Component.literal((m.sellerVerified ? " ✓" : "") + " — " + priceText + bidText + "  ").withStyle(ChatFormat.RESULT));
+		msg.append(WatchlistAlert.buildOptionsButton(m.itemName));
+		return msg;
 	}
 
 	private static void deliverNotifications(Minecraft client, List<MarketplaceNotification> notifications) {
@@ -143,6 +145,13 @@ public final class WatchlistJoinCheck {
 
 			for (Listing l : listings) {
 				if (!world.equalsIgnoreCase(l.world)) continue;
+				// GET /listings merges in active marketplace posts alongside real
+				// shop listings (see worker.js's marketplaceRowAsListing) — but
+				// those are always reported separately by buildMarketplaceMatches
+				// above, so skip them here entirely rather than risk the same
+				// listing getting announced twice (once as "Marketplace: ...", once
+				// as "Watching: ... at Seller's marketplace").
+				if (l.marketplace) continue;
 				boolean isDisplay = "display".equalsIgnoreCase(l.currency);
 				if (watchedItem.excludeNoPriceOrDisplay && isDisplay) continue;
 				if (!MatchUtil.alphaOnly(l.itemName).equals(MatchUtil.alphaOnly(watchedItem.itemName))) continue;

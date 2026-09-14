@@ -81,9 +81,6 @@
 //   GET  /admin/blocked-sellers
 //   POST /admin/blocked-sellers/add          body: {username, reason?} -> blocks a seller; strips their existing listings immediately
 //   POST /admin/blocked-sellers/remove       body: {username}
-// Permission bucket "rareApprovals":
-//   GET  /admin/rare-approvals               -> rare items priced 1-2 diamond, held pending approval (see pendingRareApprovals below)
-//   POST /admin/rare-approvals/resolve       body: {id, action: "approve"|"deny"}
 // Permission bucket "updateNotice":
 //   GET  /admin/update-notice                -> current config {enabled, minVersion, message, updatedAt, updatedBy}
 //   POST /admin/update-notice/set            body: {enabled, minVersion, message}
@@ -113,14 +110,6 @@
 //   seller's own shop stats: active listings, best sellers, sales trend, all estimated
 //   from listing-snapshot deltas — see computeSellerItemStats' doc comment for why.
 //
-// Rare-item price-approval hold: on upload, a listing whose item name is in
-// the rare-items catalog (data/rare-items.json, fetched live — see
-// getRareNameSet) AND priced at exactly 1 or 2 diamond is stored in
-// pendingRareApprovals instead of `listings`, and doesn't appear anywhere
-// public until an admin approves it. A rowKey that's already been approved
-// once is exempt from future holds (see handleUploadListings) so re-scanning
-// an unchanged, already-vetted listing doesn't need re-approval every time.
-//
 // Marketplace — every site account (admin or plain marketplace user) is a
 // row in `admins`; "admin" just means isHeadAdmin or a non-empty permissions
 // array. POST /admin/login is the one shared login for everyone.
@@ -140,7 +129,7 @@
 //   POST /marketplace/notifications/mark-read      body: {ids: [...]} or {} for "mark all"
 //   GET  /marketplace/notifications/for-mc?mcUsername=<name> (public, no session — the MOD calls this on join)
 //     -> undelivered notifications for a VERIFIED account only, marks them delivered
-//   GET  /admin/marketplace/listings, POST /admin/marketplace/listings/remove (permission "marketplaceListings")
+//   GET  /admin/marketplace/listings?username=<exact> (empty/missing -> []), POST /admin/marketplace/listings/remove (permission "marketplaceListings")
 // Active selling/lookingFor listings are also merged straight into GET
 // /listings (see handleGetListings) — tagged marketplace/marketplaceType/
 // marketplaceListingId — so they show up in the site's normal listings
@@ -351,15 +340,12 @@ function chunkArray(arr, size) {
 // this size instead of one unbounded query (see handleUploadListings).
 const MAX_QUERY_PARAMS_PER_CHUNK = 50;
 
-// Shared by handleUploadListings and the rare-approval "approve" action so
-// both write to `listings` through the exact same upsert logic.
+// Shared upsert logic for writing a row into `listings` — used by handleUploadListings.
 function buildListingUpsertStmt(env, key, r) {
 	// availableSince is intentionally NOT in the ON CONFLICT...DO UPDATE SET
 	// list below — SQLite only applies the bound value on a genuine INSERT;
 	// an existing row keeps whatever it already had regardless of what's
-	// bound here. r.submittedAt (present on a pendingRareApprovals row being
-	// approved) reflects when the item was actually first submitted, which is
-	// more accurate than "now" (the approval moment) for a held rare item.
+	// bound here.
 	const availableSince = r.submittedAt || new Date().toISOString();
 	return env.DB.prepare(
 		`INSERT INTO listings (rowKey, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen, availableSince, missingStreak)
@@ -393,34 +379,6 @@ async function getBlockedSellerSet(env, sellers) {
 // local copy of data/rare-items.json) and cached in module scope for
 // RARE_NAMES_CACHE_TTL_MS — same "fetch cross-origin, cache briefly"
 // approach computeDailySnapshots() already uses for the item-lang table.
-// NOTE: the existing `rareItems` D1 table is NOT this catalog — it's an
-// unrelated admin-curated "spotted on this world" list (see
-// handleGetRareItems / generate-backfill.js), not tied to the site's rare
-// item pages at all.
-const RARE_ITEMS_CATALOG_URL = "https://sctp.nl/data/rare-items.json";
-const RARE_NAMES_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-let rareNameSetCache = { names: null, fetchedAt: 0 };
-
-async function getRareNameSet() {
-	const now = Date.now();
-	if (rareNameSetCache.names && now - rareNameSetCache.fetchedAt < RARE_NAMES_CACHE_TTL_MS) {
-		return rareNameSetCache.names;
-	}
-	try {
-		const res = await fetch(RARE_ITEMS_CATALOG_URL);
-		if (res.ok) {
-			const catalog = await res.json();
-			const names = new Set(catalog.map((e) => String(e.name || "").trim().toLowerCase()));
-			rareNameSetCache = { names, fetchedAt: now };
-			return names;
-		}
-	} catch (e) {
-		// fall through to a stale cache below
-	}
-	// A failed fetch reuses whatever we last had rather than treating every
-	// item as "not rare," which would silently bypass the approval hold.
-	return rareNameSetCache.names || new Set();
-}
 
 // ---------------- admin auth: multi-account + granular permissions ----------------
 //
@@ -430,7 +388,7 @@ async function getRareNameSet() {
 // granted. The old shared ADMIN_KEY master-key bypass was removed once real
 // accounts existed — see requireAnyAdmin.
 const ADMIN_PERMISSION_BUCKETS = new Set([
-	"reports", "sharedShopRequests", "faq", "worldMap", "manualListings", "blockedSellers", "rareApprovals", "marketplaceListings", "updateNotice",
+	"reports", "sharedShopRequests", "faq", "worldMap", "manualListings", "blockedSellers", "marketplaceListings", "updateNotice",
 	"suggestions", "bugReports", "playerReports",
 ]);
 
@@ -919,7 +877,6 @@ async function blockSellerAndWipe(env, username, reason, blockedBy) {
 
 	// A block takes effect immediately, not just for future uploads.
 	await env.DB.prepare("DELETE FROM listings WHERE lower(seller) = ?").bind(usernameKey).run();
-	await env.DB.prepare("DELETE FROM pendingRareApprovals WHERE lower(seller) = ?").bind(usernameKey).run();
 }
 
 async function handleAdminBlockSeller(request, env) {
@@ -962,44 +919,6 @@ async function handleAdminUnblockSeller(request, env) {
 	return json({ ok: true });
 }
 
-// ---------------- rare-item price-approval queue ----------------
-
-async function handleAdminListRareApprovals(request, env) {
-	const auth = await requireAdminAuth(request, env, "rareApprovals");
-	if (!auth.ok) return auth.response;
-	const { results } = await env.DB.prepare("SELECT * FROM pendingRareApprovals ORDER BY submittedAt").all();
-	return json(results.map((r) => ({ ...r, bulk: !!r.bulk, bundled: !!r.bundled, mixedContents: !!r.mixedContents })));
-}
-
-async function handleAdminResolveRareApproval(request, env) {
-	const auth = await requireAdminAuth(request, env, "rareApprovals");
-	if (!auth.ok) return auth.response;
-
-	let body;
-	try {
-		body = await request.json();
-	} catch (e) {
-		return json({ error: "Invalid JSON body" }, 400);
-	}
-	const id = String(body.id || "");
-	const action = String(body.action || "");
-	if (!id) return json({ error: "id is required" }, 400);
-	if (!["approve", "deny"].includes(action)) return json({ error: "Invalid action" }, 400);
-
-	try {
-		const pending = await env.DB.prepare("SELECT * FROM pendingRareApprovals WHERE id = ?").bind(id).first();
-		if (!pending) return json({ error: "Not found" }, 404);
-
-		if (action === "approve") {
-			await buildListingUpsertStmt(env, pending.rowKey, pending).run();
-		}
-		await env.DB.prepare("DELETE FROM pendingRareApprovals WHERE id = ?").bind(id).run();
-		return json({ ok: true });
-	} catch (e) {
-		return json({ error: String(e) }, 502);
-	}
-}
-
 async function handleUploadListings(request, env) {
 	if (!isAuthorized(request, env.API_KEY)) return json({ error: "Unauthorized" }, 401);
 
@@ -1023,75 +942,20 @@ async function handleUploadListings(request, env) {
 	const validScannedPositions = scannedPositionsIn.filter((sp) => sp && sp.world && sp.position);
 	const scannedSet = new Set(validScannedPositions.map((sp) => positionKey(sp.world, sp.position)));
 
-	let added = 0, updated = 0, skipped = 0, removed = 0, heldForApproval = 0;
+	let added = 0, updated = 0, skipped = 0, removed = 0;
 	try {
 		const blockedSet = await getBlockedSellerSet(env, incoming.map((r) => r && r.seller));
-		const rareNames = await getRareNameSet();
 
 		const validRows = [];
-		// Rare items (data/rare-items.json) priced at exactly 1-2 diamond go to
-		// pendingRareApprovals instead of straight into `listings` — but only
-		// the FIRST time: once a rowKey has already been approved once (i.e.
-		// it's already sitting in `listings`), later re-scans of the same
-		// unchanged listing just update it normally instead of re-holding it
-		// forever. rareHoldCandidates collects the ones that MIGHT need
-		// holding; which of them actually do gets decided just below, once we
-		// know which of their keys already exist in `listings`.
-		const rareHoldCandidates = [];
 		for (const r of incoming) {
 			if (!r.itemName || !r.seller || !r.world) { skipped++; continue; }
 			if (isBannedItem(r.baseItem, r.itemName)) { skipped++; continue; }
 			if (isPaymentItem(r.baseItem, r.currency)) { skipped++; continue; }
 			if (blockedSet.has(String(r.seller).toLowerCase())) { skipped++; continue; }
-
-			const key = rowKey(r);
-			const isCheapRare = String(r.currency || "").toLowerCase() === "diamond"
-				&& (r.price === 1 || r.price === 2)
-				&& rareNames.has(String(r.itemName || "").trim().toLowerCase());
-
-			if (isCheapRare) {
-				rareHoldCandidates.push({ ...r, _key: key });
-			} else {
-				validRows.push({ ...r, _key: key });
-			}
+			validRows.push({ ...r, _key: rowKey(r) });
 		}
 
 		const stmts = [];
-
-		if (rareHoldCandidates.length > 0) {
-			const candidateKeys = [...new Set(rareHoldCandidates.map((r) => r._key))];
-			// Chunks are independent reads — firing them concurrently instead of
-			// awaiting one at a time inside the loop cuts a big upload's total
-			// round-trip time from O(chunks) sequential waits down to about one.
-			const candidateChunks = await Promise.all(chunkArray(candidateKeys, MAX_QUERY_PARAMS_PER_CHUNK).map((chunk) => {
-				const placeholders = chunk.map(() => "?").join(",");
-				return env.DB.prepare(`SELECT rowKey FROM listings WHERE rowKey IN (${placeholders})`).bind(...chunk).all();
-			}));
-			const alreadyApproved = new Set();
-			for (const res of candidateChunks) for (const row of res.results) alreadyApproved.add(row.rowKey);
-			const submittedAt = new Date().toISOString();
-			for (const r of rareHoldCandidates) {
-				if (alreadyApproved.has(r._key)) {
-					validRows.push(r); // already vetted once — flows through normally from here
-					continue;
-				}
-				heldForApproval++;
-				stmts.push(env.DB.prepare(
-					`INSERT INTO pendingRareApprovals (id, rowKey, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen, submittedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-					 ON CONFLICT(id) DO UPDATE SET
-					   itemName=excluded.itemName, baseItem=excluded.baseItem, bulk=excluded.bulk, bundled=excluded.bundled,
-					   mixedContents=excluded.mixedContents, price=excluded.price, priceLabel=excluded.priceLabel,
-					   stackSize=excluded.stackSize, amount=excluded.amount, stacksInStock=excluded.stacksInStock,
-					   currency=excluded.currency, seller=excluded.seller, world=excluded.world,
-					   position=excluded.position, lastSeen=excluded.lastSeen, submittedAt=excluded.submittedAt`
-				).bind(
-					r._key, r._key, r.itemName, r.baseItem, r.bulk ? 1 : 0, r.bundled ? 1 : 0, r.mixedContents ? 1 : 0,
-					r.price, r.priceLabel, r.stackSize, r.amount, r.stacksInStock,
-					r.currency, r.seller, r.world, r.position, r.lastSeen, submittedAt
-				));
-			}
-		}
 
 		if (validRows.length > 0) {
 			// Look up existing lastSeen for these keys so an older/duplicate
@@ -1164,11 +1028,11 @@ async function handleUploadListings(request, env) {
 
 		if (stmts.length > 0) await env.DB.batch(stmts);
 
-		if (added === 0 && updated === 0 && removed === 0 && heldForApproval === 0) {
-			return json({ added: 0, updated: 0, skipped, removed: 0, heldForApproval: 0, committed: false });
+		if (added === 0 && updated === 0 && removed === 0) {
+			return json({ added: 0, updated: 0, skipped, removed: 0, committed: false });
 		}
 		const totalRow = await env.DB.prepare("SELECT COUNT(*) as c FROM listings").first();
-		return json({ added, updated, skipped, removed, heldForApproval, total: totalRow.c, committed: true });
+		return json({ added, updated, skipped, removed, total: totalRow.c, committed: true });
 	} catch (e) {
 		return json({ error: String(e) }, 502);
 	}
@@ -1554,12 +1418,18 @@ async function handleGetNotificationsForMc(request, env) {
 }
 
 // Permission bucket "marketplaceListings" — moderation.
+// Search-based, not a full dump — an active-and-growing marketplace makes
+// "list everything" both slow and useless to scroll through. Same idea as
+// GET /admin/admins?username=.
 async function handleAdminListMarketplaceListings(request, env) {
 	const auth = await requireAdminAuth(request, env, "marketplaceListings");
 	if (!auth.ok) return auth.response;
+	const url = new URL(request.url);
+	const username = (url.searchParams.get("username") || "").trim();
+	if (!username) return json([]);
 	const { results } = await env.DB.prepare(
-		"SELECT ml.*, a.username AS accountUsername FROM marketplaceListings ml JOIN admins a ON a.id = ml.accountId ORDER BY ml.createdAt DESC"
-	).all();
+		"SELECT ml.*, a.username AS accountUsername FROM marketplaceListings ml JOIN admins a ON a.id = ml.accountId WHERE lower(a.username) = lower(?) ORDER BY ml.createdAt DESC"
+	).bind(username).all();
 	return json(results);
 }
 
@@ -2951,8 +2821,6 @@ const ROUTES = [
 	["GET", "/admin/blocked-sellers", handleAdminListBlockedSellers],
 	["POST", "/admin/blocked-sellers/add", handleAdminBlockSeller],
 	["POST", "/admin/blocked-sellers/remove", handleAdminUnblockSeller],
-	["GET", "/admin/rare-approvals", handleAdminListRareApprovals],
-	["POST", "/admin/rare-approvals/resolve", handleAdminResolveRareApproval],
 	["POST", "/admin/admins/set-mc", handleAdminSetMc],
 	["GET", "/marketplace/listings", handleGetMarketplaceListings],
 	["POST", "/marketplace/listings/create", handleCreateMarketplaceListing],
