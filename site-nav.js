@@ -24,7 +24,8 @@
 		{ href: "/", label: "Home" },
 		{ href: "/items/", label: "Items" },
 		{ href: "/list/", label: "Build List" },
-		{ href: "/marketplace/", label: "Marketplace" },
+		{ href: "/marketplace/", label: "Marketplace", isNew: true,
+			newPopup: "<strong>&#10024; New: the Marketplace!</strong>Buy, sell &amp; trade directly with other players &mdash; post listings, take bids, get notified.<span class=\"site-nav-new-cta-row\"><a href=\"/register/\">Register your account &rarr;</a></span>" },
 		{ href: "/stats/", label: "Stats" },
 		{ href: "/roadmap/", label: "Roadmap" },
 		{ href: "/docs/", label: "Info" },
@@ -55,6 +56,31 @@
 			".site-nav-links.open{display:flex;}" +
 			".site-nav-links a{padding:10px 12px;border-radius:6px;font-size:14px;}" +
 			".site-nav-links a:hover{background:var(--panel-alt,#22332A);}" +
+		"}" +
+		// "New feature" highlight — a pulsing badge that's always animating (not
+		// just on hover) so it actually catches the eye while scanning the nav,
+		// plus a rich hover popup explaining what's new and nudging toward
+		// registering. The popup is a sibling of the <a>, not nested inside it —
+		// anchors can't nest, and this one needs its own real, independently
+		// clickable "Register" link.
+		".site-nav-new-wrap{position:relative;display:inline-flex;align-items:center;}" +
+		".site-nav-new-badge{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:999px;background:linear-gradient(135deg,var(--accent,#B7E23D),#6FE3C8);color:var(--accent-ink,#16210F);font-size:10px;font-weight:800;letter-spacing:0.04em;line-height:1.3;vertical-align:2px;box-shadow:0 0 0 rgba(183,226,61,0.6);animation:siteNavNewPulse 1.8s ease-in-out infinite;}" +
+		"@keyframes siteNavNewPulse{" +
+			"0%{transform:scale(1);box-shadow:0 0 0 0 rgba(183,226,61,0.55);}" +
+			"50%{transform:scale(1.12);box-shadow:0 0 8px 3px rgba(183,226,61,0.35);}" +
+			"100%{transform:scale(1);box-shadow:0 0 0 0 rgba(183,226,61,0);}" +
+		"}" +
+		".site-nav-new-popup{position:absolute;top:calc(100% + 10px);right:0;width:250px;max-width:calc(100vw - 40px);background:var(--panel,#1B2A20);border:1px solid var(--accent,#B7E23D);border-radius:12px;padding:14px;font-size:12.5px;line-height:1.5;color:var(--text,#EAEFE7);box-shadow:0 10px 30px rgba(0,0,0,0.45),0 0 22px rgba(183,226,61,0.25);opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .18s ease,transform .18s ease,visibility .18s;z-index:100;text-align:left;white-space:normal;pointer-events:none;}" +
+		".site-nav-new-wrap:hover .site-nav-new-popup{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto;}" +
+		".site-nav-new-popup strong{display:block;margin-bottom:6px;color:var(--accent,#B7E23D);font-size:13.5px;}" +
+		".site-nav-new-cta-row{display:block;margin-top:10px;}" +
+		".site-nav-new-cta-row a{display:inline-block;padding:6px 10px;border-radius:8px;background:var(--accent,#B7E23D);color:var(--accent-ink,#16210F)!important;font-weight:700;font-size:12px;}" +
+		".site-nav-new-cta-row a:hover{background:var(--accent-dim,#87AE29);}" +
+		// Mobile dropdown: the wrap needs to behave as a full-width row like
+		// every other link there, and the popup anchors below it the same way.
+		"@media (max-width:" + MOBILE_BREAKPOINT + "px){" +
+			".site-nav-new-wrap{display:flex;width:100%;}" +
+			".site-nav-new-popup{right:6px;}" +
 		"}";
 	document.head.appendChild(style);
 
@@ -75,7 +101,13 @@
 		if (!mount) return;
 		var linksHtml = LINKS.map(function (l) {
 			var attrs = l.requireAuth ? " data-require-auth hidden" : "";
-			return '<a href="' + l.href + '"' + (isActive(l.href) ? ' class="active"' : "") + attrs + ">" + l.label + "</a>";
+			var link = '<a href="' + l.href + '"' + (isActive(l.href) ? ' class="active"' : "") + attrs + ">" + l.label
+				+ (l.isNew ? '<span class="site-nav-new-badge">NEW</span>' : "") + "</a>";
+			if (!l.isNew) return link;
+			// Wrapped (not nested — anchors can't nest) so the popup's own
+			// "Register" link stays independently clickable. See the CSS above.
+			return '<span class="site-nav-new-wrap"' + (l.requireAuth ? " data-require-auth hidden" : "") + '>' + link
+				+ '<div class="site-nav-new-popup">' + (l.newPopup || "") + '</div></span>';
 		}).join("");
 
 		mount.innerHTML =
