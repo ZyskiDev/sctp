@@ -23,7 +23,7 @@
 	var LINKS = [
 		{ href: "/", label: "Home" },
 		{ href: "/items/", label: "Items" },
-		{ href: "/list/", label: "Build List" },
+		{ href: "/list/", label: "List" },
 		{ href: "/marketplace/", label: "Marketplace", isNew: true,
 			newPopup: "<strong>&#10024; New: the Marketplace!</strong>Buy, sell &amp; trade directly with other players &mdash; post listings, take bids, get notified.<span class=\"site-nav-new-cta-row\"><a href=\"/register/\">Register your account &rarr;</a></span>" },
 		{ href: "/stats/", label: "Stats" },
@@ -64,6 +64,13 @@
 		// anchors can't nest, and this one needs its own real, independently
 		// clickable "Register" link.
 		".site-nav-new-wrap{position:relative;display:inline-flex;align-items:center;}" +
+		// The link text itself gets an animated gradient fill (not just the
+		// badge) — #siteNavMount-prefixed so this beats the plain a:hover/
+		// a.active color rule above regardless of hover/active state.
+		"#siteNavMount a.site-nav-new-link,#siteNavMount a.site-nav-new-link:hover,#siteNavMount a.site-nav-new-link.active{" +
+			"background:linear-gradient(90deg,#B7E23D,#6FE3C8,#4FC3F7,#B7E23D);background-size:300% auto;" +
+			"-webkit-background-clip:text;background-clip:text;color:transparent;animation:siteNavGradientShift 3s linear infinite;}" +
+		"@keyframes siteNavGradientShift{0%{background-position:0% center;}100%{background-position:300% center;}}" +
 		".site-nav-new-badge{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:999px;background:linear-gradient(135deg,var(--accent,#B7E23D),#6FE3C8);color:var(--accent-ink,#16210F);font-size:10px;font-weight:800;letter-spacing:0.04em;line-height:1.3;vertical-align:2px;box-shadow:0 0 0 rgba(183,226,61,0.6);animation:siteNavNewPulse 1.8s ease-in-out infinite;}" +
 		"@keyframes siteNavNewPulse{" +
 			"0%{transform:scale(1);box-shadow:0 0 0 0 rgba(183,226,61,0.55);}" +
@@ -101,7 +108,8 @@
 		if (!mount) return;
 		var linksHtml = LINKS.map(function (l) {
 			var attrs = l.requireAuth ? " data-require-auth hidden" : "";
-			var link = '<a href="' + l.href + '"' + (isActive(l.href) ? ' class="active"' : "") + attrs + ">" + l.label
+			var classes = (l.isNew ? "site-nav-new-link " : "") + (isActive(l.href) ? "active" : "");
+			var link = '<a href="' + l.href + '"' + (classes.trim() ? ' class="' + classes.trim() + '"' : "") + attrs + ">" + l.label
 				+ (l.isNew ? '<span class="site-nav-new-badge">NEW</span>' : "") + "</a>";
 			if (!l.isNew) return link;
 			// Wrapped (not nested — anchors can't nest) so the popup's own
