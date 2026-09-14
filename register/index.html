@@ -24,6 +24,8 @@
 	.brand-row{display:flex;align-items:center;gap:12px;min-width:0;}
 	.brand-mark{flex:0 0 auto;width:34px;height:34px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-size:17px;}
 	header.site h1{font-family:var(--font-display);font-weight:600;font-size:23px;margin:0;}
+	.back-link{flex:0 0 auto;color:var(--shell);text-decoration:none;font-size:14px;font-weight:600;border:1px solid var(--line);border-radius:8px;padding:8px 14px;}
+	.back-link:hover{color:var(--accent);border-color:var(--accent-dim);}
 
 	main{padding:36px 0 60px;}
 	.steps{display:flex;gap:6px;margin-bottom:24px;}
@@ -74,7 +76,7 @@
 			<div class="brand-mark">📝</div>
 			<h1>Register</h1>
 		</div>
-		<nav id="siteNavMount"></nav>
+		<a href="../" class="back-link">&larr; Back</a>
 	</div>
 </header>
 
@@ -141,7 +143,6 @@
 	<div class="wrap">Already have an account? <a href="../">Log in from the homepage.</a> · <a href="#" id="cantVerifyLink">Can't verify?</a></div>
 </footer>
 
-<script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
 <script>
 (function(){
