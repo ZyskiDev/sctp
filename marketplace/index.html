@@ -434,7 +434,11 @@
 		document.body.appendChild(wrap);
 		attachItemAutocomplete(document.getElementById("nlItem"));
 		document.getElementById("nlCancel").onclick = function(){ wrap.remove(); };
-		wrap.addEventListener("click", function(e){ if(e.target === wrap) wrap.remove(); });
+		// Deliberately no outside-click-to-close here (unlike other modals on
+		// this page) — this form has enough fields that an accidental click on
+		// the backdrop (or a drag-select that ends up outside it) shouldn't
+		// silently discard everything typed. Only Cancel or a successful submit
+		// close it.
 
 		function renderPriceFields(){
 			var area = document.getElementById("nlPriceFields");

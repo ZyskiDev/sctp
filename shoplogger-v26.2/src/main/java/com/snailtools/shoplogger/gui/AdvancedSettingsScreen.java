@@ -20,6 +20,13 @@ import net.minecraft.network.chat.Component;
  */
 public class AdvancedSettingsScreen extends Screen {
 
+	private static final int ROW_COUNT = 6; // chat log format, cooldown field, beam style, /search opens, shop info on visit, Back
+	private static final int NATURAL_GAP = 24;
+	private static final int MIN_GAP = 16; // never shrink spacing below this — rows start overlapping past this point
+	private static final int TOP_Y = 50;
+	private static final int BOTTOM_MARGIN = 10;
+	private static final int COL_W = 220;
+
 	private final Screen parent;
 	private EditBox cooldownField;
 
@@ -28,23 +35,36 @@ public class AdvancedSettingsScreen extends Screen {
 		this.parent = parent;
 	}
 
+	/** Same idea as SettingsScreen's computeLayout() — single source of truth for row Ys, so "does this fit?" and the real placement can't disagree. */
+	private int[] computeRowY(int gap) {
+		int[] rowY = new int[ROW_COUNT];
+		int y = TOP_Y;
+		for (int i = 0; i < ROW_COUNT; i++) {
+			rowY[i] = y;
+			// Extra room after rows 0 and 1 (the cooldown field's own label is
+			// drawn 10px above it, so both it and the row before it need a
+			// bigger gap than usual to avoid overlapping that label) and after
+			// row 4, before Back, for the same visual grouping the screen had
+			// before this became data-driven.
+			y += (i == 0 || i == 1 || i == 4) ? gap + 12 : gap;
+		}
+		return rowY;
+	}
+
 	@Override
 	protected void init() {
-		int colW = 220;
-		int x = width / 2 - colW / 2;
-		int gap = 24;
-		int y = 50;
+		int x = width / 2 - COL_W / 2;
+
+		int gap = NATURAL_GAP;
+		while (gap > MIN_GAP && computeRowY(gap)[ROW_COUNT - 1] + 20 > height - BOTTOM_MARGIN) gap--;
+		int[] rowY = computeRowY(gap);
 
 		addRenderableWidget(CycleButton.builder((Boolean v) -> Component.literal(v ? "Single line" : "Multiple lines"), ScanChatLogger.isSingleLine())
 				.withValues(Boolean.FALSE, Boolean.TRUE)
-				.create(x, y, colW, 20, Component.literal("Chat log format"),
+				.create(x, rowY[0], COL_W, 20, Component.literal("Chat log format"),
 						(btn, value) -> ScanChatLogger.setSingleLine(value)));
-		// Extra room here (vs. the plain "gap" used elsewhere) because the
-		// cooldown field's label is drawn 10px above it — a plain gap would
-		// leave that label overlapping this row's button.
-		y += gap + 12;
 
-		cooldownField = new EditBox(font, x, y, colW, 20, Component.literal("Cooldown (minutes)"));
+		cooldownField = new EditBox(font, x, rowY[1], COL_W, 20, Component.literal("Cooldown (minutes)"));
 		cooldownField.setValue(Integer.toString((int) (ShopAutoScanner.getPerShopCooldownMs() / 60000L)));
 		cooldownField.setResponder(s -> {
 			try {
@@ -55,27 +75,23 @@ public class AdvancedSettingsScreen extends Screen {
 			}
 		});
 		addRenderableWidget(cooldownField);
-		y += gap + 12;
 
 		addRenderableWidget(CycleButton.builder((TeleportHighlight.BeamStyle v) -> Component.literal(v.label), TeleportHighlight.getStyle())
 				.withValues(TeleportHighlight.BeamStyle.values())
-				.create(x, y, colW, 20, Component.literal("Teleport beam style"),
+				.create(x, rowY[2], COL_W, 20, Component.literal("Teleport beam style"),
 						(btn, value) -> TeleportHighlight.setStyle(value)));
-		y += gap;
 
 		addRenderableWidget(CycleButton.builder((Boolean v) -> Component.literal(v ? "GUI" : "Chat"), SearchPreferences.isGuiSearch())
 				.withValues(Boolean.TRUE, Boolean.FALSE)
-				.create(x, y, colW, 20, Component.literal("/search opens"),
+				.create(x, rowY[3], COL_W, 20, Component.literal("/search opens"),
 						(btn, value) -> SearchPreferences.setGuiSearch(value)));
-		y += gap;
 
 		addRenderableWidget(CycleButton.onOffBuilder(ShopVisitAlert.isShopInfoOnVisitEnabled())
-				.create(x, y, colW, 20, Component.literal("Shop info on visit"),
+				.create(x, rowY[4], COL_W, 20, Component.literal("Shop info on visit"),
 						(btn, value) -> ShopVisitAlert.setShopInfoOnVisitEnabled(value)));
-		y += gap + 12;
 
 		addRenderableWidget(Button.builder(Component.literal("Back"), btn -> onClose())
-				.bounds(x, y, colW, 20).build());
+				.bounds(x, rowY[5], COL_W, 20).build());
 	}
 
 	@Override

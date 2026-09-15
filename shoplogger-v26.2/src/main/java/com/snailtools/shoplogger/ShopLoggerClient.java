@@ -216,6 +216,7 @@ public class ShopLoggerClient implements ClientModInitializer {
 			WorldDetector.getInstance().tick(client);
 			WatchlistJoinCheck.tick(client);
 			UpdateNoticeCheck.tick(client);
+			ShopVisitAlert.tick(client);
 			QolHookManager.onTick();
 
 			if (exportKey != null && exportKey.consumeClick()) {

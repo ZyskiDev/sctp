@@ -236,7 +236,10 @@ public class ShopAutoScanner implements SilentScreenCoordinator.Listener {
 			}
 			ScanChatLogger.maybePrint(client, entries);
 			OwnShopSaleTracker.check(client, armedSign, armedContainerPos, handler, world != null ? world.label() : null);
-			if (world != null) ShopVisitAlert.maybeAlert(client, world.label(), armedSign.seller());
+			if (world != null) {
+				ShopVisitAlert.maybeAlert(client, world.label(), armedSign.seller());
+				ShopVisitAlert.maybeSendShopInfo(world.label(), armedSign.seller());
+			}
 			WatchlistAlert.maybeAlert(client, entries);
 		}
 

@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
@@ -86,13 +87,6 @@ public final class ShopVisitAlert {
 		// UPLOAD_LAG_GRACE_MS — see its comment for why.
 		Config.update(key, now + UPLOAD_LAG_GRACE_MS);
 
-		// Rides the same per-(world, seller) cooldown gate as the "what's new"
-		// check above — fires on every qualifying visit, including the very
-		// first (unlike the new-item comparison, there's nothing to wait on).
-		if (isShopInfoOnVisitEnabled() && client.getConnection() != null) {
-			client.getConnection().sendCommand("shops plot info");
-		}
-
 		if (firstVisit) return; // nothing to compare against yet — just start tracking
 
 		long previousVisit = stored;
@@ -136,6 +130,49 @@ public final class ShopVisitAlert {
 		List<String> ordered = new ArrayList<>(newRares); // rares first
 		ordered.addAll(newOthers);
 		ChatFormat.send(client, ChatFormat.SUCCESS, "New at " + seller + "'s shop: " + String.join(", ", ordered));
+	}
+
+	// ---------------- shop info on visit ----------------
+	// Deliberately independent of the "what's new" check above: its own
+	// toggle, its own per-(world, seller) cooldown/config namespace, and not
+	// nested inside maybeAlert() — so it fires on its own regardless of
+	// whether "New-item alerts" is enabled, and isn't skipped by that check's
+	// early-return. Delayed by SHOP_INFO_DELAY_MS so it doesn't fire the
+	// instant a container's opened, before the client's even settled.
+
+	private static final long SHOP_INFO_COOLDOWN_MS = 60 * 60 * 1000L; // 1 hour, same idea as COOLDOWN_MS but its own clock
+	private static final long SHOP_INFO_DELAY_MS = 2000L;
+	private static final List<Long> pendingShopInfoFireTimes = new ArrayList<>();
+
+	private static String shopInfoConfigKey(String world, String seller) {
+		return "shopInfoOnVisit/lastRun/" + world.toLowerCase(Locale.ROOT) + "|" + seller.toLowerCase(Locale.ROOT);
+	}
+
+	/** Call after any scan (manual or silent) that read a valid sign — same call sites as maybeAlert(), but entirely separate state/gating. */
+	public static void maybeSendShopInfo(String world, String seller) {
+		if (world == null || seller == null || !isShopInfoOnVisitEnabled()) return;
+
+		String key = shopInfoConfigKey(world, seller);
+		long now = System.currentTimeMillis();
+		Long last = Config.get(key, Long.class);
+		if (last != null && now - last < SHOP_INFO_COOLDOWN_MS) return;
+		Config.update(key, now);
+
+		pendingShopInfoFireTimes.add(now + SHOP_INFO_DELAY_MS);
+	}
+
+	/** Call every client tick — fires any queued "shops plot info" command whose delay has elapsed. */
+	public static void tick(Minecraft client) {
+		if (pendingShopInfoFireTimes.isEmpty() || client.getConnection() == null) return;
+		long now = System.currentTimeMillis();
+		Iterator<Long> it = pendingShopInfoFireTimes.iterator();
+		while (it.hasNext()) {
+			long fireAt = it.next();
+			if (now >= fireAt) {
+				client.getConnection().sendCommand("shops plot info");
+				it.remove();
+			}
+		}
 	}
 
 	private static boolean isRareItem(String itemName, List<RareItem> rareCatalog) {

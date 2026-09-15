@@ -79,7 +79,10 @@ public class ShopScanner {
 			// rescan cooldown); that tracking is for the silent auto-scan path only.
 			ScanChatLogger.maybePrint(client, entries);
 			OwnShopSaleTracker.check(client, sign, containerPos, handler, world != null ? world.label() : null);
-			if (world != null) ShopVisitAlert.maybeAlert(client, world.label(), sign.seller());
+			if (world != null) {
+				ShopVisitAlert.maybeAlert(client, world.label(), sign.seller());
+				ShopVisitAlert.maybeSendShopInfo(world.label(), sign.seller());
+			}
 			WatchlistAlert.maybeAlert(client, entries);
 		}
 	}
