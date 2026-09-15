@@ -121,6 +121,7 @@
 //     -> currency fields must be one of MARKETPLACE_CURRENCIES ("diamond"|"diamondblock"|"diamondstack" — dia/db/stx in the UI)
 //   POST /marketplace/listings/cancel             body: {id} -> owner only
 //   POST /marketplace/bids/place                  body: {listingId, amount, currency, message?} -> currency must be one of MARKETPLACE_CURRENCIES
+//     works on both "selling" (a buyer's bid) and "lookingFor" (a seller offering to sell at that price) listings
 //   POST /marketplace/bids/withdraw                body: {bidId} -> bidder only
 //   POST /marketplace/bids/accept                 body: {bidId} -> listing owner only, rejects every other pending bid
 //   POST /marketplace/bids/reject                 body: {bidId} -> listing owner only
@@ -1256,8 +1257,8 @@ async function handlePlaceBid(request, env) {
 	if (!MARKETPLACE_CURRENCIES.has(currency)) return json({ error: "currency must be diamond, diamondblock, or diamondstack" }, 400);
 
 	const listing = await env.DB.prepare("SELECT * FROM marketplaceListings WHERE id = ?").bind(listingId).first();
-	if (!listing || listing.status !== "active" || listing.type !== "selling") return json({ error: "That listing isn't open for bids" }, 400);
-	if (listing.accountId === auth.admin.id) return json({ error: "You can't bid on your own listing" }, 400);
+	if (!listing || listing.status !== "active") return json({ error: "That listing isn't open for offers" }, 400);
+	if (listing.accountId === auth.admin.id) return json({ error: "You can't respond to your own listing" }, 400);
 
 	const id = newId();
 	const createdAt = new Date().toISOString();
@@ -1265,7 +1266,13 @@ async function handlePlaceBid(request, env) {
 		"INSERT INTO marketplaceBids (id, listingId, bidderAccountId, amount, currency, message, createdAt, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')"
 	).bind(id, listingId, auth.admin.id, amount, currency, message, createdAt).run();
 
-	await notifyAccount(env, listing.accountId, "newBid", `${auth.admin.username} bid ${amount} ${currency} on your ${listing.itemName} listing.`, listingId);
+	// Same "bid" row/mechanism works in both directions: on a "selling" post
+	// it's a buyer's bid; on a "lookingFor" post it's someone offering to
+	// sell at that price — only the notification wording differs.
+	const notifyMsg = listing.type === "lookingFor"
+		? `${auth.admin.username} offered to sell you ${listing.itemName} for ${amount} ${currency}.`
+		: `${auth.admin.username} bid ${amount} ${currency} on your ${listing.itemName} listing.`;
+	await notifyAccount(env, listing.accountId, "newBid", notifyMsg, listingId);
 	return json({ ok: true, id });
 }
 
@@ -1313,14 +1320,23 @@ async function handleAcceptBid(request, env) {
 	await env.DB.batch(stmts);
 
 	const bidder = await env.DB.prepare("SELECT * FROM admins WHERE id = ?").bind(bid.bidderAccountId).first();
+	// On a "selling" post the poster is the seller and the responder is the
+	// buyer; on a "lookingFor" post those roles are swapped (the poster is
+	// the one looking to buy, the responder offered to sell) — same accept
+	// flow either way, just the "who's who" in the notification text.
+	const posterIsBuyer = listing.type === "lookingFor";
+	const posterRole = posterIsBuyer ? "buyer" : "seller";
+	const responderRole = posterIsBuyer ? "seller" : "buyer";
+	const offerWord = posterIsBuyer ? "offer" : "bid";
+	const offerArticle = posterIsBuyer ? "an" : "a";
 	await notifyAccount(env, bid.bidderAccountId, "bidAccepted",
-		`Your bid of ${bid.amount} ${bid.currency} on ${listing.itemName} was accepted! Contact the seller via:\n${contactInfoText(auth.admin)}`, listing.id);
+		`Your ${offerWord} of ${bid.amount} ${bid.currency} on ${listing.itemName} was accepted! Contact the ${posterRole} via:\n${contactInfoText(auth.admin)}`, listing.id);
 	if (bidder) {
 		await notifyAccount(env, auth.admin.id, "bidAcceptedConfirmation",
-			`You accepted a bid on ${listing.itemName}! Contact the buyer via:\n${contactInfoText(bidder)}`, listing.id);
+			`You accepted ${offerArticle} ${offerWord} on ${listing.itemName}! Contact the ${responderRole} via:\n${contactInfoText(bidder)}`, listing.id);
 	}
 	for (const ob of otherBids) {
-		await notifyAccount(env, ob.bidderAccountId, "bidRejected", `Your bid on ${listing.itemName} wasn't selected — the seller accepted another offer.`, listing.id);
+		await notifyAccount(env, ob.bidderAccountId, "bidRejected", `Your ${offerWord} on ${listing.itemName} wasn't selected — the ${posterRole} accepted another offer.`, listing.id);
 	}
 	return json({ ok: true });
 }
@@ -1338,8 +1354,9 @@ async function handleRejectBid(request, env) {
 	const listing = await env.DB.prepare("SELECT * FROM marketplaceListings WHERE id = ?").bind(bid.listingId).first();
 	if (!listing || listing.accountId !== auth.admin.id) return json({ error: "Not your listing" }, 403);
 
+	const offerWord = listing.type === "lookingFor" ? "offer" : "bid";
 	await env.DB.prepare("UPDATE marketplaceBids SET status = 'rejected' WHERE id = ?").bind(bidId).run();
-	await notifyAccount(env, bid.bidderAccountId, "bidRejected", `Your bid of ${bid.amount} ${bid.currency} on ${listing.itemName} was declined.`, listing.id);
+	await notifyAccount(env, bid.bidderAccountId, "bidRejected", `Your ${offerWord} of ${bid.amount} ${bid.currency} on ${listing.itemName} was declined.`, listing.id);
 	return json({ ok: true });
 }
 

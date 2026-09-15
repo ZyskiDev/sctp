@@ -363,53 +363,55 @@
 			'<p class="lc-meta">Posted ' + esc(new Date(l.createdAt).toLocaleDateString()) + ' · expires ' + esc(new Date(l.expiresAt).toLocaleDateString()) + '</p>' +
 			'<div class="lc-price">' + esc(priceLine || "—") + '</div>' +
 			(l.notes ? '<p class="lc-notes">' + esc(l.notes) + '</p>' : '');
-		if(l.type === "selling"){
-			html += '<div id="bidPlaceArea"></div>';
-			html += '<h3 style="font-size:14px;margin:16px 0 8px;">Previous bids</h3><div id="bidListArea"></div>';
-		}
+		// A "selling" post takes bids (a buyer naming a price); a "lookingFor"
+		// post takes offers (a seller naming a price they'd sell for) — same
+		// underlying mechanism either way, just the wording flips.
+		var isLookingFor = l.type === "lookingFor";
+		var offerWord = isLookingFor ? "offer" : "bid";
+		var offerWordCap = isLookingFor ? "Offer" : "Bid";
+		html += '<div id="bidPlaceArea"></div>';
+		html += '<h3 style="font-size:14px;margin:16px 0 8px;">Previous ' + offerWord + 's</h3><div id="bidListArea"></div>';
 		html += '<div class="actions"><button type="button" class="btn-ghost" id="detailClose" style="width:100%;">Close</button></div></div>';
 		wrap.innerHTML = html;
 		document.body.appendChild(wrap);
 		document.getElementById("detailClose").onclick = function(){ wrap.remove(); };
 		wrap.addEventListener("click", function(e){ if(e.target === wrap) wrap.remove(); });
 
-		if(l.type === "selling"){
-			var placeArea = document.getElementById("bidPlaceArea");
-			if(!s){
-				placeArea.innerHTML = '<p class="lc-meta">Log in to place a bid.</p>';
-			} else {
-				placeArea.innerHTML =
-					'<div class="row2"><div class="field"><label>Your bid</label><input type="number" id="bidAmount" min="0" step="any"></div>' +
-					'<div class="field"><label>Currency</label>' + currencySelectHtml("bidCurrency", "diamond") + '</div></div>' +
-					'<div class="field"><label>Message (optional)</label><input type="text" id="bidMessage" maxlength="300"></div>' +
-					'<p class="err" id="bidErr" hidden></p>' +
-					'<button type="button" class="btn" style="width:100%;" id="bidSubmit">Place bid</button>';
-				document.getElementById("bidSubmit").onclick = function(){
-					var amount = Number(document.getElementById("bidAmount").value);
-					var currency = document.getElementById("bidCurrency").value;
-					var message = document.getElementById("bidMessage").value.trim();
-					var errEl = document.getElementById("bidErr");
-					errEl.hidden = true;
-					if(!amount || amount <= 0){ errEl.textContent = "Enter a positive bid amount."; errEl.hidden = false; return; }
-					authFetch("/marketplace/bids/place", { method: "POST", body: JSON.stringify({ listingId: l.id, amount: amount, currency: currency, message: message || undefined }) })
-						.then(function(res){
-							if(!res.ok){ errEl.textContent = res.data.error || "Couldn't place bid."; errEl.hidden = false; return; }
-							wrap.remove();
-							loadListings();
-						});
-				};
-			}
-			// Previous bids show amount/currency/message/status/time only — never
-			// who placed them. Full bidder identity is only ever visible to the
-			// listing's own owner, under My Marketplace.
-			var bidListArea = document.getElementById("bidListArea");
-			var history = l.bidHistory || [];
-			bidListArea.innerHTML = history.length
-				? history.map(function(b){
-					return '<div class="bid-row"><span>' + fmtNum(b.amount) + ' ' + esc(CURRENCY_LABELS[b.currency] || b.currency) + (b.message ? ' — "' + esc(b.message) + '"' : '') + '</span><span class="bid-status">' + esc(b.status) + '</span></div>';
-				}).join("")
-				: '<p class="lc-meta">No bids yet.</p>';
+		var placeArea = document.getElementById("bidPlaceArea");
+		if(!s){
+			placeArea.innerHTML = '<p class="lc-meta">Log in to place ' + (isLookingFor ? "an" : "a") + ' ' + offerWord + '.</p>';
+		} else {
+			placeArea.innerHTML =
+				'<div class="row2"><div class="field"><label>Your ' + offerWord + (isLookingFor ? " price" : "") + '</label><input type="number" id="bidAmount" min="0" step="any"></div>' +
+				'<div class="field"><label>Currency</label>' + currencySelectHtml("bidCurrency", "diamond") + '</div></div>' +
+				'<div class="field"><label>Message (optional)</label><input type="text" id="bidMessage" maxlength="300"></div>' +
+				'<p class="err" id="bidErr" hidden></p>' +
+				'<button type="button" class="btn" style="width:100%;" id="bidSubmit">' + offerWordCap + (isLookingFor ? " to sell" : "") + '</button>';
+			document.getElementById("bidSubmit").onclick = function(){
+				var amount = Number(document.getElementById("bidAmount").value);
+				var currency = document.getElementById("bidCurrency").value;
+				var message = document.getElementById("bidMessage").value.trim();
+				var errEl = document.getElementById("bidErr");
+				errEl.hidden = true;
+				if(!amount || amount <= 0){ errEl.textContent = "Enter a positive " + offerWord + " amount."; errEl.hidden = false; return; }
+				authFetch("/marketplace/bids/place", { method: "POST", body: JSON.stringify({ listingId: l.id, amount: amount, currency: currency, message: message || undefined }) })
+					.then(function(res){
+						if(!res.ok){ errEl.textContent = res.data.error || ("Couldn't place " + offerWord + "."); errEl.hidden = false; return; }
+						wrap.remove();
+						loadListings();
+					});
+			};
 		}
+		// Previous bids/offers show amount/currency/message/status/time only —
+		// never who placed them. Full identity is only ever visible to the
+		// listing's own owner, under My Marketplace.
+		var bidListArea = document.getElementById("bidListArea");
+		var history = l.bidHistory || [];
+		bidListArea.innerHTML = history.length
+			? history.map(function(b){
+				return '<div class="bid-row"><span>' + fmtNum(b.amount) + ' ' + esc(CURRENCY_LABELS[b.currency] || b.currency) + (b.message ? ' — "' + esc(b.message) + '"' : '') + '</span><span class="bid-status">' + esc(b.status) + '</span></div>';
+			}).join("")
+			: '<p class="lc-meta">No ' + offerWord + 's yet.</p>';
 	}
 
 	// ---------------- new listing modal ----------------
@@ -535,17 +537,18 @@
 		data.bidsReceived.forEach(function(b){ (bidsByListing[b.listingId] = bidsByListing[b.listingId] || []).push(b); });
 
 		var listingsHtml = data.listings.length ? data.listings.map(function(l){
+			var offerWord = l.type === "lookingFor" ? "offer" : "bid";
 			var received = (bidsByListing[l.id] || []);
 			var pending = received.filter(function(b){ return b.status === "pending"; });
 			var bidsHtml = pending.length ? pending.map(function(b){
 				return '<div class="bid-row"><span>' + fmtNum(b.amount) + ' ' + esc(CURRENCY_LABELS[b.currency] || b.currency) + (b.message ? ' — "' + esc(b.message) + '"' : '') + '</span>' +
 					(l.status === "active" ? '<span><button type="button" class="btn-ghost" data-accept-bid="' + esc(b.id) + '" style="margin-right:6px;">Accept</button><button type="button" class="btn-danger" data-reject-bid="' + esc(b.id) + '">Decline</button></span>' : '') +
 				'</div>';
-			}).join("") : '<p class="lc-meta">No pending bids.</p>';
+			}).join("") : '<p class="lc-meta">No pending ' + offerWord + 's.</p>';
 			return '<div class="listing-card" style="margin-bottom:12px;">' +
 				'<div class="lc-top"><h3>' + esc(l.itemName) + '</h3><span class="badge ' + (l.type === "selling" ? "selling" : "lookingfor") + '">' + esc(l.status) + '</span></div>' +
 				'<p class="lc-meta">' + esc(l.world) + ' · qty ' + fmtNum(l.quantity) + '</p>' +
-				(l.type === "selling" ? bidsHtml : '') +
+				bidsHtml +
 				(l.status === "active" ? '<button type="button" class="btn-danger" data-cancel-listing="' + esc(l.id) + '" style="margin-top:8px;">Cancel listing</button>' : '') +
 			'</div>';
 		}).join("") : '<p class="empty-state">You haven\'t posted anything yet.</p>';

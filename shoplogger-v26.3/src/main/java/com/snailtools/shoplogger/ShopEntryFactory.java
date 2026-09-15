@@ -1,0 +1,261 @@
+package com.snailtools.shoplogger;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BundleItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.BundleContents;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/** Tallies item stacks in a container into one ShopEntry per distinct item type. */
+public final class ShopEntryFactory {
+
+	private ShopEntryFactory() {}
+
+	/** A shulker box always has 27 inventory slots, regardless of what's in it. */
+	private static final int SHULKER_SLOTS = 27;
+
+	// batchSize = how many of this item the sign's price actually buys.
+	// Normal/bundled listings: the largest single-slot quantity seen (the shop
+	// stocks per slot, not necessarily a full stack — see ShopSign). Bulk
+	// (shulker) listings are priced per WHOLE shulker, not per slot inside
+	// it — see addTally's SHULKER_SLOTS use — so batchSize there is a fixed
+	// 27 * (this item's own max stack size), e.g. 1728 for a 64-stackable
+	// item, regardless of how full the shulker actually is right now.
+	private record Tally(ItemStack representative, int count, int batchSize, boolean bulk, boolean bundled) {}
+
+	public static List<ShopEntry> build(AbstractContainerMenu handler, ShopSign sign, BlockPos containerPos) {
+		if (!(handler instanceof ChestMenu containerHandler)) {
+			return List.of();
+		}
+		if (!sign.display() && sign.signPrice() == 0) {
+			return List.of(); // price-0 signs aren't real sales — don't log their contents
+		}
+		if (!ShopDimension.isActive(Minecraft.getInstance())) {
+			return List.of(); // not the shop dimension — e.g. a lookalike sign+chest in the overworld
+		}
+
+		ShopWorld world = WorldSelection.get();
+		if (world == null) {
+			return List.of(); // callers should already gate on WorldSelection.ensureSet(...) before reaching here
+		}
+
+		int invSize = containerHandler.getContainer().getContainerSize();
+
+		// key = baseId + "|" + displayName
+		Map<String, Tally> tallies = new LinkedHashMap<>();
+
+		for (int i = 0; i < invSize && i < handler.slots.size(); i++) {
+			ItemStack stack = handler.getSlot(i).getItem();
+			if (stack == null || stack.isEmpty()) continue;
+
+			List<ItemStack> shulkerContents = readShulkerContents(stack);
+			List<ItemStack> bundleContents = shulkerContents == null ? readBundleContents(stack) : null;
+
+			if (shulkerContents != null && !shulkerContents.isEmpty() && isSingleItemType(shulkerContents)) {
+				// Bulk item: the whole shulker is one item type — register its
+				// contents instead of the shulker itself.
+				for (ItemStack inner : shulkerContents) {
+					if (inner == null || inner.isEmpty()) continue;
+					addTally(tallies, inner, inner.getCount(), true, false, sign.currency());
+				}
+			} else if (bundleContents != null && !bundleContents.isEmpty() && isSingleItemType(bundleContents)) {
+				// Same idea as a shulker, but marked "bundled" instead of "bulk" so
+				// the site can tell the two apart.
+				for (ItemStack inner : bundleContents) {
+					if (inner == null || inner.isEmpty()) continue;
+					addTally(tallies, inner, inner.getCount(), false, true, sign.currency());
+				}
+			} else {
+				// Empty/mixed-contents shulker or bundle (e.g. a curated bundle like
+				// a "Lunar New Year Box") — list the container itself rather than
+				// decomposing it. "Bulk"/"bundled" specifically mean "entirely one
+				// item type."
+				addTally(tallies, stack, stack.getCount(), false, false, sign.currency());
+			}
+		}
+
+		long now = System.currentTimeMillis();
+		List<ShopEntry> out = new ArrayList<>();
+		for (Tally t : tallies.values()) {
+			ItemStack rep = t.representative();
+
+			// The sign's price is exactly what's on the sign, per t.batchSize()
+			// items — however many the shop actually stocks per slot. We don't
+			// scale it to a full stack; batchSize is just shown alongside it so
+			// buyers know what the price buys (e.g. "1 diamond" / "per 32").
+			int batchSize = t.batchSize();
+			double stacksInStock = Math.round((t.count() / (double) batchSize) * 100.0) / 100.0;
+
+			out.add(new ShopEntry(
+					displayNameFor(rep),
+					BuiltInRegistries.ITEM.getKey(rep.getItem()).toString(),
+					t.count(),
+					sign.signPrice(),
+					batchSize,
+					stacksInStock,
+					t.bulk(),
+					t.bundled(),
+					sign.currency(),
+					sign.seller(),
+					world.label(),
+					containerPos,
+					now
+			));
+		}
+		return out;
+	}
+
+	// Currency string (from a shop sign's line 3) -> the item id it actually
+	// pays with. Used to make sure a shop never lists its own payment item as
+	// something for sale (e.g. an "ironingot" shop that also happens to have
+	// loose iron ingots in the chest shouldn't show "1 Iron Ingot for 1 Iron
+	// Ingot"). Extend as new real-world currencies show up.
+	private static final Map<String, String> CURRENCY_ITEM_IDS = Map.ofEntries(
+			Map.entry("diamond", "minecraft:diamond"),
+			Map.entry("diamondblock", "minecraft:diamond_block"),
+			Map.entry("iron", "minecraft:iron_ingot"),
+			Map.entry("ironingot", "minecraft:iron_ingot"),
+			Map.entry("ironblock", "minecraft:iron_block"),
+			Map.entry("gold", "minecraft:gold_ingot"),
+			Map.entry("goldingot", "minecraft:gold_ingot"),
+			Map.entry("goldblock", "minecraft:gold_block"),
+			Map.entry("emerald", "minecraft:emerald"),
+			Map.entry("emeraldblock", "minecraft:emerald_block"),
+			Map.entry("netherite", "minecraft:netherite_ingot"),
+			Map.entry("netheriteingot", "minecraft:netherite_ingot"),
+			Map.entry("netheriteblock", "minecraft:netherite_block"),
+			Map.entry("coal", "minecraft:coal")
+	);
+
+	private static boolean isPaymentItem(String baseId, String currency) {
+		String mapped = CURRENCY_ITEM_IDS.get(String.valueOf(currency).toLowerCase());
+		return mapped != null && mapped.equals(baseId);
+	}
+
+	private static void addTally(Map<String, Tally> tallies, ItemStack stack, int amount, boolean bulk, boolean bundled, String currency) {
+		String baseId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+		if (isPaymentItem(baseId, currency)) return; // never list the item this shop is literally being paid in
+		String displayName = displayNameFor(stack);
+		// bulk/bundled are part of the key so a normal-priced stack and a
+		// bulk/bundled stack of the SAME item in the same container don't
+		// collapse into one tally, losing the fact both forms are sold.
+		String key = baseId + "|" + displayName + "|" + bulk + "|" + bundled;
+
+		// A bulk listing is priced per whole shulker (27 slots), not per slot
+		// inside it — using the observed per-slot amount here (as bundled/normal
+		// listings do) would understate a bulk batch by ~27x, which is exactly
+		// the "1db/64" vs the real "1db/shulk (=1db/1728)" mismatch this fixes.
+		int slotBatchSize = bulk ? SHULKER_SLOTS * stack.getMaxStackSize() : amount;
+
+		Tally existing = tallies.get(key);
+		if (existing == null) {
+			tallies.put(key, new Tally(stack, amount, slotBatchSize, bulk, bundled));
+		} else {
+			// Once bulk/bundled, stays that way if any contributing stack came
+			// from a shulker/bundle. batchSize takes the largest batch seen —
+			// a smaller one (a partially-sold leftover slot) shouldn't shrink an
+			// already-established real batch size.
+			tallies.put(key, new Tally(
+					existing.representative(),
+					existing.count() + amount,
+					Math.max(existing.batchSize(), slotBatchSize),
+					existing.bulk() || bulk,
+					existing.bundled() || bundled));
+		}
+	}
+
+	/**
+	 * An enchanted book's own display name is just "Enchanted Book" — the
+	 * enchantment only shows up as a separate tooltip line, not in
+	 * getHoverName(). Use the enchantment(s) it actually holds instead, e.g.
+	 * "Sharpness V", so different enchanted books don't all collapse into one
+	 * listing and buyers can tell what they're actually buying without
+	 * opening the shop.
+	 *
+	 * Music discs have the exact same problem: every single disc's
+	 * getHoverName() is just the generic "Music Disc" (the actual track name,
+	 * e.g. "C418 - cat", is a separate lore/description line, not the hover
+	 * name) — so without this, every disc would upload/search/display as
+	 * plain "Music Disc" regardless of which one it actually is. This version
+	 * of Minecraft has no dedicated "music disc" Item subclass to check
+	 * against (they're plain, component-driven Items) — the item's own
+	 * registry id is the reliable signal instead. Derive the real name from
+	 * it (e.g. "music_disc_cat" -> "Music Disc Cat"), matching the exact
+	 * naming convention data/vanilla-items.json already uses for every disc —
+	 * this also means the site's name-based texture lookup resolves the
+	 * correct per-disc texture automatically, the same way it already does
+	 * for every other item, no separate texture special-case needed.
+	 */
+	private static String displayNameFor(ItemStack stack) {
+		if (stack.getItem() == Items.ENCHANTED_BOOK) {
+			ItemEnchantments enchantments = stack.get(DataComponents.STORED_ENCHANTMENTS);
+			if (enchantments != null && !enchantments.isEmpty()) {
+				return enchantments.entrySet().stream()
+						.map(e -> Enchantment.getFullname(e.getKey(), e.getIntValue()).getString())
+						.sorted()
+						.collect(Collectors.joining(", "));
+			}
+		}
+		String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+		// One irregular case: the catalog names this "Music Disc Creator (Music
+		// Box)" (a distinct variant of the Creator disc), not the plain
+		// space-joined title-case every other disc's id produces.
+		if (path.equals("music_disc_creator_music_box")) return "Music Disc Creator (Music Box)";
+		if (path.startsWith("music_disc_")) {
+			String suffix = path.substring("music_disc_".length());
+			String titled = Arrays.stream(suffix.split("_"))
+					.filter(w -> !w.isEmpty())
+					.map(w -> Character.toUpperCase(w.charAt(0)) + w.substring(1))
+					.collect(Collectors.joining(" "));
+			return "Music Disc " + titled;
+		}
+		return stack.getHoverName().getString();
+	}
+
+	/** True if every non-empty stack inside the shulker is the same item. */
+	private static boolean isSingleItemType(List<ItemStack> contents) {
+		var firstItem = contents.get(0).getItem();
+		for (ItemStack s : contents) {
+			if (s.getItem() != firstItem) return false;
+		}
+		return true;
+	}
+
+	/** Returns the item stacks inside a shulker box, or null if this isn't a (non-empty) shulker box. */
+	private static List<ItemStack> readShulkerContents(ItemStack stack) {
+		if (!(stack.getItem() instanceof BlockItem blockItem)) return null;
+		if (!(blockItem.getBlock() instanceof ShulkerBoxBlock)) return null;
+
+		ItemContainerContents container = stack.get(DataComponents.CONTAINER);
+		if (container == null) return null;
+
+		return container.nonEmptyItemCopyStream().toList();
+	}
+
+	/** Returns the item stacks inside a bundle, or null if this isn't a (non-empty) bundle. */
+	private static List<ItemStack> readBundleContents(ItemStack stack) {
+		if (!(stack.getItem() instanceof BundleItem)) return null;
+
+		BundleContents contents = stack.get(DataComponents.BUNDLE_CONTENTS);
+		if (contents == null || contents.isEmpty()) return null;
+
+		return contents.itemCopies().toList();
+	}
+}
