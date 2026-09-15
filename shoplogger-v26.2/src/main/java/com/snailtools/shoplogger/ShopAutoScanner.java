@@ -7,6 +7,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -153,12 +155,29 @@ public class ShopAutoScanner implements SilentScreenCoordinator.Listener {
 
 		if (armed) return; // waiting on a silent open to finish
 		if (client.player.containerMenu != client.player.inventoryMenu) return; // player has a container open themselves — don't compete for it
+		if (isHoldingPausingItem(client)) return; // see isHoldingPausingItem() — don't silently right-click while holding one of these
 		long now = System.currentTimeMillis();
 		if (now - lastOpenAttempt < GLOBAL_COOLDOWN_MS) return;
 
 		findNextTarget(client).ifPresent(target -> {
 			openSilently(client, target.pos, target.sign);
 		});
+	}
+
+	/**
+	 * Silent scanning right-clicks a container using whatever's in the
+	 * player's main hand (see openSilently()'s useItemOn call) — for a
+	 * held item with its own special block-interaction behavior, that could
+	 * silently fire on every shop container the player walks past, not just
+	 * open it. Name tags and anything built on the vanilla feather item
+	 * (Snailcraft's convention for several custom tools/wands) are the known
+	 * cases; pausing while either is in hand avoids triggering them by
+	 * accident. Scanning resumes on its own the moment the player switches
+	 * away from holding one.
+	 */
+	private static boolean isHoldingPausingItem(Minecraft client) {
+		ItemStack main = client.player.getMainHandItem();
+		return main.getItem() == Items.NAME_TAG || main.getItem() == Items.FEATHER;
 	}
 
 	private record Target(BlockPos pos, ShopSign sign) {}
