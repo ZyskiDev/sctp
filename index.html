@@ -427,23 +427,39 @@
 	}
 	.share-btn:hover{color:var(--accent);border-color:var(--accent);}
 
-	.similar-listings{list-style:none;padding:0;margin:0 0 16px;border:1px solid var(--line);border-radius:10px;overflow:hidden;max-height:340px;overflow-y:auto;}
-	.similar-listings li{padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px;}
-	.similar-listings li:last-child{border-bottom:none;}
-	.similar-listings .sl-top{display:flex;justify-content:space-between;gap:10px;}
-	.similar-listings .sl-seller{color:var(--text);}
-	.similar-listings .sl-seller a{color:var(--text);text-decoration:underline;}
-	.similar-listings .sl-seller a:hover{color:var(--accent);}
-	.similar-listings .sl-world{color:var(--muted);font-weight:400;}
-	.similar-listings .sl-price{color:var(--accent);white-space:nowrap;font-weight:600;}
-	.similar-listings .sl-meta{color:var(--muted);font-size:11.5px;margin-top:3px;}
-	.similar-listings-empty{color:var(--muted);font-size:13px;margin:0 0 16px;}
-	.share-avg{margin-bottom:18px;}
-	.share-avg h4, .share-similar-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;}
-	.share-avg table{width:100%;border-collapse:collapse;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:12.5px;}
-	.share-avg th, .share-avg td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);}
-	.share-avg tr:last-child th, .share-avg tr:last-child td{border-bottom:none;}
-	.share-avg th{color:var(--muted);font-weight:600;}
+	.share-modal{max-width:420px;}
+	.share-hero{
+		display:flex;gap:14px;align-items:center;padding:16px;
+		background:var(--panel-alt);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;
+	}
+	.share-hero img{
+		width:52px;height:52px;image-rendering:pixelated;flex:0 0 auto;
+		background:var(--bg);border-radius:10px;padding:6px;border:1px solid var(--line);
+	}
+	.share-hero-info{min-width:0;}
+	.share-hero-name{font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--text);line-height:1.25;}
+	.share-hero-name a{color:var(--text);}
+	.share-hero-name a:hover{color:var(--accent);}
+	.share-hero-price{color:var(--accent);font-weight:700;font-size:15px;margin-top:3px;}
+
+	.share-details{
+		display:grid;grid-template-columns:auto 1fr;gap:7px 14px;
+		font-size:13px;margin-bottom:16px;padding:2px 2px 0;
+	}
+	.share-details .sd-label{color:var(--muted);white-space:nowrap;}
+	.share-details .sd-value{color:var(--text);min-width:0;overflow-wrap:break-word;}
+	.share-details .sd-value a{color:var(--text);text-decoration:underline;}
+	.share-details .sd-value a:hover{color:var(--accent);}
+
+	.share-avg-row{display:flex;gap:10px;margin-bottom:18px;}
+	.share-avg-stat{
+		flex:1;min-width:0;background:var(--panel-alt);border:1px solid var(--line);
+		border-radius:10px;padding:9px 12px;
+	}
+	.share-avg-stat .sa-world{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}
+	.share-avg-stat .sa-val{font-size:13px;font-weight:600;color:var(--text);}
+	.share-avg-stat .sa-val.sa-none{color:var(--muted);font-weight:400;}
+
 	.share-link-row{display:flex;gap:8px;margin-bottom:6px;}
 	.share-link-row input{
 		flex:1;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
@@ -767,15 +783,15 @@
 
 <!-- share modal -->
 <div class="modal-backdrop" id="shareBackdrop">
-	<div class="modal">
+	<div class="modal share-modal">
 		<h2>Share this listing</h2>
-		<p id="shareListingLabel"></p>
+		<div id="shareHero"></div>
+		<div id="shareDetailsWrap"></div>
 		<div class="share-link-row">
 			<input type="text" id="shareLinkInput" readonly>
 			<button id="copyShareLink" type="button">Copy link</button>
 		</div>
 		<div class="file-status" id="shareStatus"></div>
-		<div id="shareSimilarWrap"></div>
 		<div class="modal-actions">
 			<button id="closeShare" type="button">Close</button>
 		</div>
@@ -1961,67 +1977,57 @@
 	function openShare(row){
 		var itemUrl = itemLibraryUrlFor(row);
 		var itemHtml = itemUrl ? '<a href="'+esc(itemUrl)+'">'+esc(row.itemNameDisplay)+'</a>' : esc(row.itemNameDisplay);
+		document.getElementById("shareHero").innerHTML =
+			'<img src="'+esc(iconFor(row))+'" alt="" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';">'+
+			'<div class="share-hero-info">'+
+				'<div class="share-hero-name">'+itemHtml+'</div>'+
+				'<div class="share-hero-price">'+esc(row.priceLabel)+'</div>'+
+			'</div>';
+
 		var rowSellerUrl = sellerUrl(row.seller, row.world);
 		var sellerHtml = rowSellerUrl ? '<a href="'+esc(rowSellerUrl)+'">'+esc(row.seller)+'</a>' : esc(row.seller);
-		document.getElementById("shareListingLabel").innerHTML =
-			itemHtml + " — " + esc(row.priceLabel) + " — sold by " + sellerHtml + " (" + esc(row.world) + ")";
+		var stockText = row.marketplace
+			? (row.marketplaceType === "lookingFor" ? "Wants " : "Has ") + fmtNum(row.amount)
+			: fmtNum(row.amount) + ' (' + row.stacksInStock + ' ' + (row.bulk ? 'shulks' : row.stackSize === 64 ? 'stacks' : 'groups') + ')';
+		var details = [
+			["Seller", sellerHtml],
+			["World", esc(row.world)],
+			["Stock", esc(stockText)],
+			["Position", esc(row.position || "—")],
+			["Last seen", esc(relTime(row.lastSeen))]
+		];
+		document.getElementById("shareDetailsWrap").innerHTML =
+			'<div class="share-details">' +
+				details.map(function(d){ return '<span class="sd-label">'+d[0]+'</span><span class="sd-value">'+d[1]+'</span>'; }).join("") +
+			'</div>' +
+			shareAvgHtml(row);
 
 		var link = location.origin + "/?listing=" + encodeURIComponent(row.id);
-		var linkInput = document.getElementById("shareLinkInput");
-		linkInput.value = link;
+		document.getElementById("shareLinkInput").value = link;
 
 		var statusEl = document.getElementById("shareStatus");
 		statusEl.textContent = "";
 		statusEl.className = "file-status";
 
+		document.getElementById("shareBackdrop").classList.add("open");
+	}
+
+	// Average price for this item, split by world — [DISPLAY] listings excluded,
+	// same convention as the main table's price summary (see renderPriceSummary).
+	function shareAvgHtml(row){
 		var normalized = alphaOnly(row.itemNameDisplay || row.itemName);
-		// [DISPLAY] listings aren't real purchasable stock — excluded from both
-		// the average and the "other sellers" list, same convention as the
-		// main table's price summary (see renderPriceSummary).
 		var itemRows = allListings.filter(function(r){
 			return alphaOnly(r.itemNameDisplay || r.itemName) === normalized && String(r.currency||"").toLowerCase() !== "display";
 		});
-
 		var worlds = ["Firefly","Honeybee"];
-		var avgRowsHtml = worlds.map(function(world){
+		var statsHtml = worlds.map(function(world){
 			var rows = itemRows.filter(function(r){ return r.world === world; });
-			if(!rows.length) return '<tr><td>'+esc(world)+'</td><td colspan="2">No listings</td></tr>';
+			if(!rows.length) return '<div class="share-avg-stat"><div class="sa-world">'+esc(world)+'</div><div class="sa-val sa-none">No listings</div></div>';
 			var sum = rows.reduce(function(acc,r){ return acc + pricePerItem(r); }, 0);
 			var per1 = sum / rows.length;
-			return '<tr><td>'+esc(world)+'</td><td>'+fmtAvgPrice(per1)+'</td><td>'+fmtAvgPrice(per1*64)+'</td></tr>';
+			return '<div class="share-avg-stat"><div class="sa-world">'+esc(world)+' avg</div><div class="sa-val">'+fmtAvgPrice(per1)+' / item</div></div>';
 		}).join("");
-		var avgHtml = '<div class="share-avg"><h4>Average price for this item</h4><table><thead><tr><th>World</th><th>Per 1</th><th>Per 64</th></tr></thead><tbody>'+avgRowsHtml+'</tbody></table></div>';
-
-		var similar = itemRows.filter(function(r){
-			return r.id !== row.id;
-		}).sort(function(a, b){
-			return pricePerItem(a) - pricePerItem(b);
-		}).slice(0, 12);
-
-		var listHtml;
-		if(similar.length){
-			listHtml = '<ul class="similar-listings">' + similar.map(function(s){
-				var sUrl = sellerUrl(s.seller, s.world);
-				var sellerHtml = sUrl ? '<a href="'+esc(sUrl)+'">'+esc(s.seller)+'</a>' : esc(s.seller);
-				var stockText = s.marketplace
-					? (s.marketplaceType === "lookingFor" ? "wants " : "has ") + fmtNum(s.amount)
-					: fmtNum(s.amount) + ' (' + s.stacksInStock + ' ' + (s.bulk ? 'shulks' : s.stackSize === 64 ? 'stacks' : 'groups') + ')';
-				return '<li>' +
-					'<div class="sl-top"><span class="sl-seller">'+sellerHtml+' <span class="sl-world">('+esc(s.world)+')</span></span>' +
-						'<span class="sl-price">'+esc(s.priceLabel)+'</span></div>' +
-					'<div class="sl-meta">'+esc(stockText)+' in stock &middot; '+esc(s.position||'—')+' &middot; seen '+relTime(s.lastSeen)+'</div>' +
-				'</li>';
-			}).join("") + '</ul>';
-		} else {
-			listHtml = '<p class="similar-listings-empty">No other sellers currently list this item.</p>';
-		}
-
-		var wrap = document.getElementById("shareSimilarWrap");
-		wrap.innerHTML = avgHtml +
-			'<p class="share-similar-label">Other sellers'+(similar.length ? ' — cheapest first' : '')+'</p>' +
-			listHtml;
-
-		document.getElementById("shareBackdrop").classList.add("open");
+		return '<div class="share-avg-row">'+statsHtml+'</div>';
 	}
 	function closeShare(){
 		document.getElementById("shareBackdrop").classList.remove("open");
