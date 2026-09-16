@@ -50,7 +50,12 @@
 		padding:28px 0 22px;
 		position:relative;
 	}
-	.header-row{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:nowrap;}
+	/* wrap (not nowrap) so a tight window drops the whole "Download mod + nav"
+	   group onto its own full-width line below the title, instead of that
+	   group being squeezed into leftover space and wrapping internally —
+	   button alone on top, nav stranded below it. The row's own 24px gap
+	   already covers spacing for both the single-line and wrapped case. */
+	.header-row{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
 	.brand{min-width:0;}
 	.brand h1{
 		font-family:var(--font-display);
