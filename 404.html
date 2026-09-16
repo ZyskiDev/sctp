@@ -79,6 +79,14 @@
 		transition:opacity .12s ease;
 	}
 	.report-player-btn:hover{opacity:1;}
+	.share-player-btn, .share-item-btn{
+		display:inline-block;background:transparent;color:var(--accent);
+		border:1px solid var(--accent);font-family:var(--font-body);font-weight:600;font-size:12px;
+		padding:5px 11px;border-radius:999px;cursor:pointer;opacity:.85;
+		transition:opacity .12s ease;
+	}
+	.share-player-btn:hover, .share-item-btn:hover{opacity:1;}
+	.share-item-btn{align-self:center;margin-left:auto;}
 
 	/* ---------- layout ---------- */
 	.layout{display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:start;}
@@ -229,6 +237,23 @@
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var DATA_URL = API_BASE + "/listings";
 	var SHARED_SHOPS_URL = API_BASE + "/shared-shops";
+
+	// Shared by the item page's and seller profile's Share buttons — copies
+	// the Worker's server-rendered share-page URL (real og:title/description
+	// for link previews, see GET /item/<slug> and /seller/<world>/<seller>
+	// on worker.js) straight to clipboard rather than opening a popup.
+	document.addEventListener("click", function(e){
+		var btn = e.target.closest && e.target.closest("[data-share-url]");
+		if(!btn) return;
+		var url = btn.getAttribute("data-share-url");
+		var original = btn.textContent;
+		navigator.clipboard.writeText(url).then(function(){
+			btn.textContent = "Copied!";
+			setTimeout(function(){ btn.textContent = original; }, 1500);
+		}).catch(function(){
+			window.prompt("Copy this link:", url);
+		});
+	});
 	var ITEM_LANG_URL = "/data/item-lang-table.json";
 
 	function esc(s){
@@ -622,6 +647,7 @@
 					'<h1 class="profile-name">'+esc(username)+'</h1>'+
 					'<span class="world-badge">'+esc(world)+'</span>'+
 					(hasOtherWorldListings ? '<span class="other-world-link">also sells on <a href="/s/'+otherSlug+'/'+encodeURIComponent(username)+'">'+esc(otherWorld)+'</a></span>' : '')+
+					'<button type="button" class="share-player-btn" data-share-url="'+esc(API_BASE+"/seller/"+encodeURIComponent(world)+"/"+encodeURIComponent(username))+'">Share</button>'+
 					'<a class="report-player-btn" href="/report/?player='+encodeURIComponent(username)+'&world='+encodeURIComponent(world)+'">Report this player</a>'+
 				'</div>'+
 				(bio ? '<p class="profile-bio">'+esc(bio)+'</p>' : '')+
@@ -874,6 +900,7 @@
 					'<img src="'+esc(entry.texture)+'" class="item-header-icon" alt="" onerror="this.style.visibility=\'hidden\'">'+
 					'<div><h1 class="item-header-name">'+esc(entry.name)+'</h1>'+
 					'<p class="tag">'+subtitle+' &middot; <a href="/items/">&larr; Item Library</a></p></div>'+
+					'<button type="button" class="share-item-btn" data-share-url="'+esc(API_BASE+"/item/"+encodeURIComponent(slug))+'">Share</button>'+
 				'</div>'+
 				renamedNotice+
 				(isRare ? rareInfoHtml(entry) : '')+
@@ -1149,6 +1176,7 @@
 					'<img src="'+esc(catalogEntry.texture)+'" class="item-header-icon" alt="" onerror="this.style.visibility=\'hidden\'">'+
 					'<div><h1 class="item-header-name">Enchanted Books</h1>'+
 					'<p class="tag">Every enchantment/level combination is its own item, each with its own price history &middot; <a href="/items/">&larr; Item Library</a></p></div>'+
+					'<button type="button" class="share-item-btn" data-share-url="'+esc(API_BASE+"/item/"+encodeURIComponent(slug))+'">Share</button>'+
 				'</div>'+
 				(forms.length === 0
 					? '<div class="empty-state"><h3>No enchanted books currently for sale</h3><p>Check back once someone lists one.</p></div>'

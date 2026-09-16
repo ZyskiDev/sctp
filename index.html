@@ -420,6 +420,29 @@
 	.report-btn.remove-btn:hover{background:#E27D6B;color:#2a0f0a;}
 	.report-btn:disabled{opacity:.5;cursor:default;}
 
+	.action-btns{display:flex;flex-direction:column;gap:5px;align-items:stretch;}
+	.share-btn{
+		background:transparent;border:1px solid var(--line);color:var(--muted);
+		border-radius:8px;padding:4px 10px;font-size:11.5px;cursor:pointer;white-space:nowrap;
+	}
+	.share-btn:hover{color:var(--accent);border-color:var(--accent);}
+
+	.similar-listings{list-style:none;padding:0;margin:0 0 16px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+	.similar-listings li{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px;}
+	.similar-listings li:last-child{border-bottom:none;}
+	.similar-listings .sl-seller{color:var(--text);}
+	.similar-listings .sl-price{color:var(--accent);white-space:nowrap;}
+	.similar-listings-empty{color:var(--muted);font-size:13px;margin:0 0 16px;}
+	.share-link-row{display:flex;gap:8px;margin-bottom:6px;}
+	.share-link-row input{
+		flex:1;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:8px 10px;font-family:var(--font-body);font-size:12.5px;
+	}
+	.share-link-row button{
+		background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;
+		border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;white-space:nowrap;
+	}
+
 	.info-icon{
 		display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;
 		border-radius:50%;background:var(--info);color:var(--accent-ink);font-size:10px;font-weight:700;
@@ -727,6 +750,23 @@
 		<div class="modal-actions">
 			<button id="closeReport" type="button">Cancel</button>
 			<button id="submitReport" class="primary" type="button">Submit report</button>
+		</div>
+	</div>
+</div>
+
+<!-- share modal -->
+<div class="modal-backdrop" id="shareBackdrop">
+	<div class="modal">
+		<h2>Share this listing</h2>
+		<p id="shareListingLabel"></p>
+		<div class="share-link-row">
+			<input type="text" id="shareLinkInput" readonly>
+			<button id="copyShareLink" type="button">Copy link</button>
+		</div>
+		<div class="file-status" id="shareStatus"></div>
+		<div id="shareSimilarWrap"></div>
+		<div class="modal-actions">
+			<button id="closeShare" type="button">Close</button>
 		</div>
 	</div>
 </div>
@@ -1602,9 +1642,12 @@
 				'<td class="position">'+esc(r.position)+'</td>'+
 				'<td>'+lastSeenCell+'</td>'+
 				'<td>'+availableSinceCell(r)+'</td>'+
-				'<td>'+(canRemoveListings()
-					? '<button class="report-btn remove-btn" type="button" data-row-idx="'+idx+'">Remove</button>'
-					: '<button class="report-btn" type="button" data-row-idx="'+idx+'">Report</button>')+'</td>'+
+				'<td><div class="action-btns">'+
+					(r.id ? '<button class="share-btn" type="button" data-row-idx="'+idx+'">Share</button>' : '')+
+					(canRemoveListings()
+						? '<button class="report-btn remove-btn" type="button" data-row-idx="'+idx+'">Remove</button>'
+						: '<button class="report-btn" type="button" data-row-idx="'+idx+'">Report</button>')+
+					'</div></td>'+
 				'</tr>';
 		});
 		html += '</tbody></table></div>';
@@ -1626,6 +1669,13 @@
 				var row = pageRows[Number(btn.getAttribute("data-row-idx"))];
 				if(canRemoveListings()) removeListingDirect(row, btn);
 				else openReport(row);
+			});
+		});
+
+		area.querySelectorAll(".share-btn").forEach(function(btn){
+			btn.addEventListener("click", function(){
+				var row = pageRows[Number(btn.getAttribute("data-row-idx"))];
+				openShare(row);
 			});
 		});
 
@@ -1882,6 +1932,55 @@
 		}
 	}
 
+	// ---------------- share modal ----------------
+	function openShare(row){
+		document.getElementById("shareListingLabel").textContent =
+			row.itemNameDisplay + " — " + row.priceLabel + " — sold by " + row.seller + " (" + row.world + ")";
+
+		var link = API_BASE + "/listing/" + encodeURIComponent(row.id);
+		var linkInput = document.getElementById("shareLinkInput");
+		linkInput.value = link;
+
+		var statusEl = document.getElementById("shareStatus");
+		statusEl.textContent = "";
+		statusEl.className = "file-status";
+
+		var normalized = alphaOnly(row.itemNameDisplay || row.itemName);
+		var similar = allListings.filter(function(r){
+			return r !== row && r.id !== row.id && alphaOnly(r.itemNameDisplay || r.itemName) === normalized;
+		}).sort(function(a, b){
+			return priceInDiamonds(a) - priceInDiamonds(b);
+		}).slice(0, 6);
+
+		var wrap = document.getElementById("shareSimilarWrap");
+		if(similar.length){
+			wrap.innerHTML = '<ul class="similar-listings">' + similar.map(function(s){
+				return '<li><span class="sl-seller">' + esc(s.seller) + ' (' + esc(s.world) + ')</span>' +
+					'<span class="sl-price">' + esc(s.priceLabel) + '</span></li>';
+			}).join("") + '</ul>';
+		} else {
+			wrap.innerHTML = '<p class="similar-listings-empty">No other sellers currently list this item.</p>';
+		}
+
+		document.getElementById("shareBackdrop").classList.add("open");
+	}
+	function closeShare(){
+		document.getElementById("shareBackdrop").classList.remove("open");
+	}
+	async function copyShareLink(){
+		var linkInput = document.getElementById("shareLinkInput");
+		var statusEl = document.getElementById("shareStatus");
+		try {
+			await navigator.clipboard.writeText(linkInput.value);
+			statusEl.className = "file-status ok";
+			statusEl.textContent = "Link copied!";
+		} catch(err){
+			linkInput.select();
+			statusEl.className = "file-status";
+			statusEl.textContent = "Couldn't copy automatically — link is selected, press Ctrl+C.";
+		}
+	}
+
 	// ---------------- shared-shop request modal ----------------
 	function openSharedShopRequest(){
 		document.getElementById("sharedShopUsername").value = "";
@@ -1979,6 +2078,12 @@
 		if(e.target === this) closeReport();
 	});
 
+	document.getElementById("closeShare").addEventListener("click", closeShare);
+	document.getElementById("copyShareLink").addEventListener("click", copyShareLink);
+	document.getElementById("shareBackdrop").addEventListener("click", function(e){
+		if(e.target === this) closeShare();
+	});
+
 	document.getElementById("openSharedShopRequest").addEventListener("click", openSharedShopRequest);
 	document.getElementById("closeSharedShop").addEventListener("click", closeSharedShopRequest);
 	document.getElementById("submitSharedShop").addEventListener("click", submitSharedShopRequest);
@@ -1987,7 +2092,7 @@
 	});
 
 	document.addEventListener("keydown", function(e){
-		if(e.key === "Escape"){ closeDownload(); closeArchived(); closeUpload(); closeReport(); closeSharedShopRequest(); }
+		if(e.key === "Escape"){ closeDownload(); closeArchived(); closeUpload(); closeReport(); closeShare(); closeSharedShopRequest(); }
 	});
 
 	var dropzone = document.getElementById("dropzone");

@@ -13,6 +13,7 @@
 		--muted:#8FA593; --text:#EAEFE7; --shell:#D9C89A;
 		--accent:#B7E23D; --accent-dim:#87AE29; --accent-ink:#16210F;
 		--warn:#E2A33D; --bad:#E2643D;
+		--jobs:#4FC3F7; --jobs-ink:#0B2530;
 		--font-display:'Fraunces',serif; --font-body:'Inter',sans-serif; --font-mono:'JetBrains Mono',monospace;
 	}
 	*{box-sizing:border-box;}
@@ -34,6 +35,9 @@
 	.segmented button{background:var(--panel-alt);border:none;color:var(--muted);padding:9px 16px;font-weight:600;font-size:13.5px;cursor:pointer;border-right:1px solid var(--line);font-family:inherit;}
 	.segmented button:last-child{border-right:none;}
 	.segmented button.active{background:var(--accent);color:var(--accent-ink);}
+	#marketSeg button{flex:1;text-align:center;}
+	#marketSeg button.active[data-v="items"]{background:var(--accent);color:var(--accent-ink);}
+	#marketSeg button.active[data-v="jobs"]{background:var(--jobs);color:var(--jobs-ink);}
 	.btn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:9px;padding:10px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;}
 	.btn:hover{background:var(--accent-dim);}
 	.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 14px;font-size:13px;cursor:pointer;font-family:inherit;}
@@ -243,6 +247,38 @@
 		return '<img class="lc-icon' + (extraClass ? " " + extraClass : "") + '" src="' + esc(textureFor(itemName)) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + PLACEHOLDER_ICON_JS + '\';">';
 	}
 
+	// ---------------- share modal (used by both item listings and jobs — see
+	// GET /listing/<id> on the Worker, which looks up whichever table the id
+	// actually belongs to) ----------------
+	function openShareModal(id, label){
+		var wrap = document.createElement("div");
+		wrap.className = "modal-bg";
+		var link = API_BASE + "/listing/" + encodeURIComponent(id);
+		wrap.innerHTML = '<div class="modal">' +
+			'<h2>Share</h2>' +
+			'<p class="lc-meta" style="margin-bottom:12px;">' + esc(label) + '</p>' +
+			'<div style="display:flex;gap:8px;">' +
+				'<input type="text" id="shareLinkInput" readonly value="' + esc(link) + '" style="flex:1;min-width:0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit;">' +
+				'<button type="button" class="btn" id="shareCopyBtn">Copy link</button>' +
+			'</div>' +
+			'<p class="lc-meta" id="shareCopyStatus" style="margin-top:8px;min-height:16px;"></p>' +
+			'<div class="actions"><button type="button" class="btn-ghost" id="shareCloseBtn" style="width:100%;">Close</button></div>' +
+		'</div>';
+		document.body.appendChild(wrap);
+		document.getElementById("shareCloseBtn").onclick = function(){ wrap.remove(); };
+		wrap.addEventListener("click", function(e){ if(e.target === wrap) wrap.remove(); });
+		document.getElementById("shareCopyBtn").onclick = function(){
+			var input = document.getElementById("shareLinkInput");
+			var statusEl = document.getElementById("shareCopyStatus");
+			navigator.clipboard.writeText(input.value).then(function(){
+				statusEl.textContent = "Link copied!";
+			}).catch(function(){
+				input.select();
+				statusEl.textContent = "Couldn't copy automatically — link is selected, press Ctrl+C.";
+			});
+		};
+	}
+
 	function authFetch(path, opts){
 		opts = opts || {};
 		var s = session();
@@ -355,11 +391,20 @@
 				'<div class="lc-foot">' +
 					'<span>' + esc(l.seller) + (l.sellerVerified ? ' <span class="verified">&#10003;</span>' : '') + '</span>' +
 				'</div>' +
-				'<button type="button" class="btn-ghost" style="width:100%;margin-top:10px;" data-open-listing="' + esc(l.id) + '">' + (l.type === "selling" ? "View / Bid" : "View") + '</button>' +
+				'<div style="display:flex;gap:8px;margin-top:10px;">' +
+					'<button type="button" class="btn-ghost" style="flex:1;" data-open-listing="' + esc(l.id) + '">' + (l.type === "selling" ? "View / Bid" : "View") + '</button>' +
+					'<button type="button" class="btn-ghost" data-share-listing="' + esc(l.id) + '" title="Share">Share</button>' +
+				'</div>' +
 			'</div>';
 		}).join("");
 		grid.querySelectorAll("[data-open-listing]").forEach(function(btn){
 			btn.addEventListener("click", function(){ openListingDetail(btn.getAttribute("data-open-listing")); });
+		});
+		grid.querySelectorAll("[data-share-listing]").forEach(function(btn){
+			btn.addEventListener("click", function(){
+				var l = rows.filter(function(x){ return x.id === btn.getAttribute("data-share-listing"); })[0];
+				if(l) openShareModal(l.id, l.itemName + " — " + l.seller);
+			});
 		});
 	}
 
@@ -410,7 +455,10 @@
 		});
 	}
 
-	function rewardText(j){ return j.rewardAmount == null ? "No reward set" : currencyText(j.rewardAmount, j.rewardCurrency) + " reward"; }
+	function rewardText(j){
+		var word = j.type === "forHire" ? "fee" : "reward";
+		return j.rewardAmount == null ? "No " + word + " set" : currencyText(j.rewardAmount, j.rewardCurrency) + " " + word;
+	}
 	function jobBadgeHtml(j){ return '<span class="badge ' + (j.type === "hiring" ? "hiring" : "forhire") + '">' + (j.type === "hiring" ? "Hiring" : "For Hire") + '</span>'; }
 
 	function renderJobs(){
@@ -433,11 +481,20 @@
 					'<span>' + esc(j.poster) + (j.posterVerified ? ' <span class="verified">&#10003;</span>' : '') + '</span>' +
 					'<span>' + (j.interestCount ? j.interestCount + " interested" : "No interest yet") + '</span>' +
 				'</div>' +
-				'<button type="button" class="btn-ghost" style="width:100%;margin-top:10px;" data-open-job="' + esc(j.id) + '">View</button>' +
+				'<div style="display:flex;gap:8px;margin-top:10px;">' +
+					'<button type="button" class="btn-ghost" style="flex:1;" data-open-job="' + esc(j.id) + '">View</button>' +
+					'<button type="button" class="btn-ghost" data-share-job="' + esc(j.id) + '" title="Share">Share</button>' +
+				'</div>' +
 			'</div>';
 		}).join("");
 		grid.querySelectorAll("[data-open-job]").forEach(function(btn){
 			btn.addEventListener("click", function(){ openJobDetail(btn.getAttribute("data-open-job")); });
+		});
+		grid.querySelectorAll("[data-share-job]").forEach(function(btn){
+			btn.addEventListener("click", function(){
+				var j = rows.filter(function(x){ return x.id === btn.getAttribute("data-share-job"); })[0];
+				if(j) openShareModal(j.id, j.title + " — " + j.poster);
+			});
 		});
 	}
 
@@ -476,10 +533,11 @@
 			'<div class="lc-price">' + esc(rewardText(j)) + '</div>' +
 			(j.description ? '<p class="lc-notes">' + esc(j.description) + '</p>' : '') +
 			'<div id="jobInterestArea"></div>' +
-			'<div class="actions"><button type="button" class="btn-ghost" id="jobDetailClose" style="width:100%;">Close</button></div></div>';
+			'<div class="actions"><button type="button" class="btn-ghost" id="jobDetailShare" style="flex:1;">Share</button><button type="button" class="btn-ghost" id="jobDetailClose" style="flex:1;">Close</button></div></div>';
 		wrap.innerHTML = html;
 		document.body.appendChild(wrap);
 		document.getElementById("jobDetailClose").onclick = function(){ wrap.remove(); };
+		document.getElementById("jobDetailShare").onclick = function(){ openShareModal(j.id, j.title + " — " + j.poster); };
 		// Same reasoning as the New Listing/New Job forms — no outside-click-to-close.
 
 		var area = document.getElementById("jobInterestArea");
@@ -521,7 +579,7 @@
 				'<div class="field"><label>Description (optional)</label><textarea id="njDesc" maxlength="1000"></textarea></div>' +
 				'<div class="row2"><div class="field"><label>World</label><select id="njWorld"><option value="Firefly">Firefly</option><option value="Honeybee">Honeybee</option><option value="Cross-world">Cross-world</option></select></div>' +
 				'<div class="field"><label>Needed by (optional)</label><input type="date" id="njDeadline"></div></div>' +
-				'<div class="row2"><div class="field"><label>Reward (optional)</label><input type="number" id="njReward" min="0" step="any"></div>' +
+				'<div class="row2"><div class="field"><label id="njRewardLabel">Reward (optional)</label><input type="number" id="njReward" min="0" step="any"></div>' +
 				'<div class="field"><label>Currency</label>' + currencySelectHtml("njRewardCur", "diamond") + '</div></div>' +
 				'<p class="err" id="njErr" hidden></p>' +
 				'<div class="actions"><button type="button" class="btn-ghost" id="njCancel">Cancel</button><button type="button" class="btn" id="njSubmit">Post job</button></div>' +
@@ -535,6 +593,7 @@
 				wrap.querySelectorAll(".type-toggle button").forEach(function(b){ b.classList.remove("active"); });
 				btn.classList.add("active");
 				type = btn.dataset.type;
+				document.getElementById("njRewardLabel").textContent = type === "forHire" ? "Fee (optional)" : "Reward (optional)";
 			});
 		});
 
@@ -585,10 +644,11 @@
 		var offerWordCap = isLookingFor ? "Offer" : "Bid";
 		html += '<div id="bidPlaceArea"></div>';
 		html += '<h3 style="font-size:14px;margin:16px 0 8px;">Previous ' + offerWord + 's</h3><div id="bidListArea"></div>';
-		html += '<div class="actions"><button type="button" class="btn-ghost" id="detailClose" style="width:100%;">Close</button></div></div>';
+		html += '<div class="actions"><button type="button" class="btn-ghost" id="detailShare" style="flex:1;">Share</button><button type="button" class="btn-ghost" id="detailClose" style="flex:1;">Close</button></div></div>';
 		wrap.innerHTML = html;
 		document.body.appendChild(wrap);
 		document.getElementById("detailClose").onclick = function(){ wrap.remove(); };
+		document.getElementById("detailShare").onclick = function(){ openShareModal(l.id, l.itemName + " — " + l.seller); };
 		wrap.addEventListener("click", function(e){ if(e.target === wrap) wrap.remove(); });
 
 		var placeArea = document.getElementById("bidPlaceArea");

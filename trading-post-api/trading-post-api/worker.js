@@ -25,6 +25,13 @@
 //     UpdateNoticeCheck in the mod and the "updateNotice" permission bucket below).
 //   GET /roadmap           -> {fields, lists, cards} — server-side proxy of the public
 //     Trello roadmap board + its Amazing Fields Power-Up data, see roadmap/index.html.
+//   GET /listing/<id>      -> real server-rendered HTML (og:title/description) for one
+//     listing (shop row, marketplace item post, or marketplace job — looked up by its
+//     `id`, tried in that order) — used by the website's Share button since static
+//     GitHub Pages can't generate per-listing Open Graph tags itself. See
+//     handleListingPage/renderListingHtml/renderJobHtml.
+//   GET /item/<slug>       -> same idea, for one item-library entry (see handleItemPage).
+//   GET /seller/<world>/<seller> -> same idea, for one seller's shop page (see handleSellerPage).
 //
 // Admin auth (see requireAdminAuth): Authorization: Bearer <session token
 // from POST /admin/login>, limited to whichever permission bucket each route
@@ -261,6 +268,10 @@ function json(data, status = 200) {
 	});
 }
 
+function esc(s) {
+	return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 function isAuthorized(request, key) {
 	if (!key) return false; // secret not configured yet — refuse rather than compare against "undefined"
 	const auth = request.headers.get("Authorization") || "";
@@ -352,14 +363,16 @@ const MAX_QUERY_PARAMS_PER_CHUNK = 50;
 
 // Shared upsert logic for writing a row into `listings` — used by handleUploadListings.
 function buildListingUpsertStmt(env, key, r) {
-	// availableSince is intentionally NOT in the ON CONFLICT...DO UPDATE SET
-	// list below — SQLite only applies the bound value on a genuine INSERT;
-	// an existing row keeps whatever it already had regardless of what's
-	// bound here.
+	// availableSince and id are intentionally NOT in the ON CONFLICT...DO
+	// UPDATE SET list below — SQLite only applies the bound value on a
+	// genuine INSERT; an existing row keeps whatever it already had
+	// regardless of what's bound here. For id specifically, this is what
+	// makes it a stable per-listing identifier (see 0016_listing_ids.sql) —
+	// a listing that gets re-uploaded/updated keeps the same shareable id.
 	const availableSince = r.submittedAt || new Date().toISOString();
 	return env.DB.prepare(
-		`INSERT INTO listings (rowKey, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen, availableSince, missingStreak)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+		`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen, availableSince, missingStreak)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 		 ON CONFLICT(rowKey) DO UPDATE SET
 		   itemName=excluded.itemName, baseItem=excluded.baseItem, bulk=excluded.bulk, bundled=excluded.bundled,
 		   mixedContents=excluded.mixedContents, price=excluded.price, priceLabel=excluded.priceLabel,
@@ -367,7 +380,7 @@ function buildListingUpsertStmt(env, key, r) {
 		   currency=excluded.currency, seller=excluded.seller, world=excluded.world,
 		   position=excluded.position, lastSeen=excluded.lastSeen, missingStreak=0`
 	).bind(
-		key, r.itemName, r.baseItem, r.bulk ? 1 : 0, r.bundled ? 1 : 0, r.mixedContents ? 1 : 0,
+		key, newId(), r.itemName, r.baseItem, r.bulk ? 1 : 0, r.bundled ? 1 : 0, r.mixedContents ? 1 : 0,
 		r.price, r.priceLabel, r.stackSize, r.amount, r.stacksInStock,
 		r.currency, r.seller, r.world, r.position, r.lastSeen, availableSince
 	);
@@ -1113,6 +1126,9 @@ function marketplacePriceLabel(amount, currency, suffix) {
 // returns — see handleGetListings for why.
 function marketplaceRowAsListing(m, posterName) {
 	const base = {
+		// Shared with real shop rows (see 0016_listing_ids.sql) so the share
+		// button/link can treat every row the same regardless of origin.
+		id: m.id,
 		itemName: m.itemName, baseItem: m.baseItem || "", bulk: false, bundled: false, mixedContents: false,
 		stackSize: m.quantity, amount: m.quantity, stacksInStock: 1,
 		seller: posterName, world: m.world, position: "Marketplace listing",
@@ -1134,6 +1150,205 @@ async function getActiveMarketplaceRows(env) {
 		 WHERE ml.status = 'active' AND ml.expiresAt > ?`
 	).bind(new Date().toISOString()).all();
 	return results.map((m) => marketplaceRowAsListing(m, m.accountMcUsername || m.accountUsername));
+}
+
+// ---------------- shareable listing page ----------------
+
+const SITE_ORIGIN = "https://sctp.nl";
+
+function listingPriceText(row) {
+	if (row.priceLabel) return row.priceLabel;
+	if (row.price == null) return "no price set";
+	return `${row.price} ${row.currency || ""}`.trim();
+}
+
+function notFoundListingPage() {
+	return new Response(
+		`<!doctype html><html><head><meta charset="utf-8"><title>Listing not found — SC Trading Post</title>` +
+		`<meta name="viewport" content="width=device-width, initial-scale=1"></head>` +
+		`<body style="font-family:Inter,system-ui,sans-serif;background:#101B14;color:#EAEFE7;text-align:center;padding:80px 20px;">` +
+		`<h1>Listing not found</h1><p style="color:#8FA593;">It may have sold, expired, or been removed.</p>` +
+		`<p><a href="${SITE_ORIGIN}" style="color:#B7E23D;">Back to SC Trading Post</a></p></body></html>`,
+		{ status: 404, headers: { "Content-Type": "text/html;charset=utf-8" } }
+	);
+}
+
+// Shared by every server-rendered share page (listing/job/item/seller) — see
+// handleListingPage/handleItemPage/handleSellerPage. Static GitHub Pages
+// hosting can't generate per-page Open Graph tags itself (crawlers like
+// Discord's never execute JS to read them off the SPA), so these routes
+// exist purely to give link-preview crawlers — and anyone who opens a shared
+// link directly — a real, server-rendered page with correct
+// og:title/description, linking back to the real interactive page.
+const SHARE_PAGE_STYLE = `
+	body{background:#101B14;color:#EAEFE7;font-family:Inter,system-ui,sans-serif;max-width:560px;margin:0 auto;padding:40px 20px;}
+	h1{font-size:22px;margin:0 0 4px;}
+	.price{color:#B7E23D;font-weight:700;font-size:18px;margin:0 0 18px;}
+	.meta{color:#8FA593;font-size:14px;margin-bottom:28px;}
+	.similar h2{font-size:13px;color:#8FA593;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+	.similar ul{list-style:none;padding:0;margin:0 0 28px;border:1px solid #33453A;border-radius:10px;overflow:hidden;}
+	.similar li{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #33453A;}
+	.similar li:last-child{border-bottom:none;}
+	.s-price{color:#B7E23D;}
+	a.cta{display:inline-block;background:#B7E23D;color:#101B14;font-weight:700;text-decoration:none;padding:10px 18px;border-radius:8px;}
+`;
+
+function sharePageShell(title, description, pageUrl, bodyHtml) {
+	return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${esc(title)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="${esc(description)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SC Trading Post">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:url" content="${esc(pageUrl)}">
+<meta name="theme-color" content="#B7E23D">
+<style>${SHARE_PAGE_STYLE}</style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`;
+}
+
+function renderListingHtml(row, similar, pageUrl) {
+	const title = `${row.itemName} — ${listingPriceText(row)}`;
+	const sellerLine = row.marketplace ? `Posted by ${row.seller} on ${row.world}` : `Sold by ${row.seller} on ${row.world}`;
+	const qty = row.amount || row.stackSize || 1;
+	const description = `${qty}x ${row.itemName} for ${listingPriceText(row)}. ${sellerLine}.`;
+	const backUrl = row.world && row.seller && !row.marketplace
+		? `${SITE_ORIGIN}/s/${encodeURIComponent(String(row.world).toLowerCase())}/${encodeURIComponent(row.seller)}`
+		: `${SITE_ORIGIN}/marketplace/`;
+
+	const similarHtml = similar.length
+		? `<div class="similar"><h2>Other listings for ${esc(row.itemName)}</h2><ul>` +
+		  similar.map((s) => `<li><span class="s-seller">${esc(s.seller)}</span><span class="s-price">${esc(listingPriceText(s))}</span></li>`).join("") +
+		  `</ul></div>`
+		: "";
+
+	const body = `<h1>${esc(row.itemName)}</h1>
+<p class="price">${esc(listingPriceText(row))}</p>
+<p class="meta">${esc(sellerLine)}</p>
+${similarHtml}
+<a class="cta" href="${esc(backUrl)}">View on SC Trading Post →</a>`;
+	return new Response(sharePageShell(title, description, pageUrl, body), { headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "public, max-age=120" } });
+}
+
+// Mirrors rewardText() in marketplace/index.html — "fee" for someone
+// advertising their own labor (forHire), "reward" for someone paying to get
+// a task done (hiring).
+function jobFeeText(j) {
+	const word = j.type === "forHire" ? "fee" : "reward";
+	if (j.rewardAmount == null) return `No ${word} set`;
+	const currencyText = j.rewardCurrency === "diamondstack" ? "STX" : j.rewardCurrency || "?";
+	return `${j.rewardAmount} ${currencyText} ${word}`;
+}
+
+function renderJobHtml(job, posterName, interestCount, pageUrl) {
+	const typeLabel = job.type === "forHire" ? "For Hire" : "Hiring";
+	const title = `${job.title} — ${typeLabel}`;
+	const posterLine = `Posted by ${posterName} on ${job.world}`;
+	const description = `${jobFeeText(job)}. ${posterLine}. ${interestCount} interested.`;
+	const backUrl = `${SITE_ORIGIN}/marketplace/#job=${encodeURIComponent(job.id)}`;
+
+	const body = `<h1>${esc(job.title)}</h1>
+<p class="price">${esc(jobFeeText(job))}</p>
+<p class="meta">${esc(posterLine)}</p>
+${job.description ? `<p class="meta">${esc(job.description)}</p>` : ""}
+<a class="cta" href="${esc(backUrl)}">View on SC Trading Post →</a>`;
+	return new Response(sharePageShell(title, description, pageUrl, body), { headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "public, max-age=120" } });
+}
+
+async function handleListingPage(request, env, ctx, rawId) {
+	const id = decodeURIComponent(rawId || "").trim();
+	if (!id) return notFoundListingPage();
+	const pageUrl = `${new URL(request.url).origin}/listing/${encodeURIComponent(id)}`;
+
+	const row = await env.DB.prepare(
+		"SELECT * FROM listings WHERE id = ? AND lower(seller) NOT IN (SELECT usernameKey FROM blockedSellers)"
+	).bind(id).first();
+	if (row) {
+		const { results } = await env.DB.prepare(
+			`SELECT * FROM listings WHERE lower(itemName) = lower(?) AND id != ? AND lower(seller) NOT IN (SELECT usernameKey FROM blockedSellers) ORDER BY price ASC LIMIT 6`
+		).bind(row.itemName, id).all();
+		return renderListingHtml(row, results, pageUrl);
+	}
+
+	const m = await env.DB.prepare("SELECT * FROM marketplaceListings WHERE id = ? AND status = 'active'").bind(id).first();
+	if (m) {
+		const admin = await env.DB.prepare("SELECT username, mcUsername FROM admins WHERE id = ?").bind(m.accountId).first();
+		const mRow = marketplaceRowAsListing(m, admin ? (admin.mcUsername || admin.username) : "Someone");
+		const { results } = await env.DB.prepare(
+			`SELECT ml.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername
+			 FROM marketplaceListings ml JOIN admins a ON a.id = ml.accountId
+			 WHERE ml.status = 'active' AND ml.expiresAt > ? AND lower(ml.itemName) = lower(?) AND ml.id != ? LIMIT 6`
+		).bind(new Date().toISOString(), m.itemName, id).all();
+		const similar = results.map((r) => marketplaceRowAsListing(r, r.accountMcUsername || r.accountUsername));
+		return renderListingHtml(mRow, similar, pageUrl);
+	}
+
+	const j = await env.DB.prepare("SELECT * FROM marketplaceJobs WHERE id = ? AND status = 'active'").bind(id).first();
+	if (j) {
+		const admin = await env.DB.prepare("SELECT username, mcUsername FROM admins WHERE id = ?").bind(j.accountId).first();
+		const posterName = admin ? (admin.mcUsername || admin.username) : "Someone";
+		const countRow = await env.DB.prepare("SELECT COUNT(*) as c FROM marketplaceJobInterests WHERE jobId = ?").bind(id).first();
+		return renderJobHtml(j, posterName, countRow ? countRow.c : 0, pageUrl);
+	}
+
+	return notFoundListingPage();
+}
+
+// GET /item/<slug> — a share page for one item-library entry. Deliberately
+// doesn't try to resolve the slug against the site's item-library JSON (that
+// data lives in static files, not D1, and slug generation there is exact-
+// name-vs-baseItem-fallback logic that's fragile to reproduce server-side) —
+// prettifying the slug itself is good enough for a link preview's title.
+function prettifySlug(slug) {
+	return String(slug || "").trim().split("-").filter(Boolean)
+		.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+async function handleItemPage(request, env, ctx, rawSlug) {
+	const slug = decodeURIComponent(rawSlug || "").trim();
+	if (!slug) return notFoundListingPage();
+	const name = prettifySlug(slug);
+	const pageUrl = `${new URL(request.url).origin}/item/${encodeURIComponent(slug)}`;
+	const title = `${name} — Item Library`;
+	const description = `Browse current listings, prices, and history for ${name} on Snailcraft Trading Post.`;
+	const backUrl = `${SITE_ORIGIN}/items/${encodeURIComponent(slug)}`;
+
+	const body = `<h1>${esc(name)}</h1>
+<p class="meta">${esc(description)}</p>
+<a class="cta" href="${esc(backUrl)}">View on SC Trading Post →</a>`;
+	return new Response(sharePageShell(title, description, pageUrl, body), { headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+}
+
+// GET /seller/<world>/<seller> — a share page for one seller's shop.
+async function handleSellerPage(request, env, ctx, rawWorld, rawSeller) {
+	const world = decodeURIComponent(rawWorld || "").trim();
+	const seller = decodeURIComponent(rawSeller || "").trim();
+	if (!world || !seller) return notFoundListingPage();
+
+	const countRow = await env.DB.prepare(
+		"SELECT COUNT(*) as c FROM listings WHERE lower(world) = lower(?) AND lower(seller) = lower(?) AND lower(seller) NOT IN (SELECT usernameKey FROM blockedSellers)"
+	).bind(world, seller).first();
+	const count = countRow ? countRow.c : 0;
+
+	const pageUrl = `${new URL(request.url).origin}/seller/${encodeURIComponent(world)}/${encodeURIComponent(seller)}`;
+	const title = `${seller}'s Shop — ${world}`;
+	const description = count > 0
+		? `${count} live listing${count === 1 ? "" : "s"} on ${world}. Browse ${seller}'s shop on Snailcraft Trading Post.`
+		: `Browse ${seller}'s shop on ${world}, on Snailcraft Trading Post.`;
+	const backUrl = `${SITE_ORIGIN}/s/${encodeURIComponent(world.toLowerCase())}/${encodeURIComponent(seller)}`;
+
+	const body = `<h1>${esc(seller)}'s Shop</h1>
+<p class="meta">${esc(description)}</p>
+<a class="cta" href="${esc(backUrl)}">View on SC Trading Post →</a>`;
+	return new Response(sharePageShell(title, description, pageUrl, body), { headers: { "Content-Type": "text/html;charset=utf-8", "Cache-Control": "public, max-age=120" } });
 }
 
 // GET /marketplace/listings — public. Same active-listing set as the rows
@@ -2489,12 +2704,12 @@ async function handleAdminAddManualListings(request, env) {
 		const stmts = parsed.map((e, i) => {
 			const rowKeyVal = `${world}|${seller}|manual|${e.itemName}`.toLowerCase();
 			return env.DB.prepare(
-				`INSERT INTO listings (rowKey, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen)
-				 VALUES (?, ?, 'manual', 0, 0, 0, ?, ?, 1, 1, 1, ?, ?, ?, ?, ?)
+				`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen)
+				 VALUES (?, ?, ?, 'manual', 0, 0, 0, ?, ?, 1, 1, 1, ?, ?, ?, ?, ?)
 				 ON CONFLICT(rowKey) DO UPDATE SET
 				   price=excluded.price, priceLabel=excluded.priceLabel, currency=excluded.currency,
 				   position=excluded.position, lastSeen=excluded.lastSeen`
-			).bind(rowKeyVal, e.itemName, e.price, e.priceLabel, e.currency, seller, world, e.position, ids[i]);
+			).bind(rowKeyVal, newId(), e.itemName, e.price, e.priceLabel, e.currency, seller, world, e.position, ids[i]);
 		});
 		await env.DB.batch(stmts);
 		return json({ ok: true, added: parsed.map((e, i) => ({ itemName: e.itemName, id: ids[i] })) });
@@ -3051,6 +3266,21 @@ export default {
 
 		if (request.method === "OPTIONS") {
 			return new Response(null, { headers: corsHeaders() });
+		}
+
+		// Not in ROUTES below since that table only does exact-path matching —
+		// these are the routes with a dynamic path segment (id/slug/seller).
+		if (request.method === "GET" && url.pathname.startsWith("/listing/")) {
+			return handleListingPage(request, env, ctx, url.pathname.slice("/listing/".length));
+		}
+		if (request.method === "GET" && url.pathname.startsWith("/item/")) {
+			return handleItemPage(request, env, ctx, url.pathname.slice("/item/".length));
+		}
+		if (request.method === "GET" && url.pathname.startsWith("/seller/")) {
+			const rest = url.pathname.slice("/seller/".length); // "<world>/<seller>"
+			const slashIdx = rest.indexOf("/");
+			if (slashIdx === -1) return notFoundListingPage();
+			return handleSellerPage(request, env, ctx, rest.slice(0, slashIdx), rest.slice(slashIdx + 1));
 		}
 
 		for (const [method, path, handler] of ROUTES) {
