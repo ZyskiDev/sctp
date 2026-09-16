@@ -87,6 +87,37 @@
 	}
 	.upload-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(183,226,61,0.18);}
 	.upload-cta:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+	/* Flashy treatment for the download CTA specifically — same idea as the
+	   nav's "NEW" marketplace badge (pulsing glow + gradient), just applied
+	   to a button instead of a pill. A pulsing box-shadow (not a scale/
+	   transform) so it never reflows the header row, plus a shine sweep. */
+	#downloadMod{
+		position:relative;
+		overflow:hidden;
+		background:linear-gradient(90deg,#B7E23D,#6FE3C8,#4FC3F7,#B7E23D);
+		background-size:300% auto;
+		animation:downloadGradientShift 4s linear infinite, downloadPulseGlow 2.2s ease-in-out infinite;
+	}
+	#downloadMod:hover{animation-play-state:paused, paused;}
+	#downloadMod::after{
+		content:"";
+		position:absolute;
+		top:0;
+		left:-60%;
+		width:35%;
+		height:100%;
+		background:linear-gradient(120deg,transparent,rgba(255,255,255,0.65),transparent);
+		transform:skewX(-20deg);
+		animation:downloadShine 3s ease-in-out infinite;
+		pointer-events:none;
+	}
+	@keyframes downloadGradientShift{0%{background-position:0% center;}100%{background-position:300% center;}}
+	@keyframes downloadPulseGlow{
+		0%{box-shadow:0 0 0 0 rgba(183,226,61,0.55);}
+		50%{box-shadow:0 0 16px 5px rgba(183,226,61,0.4);}
+		100%{box-shadow:0 0 0 0 rgba(183,226,61,0);}
+	}
+	@keyframes downloadShine{0%{left:-60%;}50%{left:130%;}100%{left:130%;}}
 	.docs-cta{
 		display:inline-block;
 		background:transparent;
