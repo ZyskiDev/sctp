@@ -433,14 +433,15 @@
 		background:var(--panel-alt);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;
 	}
 	.share-hero img{
-		width:52px;height:52px;image-rendering:pixelated;flex:0 0 auto;
-		background:var(--bg);border-radius:10px;padding:6px;border:1px solid var(--line);
+		width:88px;height:88px;image-rendering:pixelated;flex:0 0 auto;
+		background:var(--bg);border-radius:12px;padding:10px;border:1px solid var(--line);
 	}
 	.share-hero-info{min-width:0;}
-	.share-hero-name{font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--text);line-height:1.25;}
+	.share-hero-name{font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--text);line-height:1.25;}
 	.share-hero-name a{color:var(--text);}
 	.share-hero-name a:hover{color:var(--accent);}
-	.share-hero-price{color:var(--accent);font-weight:700;font-size:15px;margin-top:3px;}
+	.share-hero-price{color:var(--accent);font-weight:700;font-size:16px;margin-top:4px;}
+	.share-hero-price-sub{color:var(--muted);font-size:12px;margin-top:1px;}
 
 	.share-details{
 		display:grid;grid-template-columns:auto 1fr;gap:7px 14px;
@@ -1975,26 +1976,38 @@
 	// execute JS on), but keeps every shared link a real sctp.nl page with
 	// the full interactive site behind it, which is what was asked for.
 	function openShare(row){
+		var manual = isManualListing(row);
 		var itemUrl = itemLibraryUrlFor(row);
 		var itemHtml = itemUrl ? '<a href="'+esc(itemUrl)+'">'+esc(row.itemNameDisplay)+'</a>' : esc(row.itemNameDisplay);
+		var priceSubHtml = row.marketplace ? '' : '<div class="share-hero-price-sub">per '+esc(row.bulk ? 'shulk' : row.stackSize)+'</div>';
 		document.getElementById("shareHero").innerHTML =
 			'<img src="'+esc(iconFor(row))+'" alt="" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';">'+
 			'<div class="share-hero-info">'+
 				'<div class="share-hero-name">'+itemHtml+'</div>'+
 				'<div class="share-hero-price">'+esc(row.priceLabel)+'</div>'+
+				priceSubHtml+
 			'</div>';
 
 		var rowSellerUrl = sellerUrl(row.seller, row.world);
 		var sellerHtml = rowSellerUrl ? '<a href="'+esc(rowSellerUrl)+'">'+esc(row.seller)+'</a>' : esc(row.seller);
 		var stockText = row.marketplace
 			? (row.marketplaceType === "lookingFor" ? "Wants " : "Has ") + fmtNum(row.amount)
-			: fmtNum(row.amount) + ' (' + row.stacksInStock + ' ' + (row.bulk ? 'shulks' : row.stackSize === 64 ? 'stacks' : 'groups') + ')';
+			: manual
+				? "∞ (not tracked — added manually)"
+				: fmtNum(row.amount) + ' (' + row.stacksInStock + ' ' + (row.bulk ? 'shulks' : row.stackSize === 64 ? 'stacks' : 'groups') + ')';
+		var typeText = row.marketplace
+			? (row.marketplaceType === "lookingFor" ? "Wanted (Marketplace)" : "Marketplace")
+			: (row.bulk ? "Bulk" : row.bundled ? "Bundled" : "Single") + (row.mixedContents ? " · Mixed chest" : "");
+		var lastSeenText = manual ? "None ("+row.lastSeen+")" : relTime(row.lastSeen);
 		var details = [
 			["Seller", sellerHtml],
 			["World", esc(row.world)],
+			["Base item", esc(row.baseItem)],
+			["Type", esc(typeText)],
 			["Stock", esc(stockText)],
 			["Position", esc(row.position || "—")],
-			["Last seen", esc(relTime(row.lastSeen))]
+			["Last seen", esc(lastSeenText)],
+			["Available since", esc(availableSinceCell(row))]
 		];
 		document.getElementById("shareDetailsWrap").innerHTML =
 			'<div class="share-details">' +
