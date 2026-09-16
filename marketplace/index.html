@@ -60,6 +60,8 @@
 	.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:0.03em;}
 	.badge.selling{background:rgba(183,226,61,0.15);color:var(--accent);}
 	.badge.lookingfor{background:rgba(140,147,232,0.18);color:#8C93E8;}
+	.badge.hiring{background:rgba(226,163,61,0.15);color:var(--warn);}
+	.badge.forhire{background:rgba(79,195,247,0.15);color:#4FC3F7;}
 	.lc-meta{color:var(--muted);font-size:12.5px;margin:0 0 10px;}
 	.lc-price{font-family:var(--font-mono);font-size:15px;color:var(--accent);font-weight:700;margin-bottom:2px;}
 	.lc-bid-line{font-family:var(--font-mono);font-size:12.5px;color:var(--shell);margin-bottom:6px;}
@@ -122,6 +124,11 @@
 </header>
 
 <main class="wrap">
+	<div class="segmented" id="marketSeg" style="margin-bottom:16px;">
+		<button type="button" data-v="items" class="active">Items</button>
+		<button type="button" data-v="jobs">Jobs</button>
+	</div>
+
 	<div class="tabs">
 		<button type="button" class="tab-btn active" data-tab="browse">Browse</button>
 		<button type="button" class="tab-btn" data-tab="mine" id="mineTab">My Marketplace</button>
@@ -129,27 +136,53 @@
 	</div>
 
 	<div class="tab-pane active" id="paneBrowse">
-		<div class="search-row">
-			<input type="search" id="itemSearchInput" placeholder="Search listings by item name…">
-		</div>
-		<div class="toolbar">
-			<div class="segmented" id="worldSeg">
-				<button type="button" data-v="">Both</button>
-				<button type="button" data-v="Firefly" class="active">Firefly</button>
-				<button type="button" data-v="Honeybee">Honeybee</button>
-				<button type="button" data-v="Cross-world">Cross-world</button>
+		<div id="itemsBrowse">
+			<div class="search-row">
+				<input type="search" id="itemSearchInput" placeholder="Search listings by item name…">
 			</div>
-			<div style="display:flex;gap:10px;align-items:center;">
-				<div class="segmented" id="typeSeg">
-					<button type="button" data-v="" class="active">All</button>
-					<button type="button" data-v="selling">Selling</button>
-					<button type="button" data-v="lookingFor">Looking for</button>
+			<div class="toolbar">
+				<div class="segmented" id="worldSeg">
+					<button type="button" data-v="">Both</button>
+					<button type="button" data-v="Firefly" class="active">Firefly</button>
+					<button type="button" data-v="Honeybee">Honeybee</button>
+					<button type="button" data-v="Cross-world">Cross-world</button>
 				</div>
-				<button type="button" class="btn" id="newListingBtn">+ New Listing</button>
+				<div style="display:flex;gap:10px;align-items:center;">
+					<div class="segmented" id="typeSeg">
+						<button type="button" data-v="" class="active">All</button>
+						<button type="button" data-v="selling">Selling</button>
+						<button type="button" data-v="lookingFor">Looking for</button>
+					</div>
+					<button type="button" class="btn" id="newListingBtn">+ New Listing</button>
+				</div>
 			</div>
+			<div id="listingsGrid" class="card-grid"></div>
+			<p class="empty-state" id="listingsEmpty" hidden>No active listings match these filters.</p>
 		</div>
-		<div id="listingsGrid" class="card-grid"></div>
-		<p class="empty-state" id="listingsEmpty" hidden>No active listings match these filters.</p>
+
+		<div id="jobsBrowse" hidden>
+			<div class="search-row">
+				<input type="search" id="jobSearchInput" placeholder="Search jobs by title…">
+			</div>
+			<div class="toolbar">
+				<div class="segmented" id="jobWorldSeg">
+					<button type="button" data-v="">Both</button>
+					<button type="button" data-v="Firefly" class="active">Firefly</button>
+					<button type="button" data-v="Honeybee">Honeybee</button>
+					<button type="button" data-v="Cross-world">Cross-world</button>
+				</div>
+				<div style="display:flex;gap:10px;align-items:center;">
+					<div class="segmented" id="jobTypeSeg">
+						<button type="button" data-v="" class="active">All</button>
+						<button type="button" data-v="hiring">Hiring</button>
+						<button type="button" data-v="forHire">For Hire</button>
+					</div>
+					<button type="button" class="btn" id="newJobBtn">+ New Job Post</button>
+				</div>
+			</div>
+			<div id="jobsGrid" class="card-grid"></div>
+			<p class="empty-state" id="jobsEmpty" hidden>No active job posts match these filters.</p>
+		</div>
 	</div>
 
 	<div class="tab-pane" id="paneMine">
@@ -183,6 +216,12 @@
 	var itemSearch = "";
 	var vanillaByNormName = {};
 	var itemCatalog = []; // {name, baseItem} for both vanilla + rare
+
+	var jobs = [];
+	var jobWorldFilter = "Firefly";
+	var jobTypeFilter = "";
+	var jobSearch = "";
+	var marketSection = "items"; // "items" | "jobs" — which half of the Browse pane is showing
 
 	// Same placeholder used by items/index.html — a shop-image is nice-to-have,
 	// not guaranteed (a fresh/renamed item might not be in the catalog yet).
@@ -345,6 +384,181 @@
 			renderListings();
 		});
 	});
+
+	// ---------------- items/jobs top-level toggle ----------------
+	document.querySelectorAll("#marketSeg button").forEach(function(btn){
+		btn.addEventListener("click", function(){
+			document.querySelectorAll("#marketSeg button").forEach(function(b){ b.classList.remove("active"); });
+			btn.classList.add("active");
+			marketSection = btn.dataset.v;
+			document.getElementById("itemsBrowse").hidden = marketSection !== "items";
+			document.getElementById("jobsBrowse").hidden = marketSection !== "jobs";
+		});
+	});
+
+	// ---------------- jobs: browse ----------------
+	var jobDeepLinkHandled = false;
+	function loadJobs(){
+		return fetch(API_BASE + "/marketplace/jobs").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }).then(function(rows){
+			jobs = rows;
+			renderJobs();
+			if(!jobDeepLinkHandled && location.hash.indexOf("#job=") === 0){
+				jobDeepLinkHandled = true;
+				document.querySelector('#marketSeg [data-v="jobs"]').click();
+				openJobDetail(decodeURIComponent(location.hash.slice("#job=".length)));
+			}
+		});
+	}
+
+	function rewardText(j){ return j.rewardAmount == null ? "No reward set" : currencyText(j.rewardAmount, j.rewardCurrency) + " reward"; }
+	function jobBadgeHtml(j){ return '<span class="badge ' + (j.type === "hiring" ? "hiring" : "forhire") + '">' + (j.type === "hiring" ? "Hiring" : "For Hire") + '</span>'; }
+
+	function renderJobs(){
+		var grid = document.getElementById("jobsGrid");
+		var q = jobSearch.trim().toLowerCase();
+		var rows = jobs.filter(function(j){
+			if(jobWorldFilter && j.world !== jobWorldFilter) return false;
+			if(jobTypeFilter && j.type !== jobTypeFilter) return false;
+			if(q && j.title.toLowerCase().indexOf(q) === -1) return false;
+			return true;
+		});
+		document.getElementById("jobsEmpty").hidden = rows.length > 0;
+		grid.innerHTML = rows.map(function(j){
+			return '<div class="listing-card">' +
+				'<div class="lc-top"><h3>' + esc(j.title) + '</h3>' + jobBadgeHtml(j) + '</div>' +
+				'<p class="lc-meta">' + esc(j.world) + (j.deadline ? " · needed by " + esc(new Date(j.deadline).toLocaleDateString()) : "") + '</p>' +
+				'<div class="lc-price">' + esc(rewardText(j)) + '</div>' +
+				(j.description ? '<p class="lc-notes">' + esc(j.description.length > 140 ? j.description.slice(0, 140) + "…" : j.description) + '</p>' : '') +
+				'<div class="lc-foot">' +
+					'<span>' + esc(j.poster) + (j.posterVerified ? ' <span class="verified">&#10003;</span>' : '') + '</span>' +
+					'<span>' + (j.interestCount ? j.interestCount + " interested" : "No interest yet") + '</span>' +
+				'</div>' +
+				'<button type="button" class="btn-ghost" style="width:100%;margin-top:10px;" data-open-job="' + esc(j.id) + '">View</button>' +
+			'</div>';
+		}).join("");
+		grid.querySelectorAll("[data-open-job]").forEach(function(btn){
+			btn.addEventListener("click", function(){ openJobDetail(btn.getAttribute("data-open-job")); });
+		});
+	}
+
+	document.getElementById("jobSearchInput").addEventListener("input", function(){
+		jobSearch = this.value;
+		renderJobs();
+	});
+	document.querySelectorAll("#jobWorldSeg button").forEach(function(btn){
+		btn.addEventListener("click", function(){
+			document.querySelectorAll("#jobWorldSeg button").forEach(function(b){ b.classList.remove("active"); });
+			btn.classList.add("active");
+			jobWorldFilter = btn.dataset.v;
+			renderJobs();
+		});
+	});
+	document.querySelectorAll("#jobTypeSeg button").forEach(function(btn){
+		btn.addEventListener("click", function(){
+			document.querySelectorAll("#jobTypeSeg button").forEach(function(b){ b.classList.remove("active"); });
+			btn.classList.add("active");
+			jobTypeFilter = btn.dataset.v;
+			renderJobs();
+		});
+	});
+
+	// ---------------- jobs: detail / express interest modal ----------------
+	function openJobDetail(id){
+		var j = jobs.filter(function(x){ return x.id === id; })[0];
+		if(!j) return;
+		var s = session();
+		var wrap = document.createElement("div");
+		wrap.className = "modal-bg";
+		var html = '<div class="modal">' +
+			'<h2 style="margin-bottom:4px;">' + esc(j.title) + '</h2>' + jobBadgeHtml(j) +
+			'<p class="lc-meta" style="margin-top:10px;">' + esc(j.world) + ' · posted by ' + esc(j.poster) + (j.posterVerified ? ' <span class="verified">&#10003;</span>' : '') + '</p>' +
+			'<p class="lc-meta">Posted ' + esc(new Date(j.createdAt).toLocaleDateString()) + ' · expires ' + esc(new Date(j.expiresAt).toLocaleDateString()) + (j.deadline ? ' · needed by ' + esc(new Date(j.deadline).toLocaleDateString()) : '') + '</p>' +
+			'<div class="lc-price">' + esc(rewardText(j)) + '</div>' +
+			(j.description ? '<p class="lc-notes">' + esc(j.description) + '</p>' : '') +
+			'<div id="jobInterestArea"></div>' +
+			'<div class="actions"><button type="button" class="btn-ghost" id="jobDetailClose" style="width:100%;">Close</button></div></div>';
+		wrap.innerHTML = html;
+		document.body.appendChild(wrap);
+		document.getElementById("jobDetailClose").onclick = function(){ wrap.remove(); };
+		// Same reasoning as the New Listing/New Job forms — no outside-click-to-close.
+
+		var area = document.getElementById("jobInterestArea");
+		if(!s){
+			area.innerHTML = '<p class="lc-meta">Log in to express interest.</p>';
+		} else {
+			area.innerHTML =
+				'<div class="field"><label>Message (optional)</label><input type="text" id="jobIntMessage" maxlength="300"></div>' +
+				'<p class="err" id="jobIntErr" hidden></p>' +
+				'<button type="button" class="btn" style="width:100%;" id="jobIntSubmit">I\'m interested</button>';
+			document.getElementById("jobIntSubmit").onclick = function(){
+				var message = document.getElementById("jobIntMessage").value.trim();
+				var errEl = document.getElementById("jobIntErr");
+				errEl.hidden = true;
+				authFetch("/marketplace/jobs/interest", { method: "POST", body: JSON.stringify({ jobId: j.id, message: message || undefined }) })
+					.then(function(res){
+						if(!res.ok){ errEl.textContent = res.data.error || "Couldn't express interest."; errEl.hidden = false; return; }
+						// Reveal immediately — no accept/decline step for jobs, this IS the moment.
+						area.innerHTML = '<p class="lc-meta" style="color:var(--accent);font-weight:600;">You\'re in! Contact ' + esc(j.poster) + ' via:</p>' +
+							'<p class="lc-notes" style="white-space:pre-line;">' + esc(res.data.contactInfo || "(no contact info on file)") + '</p>';
+						loadJobs();
+					});
+			};
+		}
+	}
+
+	// ---------------- jobs: new job post modal ----------------
+	function openNewJobModal(){
+		var s = session();
+		if(!s){ alert("Log in first to post a job."); return; }
+		var type = "hiring";
+		var wrap = document.createElement("div");
+		wrap.className = "modal-bg";
+		wrap.innerHTML =
+			'<div class="modal">' +
+				'<h2>New job post</h2>' +
+				'<div class="type-toggle"><button type="button" class="active" data-type="hiring">Hiring</button><button type="button" data-type="forHire">For Hire</button></div>' +
+				'<div class="field"><label>Title</label><input type="text" id="njTitle" maxlength="100" placeholder="e.g. Need a farm built"></div>' +
+				'<div class="field"><label>Description (optional)</label><textarea id="njDesc" maxlength="1000"></textarea></div>' +
+				'<div class="row2"><div class="field"><label>World</label><select id="njWorld"><option value="Firefly">Firefly</option><option value="Honeybee">Honeybee</option><option value="Cross-world">Cross-world</option></select></div>' +
+				'<div class="field"><label>Needed by (optional)</label><input type="date" id="njDeadline"></div></div>' +
+				'<div class="row2"><div class="field"><label>Reward (optional)</label><input type="number" id="njReward" min="0" step="any"></div>' +
+				'<div class="field"><label>Currency</label>' + currencySelectHtml("njRewardCur", "diamond") + '</div></div>' +
+				'<p class="err" id="njErr" hidden></p>' +
+				'<div class="actions"><button type="button" class="btn-ghost" id="njCancel">Cancel</button><button type="button" class="btn" id="njSubmit">Post job</button></div>' +
+			'</div>';
+		document.body.appendChild(wrap);
+		document.getElementById("njCancel").onclick = function(){ wrap.remove(); };
+		// Deliberately no outside-click-to-close — same reasoning as New Listing.
+
+		wrap.querySelectorAll(".type-toggle button").forEach(function(btn){
+			btn.addEventListener("click", function(){
+				wrap.querySelectorAll(".type-toggle button").forEach(function(b){ b.classList.remove("active"); });
+				btn.classList.add("active");
+				type = btn.dataset.type;
+			});
+		});
+
+		document.getElementById("njSubmit").onclick = function(){
+			var errEl = document.getElementById("njErr");
+			errEl.hidden = true;
+			var title = document.getElementById("njTitle").value.trim();
+			if(!title){ errEl.textContent = "Title is required."; errEl.hidden = false; return; }
+			var body = {
+				type: type, title: title,
+				description: document.getElementById("njDesc").value.trim() || undefined,
+				world: document.getElementById("njWorld").value,
+				deadline: document.getElementById("njDeadline").value || undefined,
+			};
+			var reward = document.getElementById("njReward").value;
+			if(reward){ body.rewardAmount = Number(reward); body.rewardCurrency = document.getElementById("njRewardCur").value; }
+			authFetch("/marketplace/jobs/create", { method: "POST", body: JSON.stringify(body) }).then(function(res){
+				if(!res.ok){ errEl.textContent = res.data.error || "Couldn't post job."; errEl.hidden = false; return; }
+				wrap.remove();
+				loadJobs();
+			});
+		};
+	}
+	document.getElementById("newJobBtn").addEventListener("click", openNewJobModal);
 
 	// ---------------- listing detail / bidding modal ----------------
 	function openListingDetail(id){
@@ -559,10 +773,37 @@
 				(b.status === "pending" ? ' <button type="button" class="btn-danger" data-withdraw-bid="' + esc(b.id) + '" style="margin-left:8px;">Withdraw</button>' : '') + '</span></div>';
 		}).join("") : '<p class="empty-state">You haven\'t bid on anything yet.</p>';
 
+		var interestsByJob = {};
+		(data.jobInterestsReceived || []).forEach(function(i){ (interestsByJob[i.jobId] = interestsByJob[i.jobId] || []).push(i); });
+
+		var jobsHtml = (data.jobs || []).length ? data.jobs.map(function(j){
+			var received = interestsByJob[j.id] || [];
+			var interestHtml = received.length ? received.map(function(i){
+				return '<div class="bid-row" style="align-items:flex-start;"><span>' + esc(i.interestedUsername) + (i.interestedVerified ? ' <span class="verified">&#10003;</span>' : '') + (i.message ? ' — "' + esc(i.message) + '"' : '') +
+					'<br><span class="lc-meta" style="white-space:pre-line;">' + esc(i.contactInfo) + '</span></span></div>';
+			}).join("") : '<p class="lc-meta">No interest yet.</p>';
+			return '<div class="listing-card" style="margin-bottom:12px;">' +
+				'<div class="lc-top"><h3>' + esc(j.title) + '</h3><span class="badge ' + (j.type === "hiring" ? "hiring" : "forhire") + '">' + esc(j.status) + '</span></div>' +
+				'<p class="lc-meta">' + esc(j.world) + '</p>' +
+				interestHtml +
+				(j.status === "active" ? '<div style="display:flex;gap:8px;margin-top:8px;">' +
+					'<button type="button" class="btn-ghost" data-fulfill-job="' + esc(j.id) + '">Mark fulfilled</button>' +
+					'<button type="button" class="btn-danger" data-cancel-job="' + esc(j.id) + '">Cancel</button>' +
+				'</div>' : '') +
+			'</div>';
+		}).join("") : '<p class="empty-state">You haven\'t posted any jobs yet.</p>';
+
+		var myJobIntHtml = (data.myJobInterests || []).length ? data.myJobInterests.map(function(i){
+			return '<div class="bid-row"><span>' + esc(i.title) + ' (' + esc(i.world) + ')' + (i.message ? ' — "' + esc(i.message) + '"' : '') + '</span></div>';
+		}).join("") : '<p class="empty-state">You haven\'t expressed interest in any jobs yet.</p>';
+
 		host.innerHTML =
 			'<h2 style="font-family:var(--font-display);font-size:17px;">Your listings</h2>' + listingsHtml +
 			'<h2 style="font-family:var(--font-display);font-size:17px;margin-top:24px;">Your bids</h2>' +
-			'<div class="listing-card">' + myBidsHtml + '</div>';
+			'<div class="listing-card">' + myBidsHtml + '</div>' +
+			'<h2 style="font-family:var(--font-display);font-size:17px;margin-top:24px;">Your job posts</h2>' + jobsHtml +
+			'<h2 style="font-family:var(--font-display);font-size:17px;margin-top:24px;">Jobs you\'re interested in</h2>' +
+			'<div class="listing-card">' + myJobIntHtml + '</div>';
 
 		host.querySelectorAll("[data-accept-bid]").forEach(function(btn){
 			btn.addEventListener("click", function(){ authFetch("/marketplace/bids/accept", { method: "POST", body: JSON.stringify({ bidId: btn.getAttribute("data-accept-bid") }) }).then(function(){ loadMine(); loadListings(); }); });
@@ -575,6 +816,12 @@
 		});
 		host.querySelectorAll("[data-cancel-listing]").forEach(function(btn){
 			btn.addEventListener("click", function(){ authFetch("/marketplace/listings/cancel", { method: "POST", body: JSON.stringify({ id: btn.getAttribute("data-cancel-listing") }) }).then(function(){ loadMine(); loadListings(); }); });
+		});
+		host.querySelectorAll("[data-fulfill-job]").forEach(function(btn){
+			btn.addEventListener("click", function(){ authFetch("/marketplace/jobs/close", { method: "POST", body: JSON.stringify({ id: btn.getAttribute("data-fulfill-job"), status: "fulfilled" }) }).then(function(){ loadMine(); loadJobs(); }); });
+		});
+		host.querySelectorAll("[data-cancel-job]").forEach(function(btn){
+			btn.addEventListener("click", function(){ authFetch("/marketplace/jobs/close", { method: "POST", body: JSON.stringify({ id: btn.getAttribute("data-cancel-job"), status: "cancelled" }) }).then(function(){ loadMine(); loadJobs(); }); });
 		});
 	}
 
@@ -598,7 +845,7 @@
 		});
 	}
 
-	Promise.all([loadCatalog(), loadListings()]);
+	Promise.all([loadCatalog(), loadListings(), loadJobs()]);
 })();
 </script>
 </body>

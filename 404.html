@@ -177,6 +177,7 @@
 	.item-header .tag{color:var(--muted);font-size:13.5px;margin:4px 0 0;font-family:var(--font-mono);}
 	.item-header .tag a{color:var(--info);font-family:var(--font-body);}
 	.history-note{color:var(--warn);font-size:13px;margin:0 0 16px;}
+	.renamed-notice{background:rgba(226,100,61,0.12);border:1px solid #E2643D;color:#E2643D;border-radius:12px;padding:12px 16px;font-size:13.5px;font-weight:600;margin-bottom:20px;}
 	.rare-info{
 		background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:24px;
 		display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:14px 20px;
@@ -452,8 +453,17 @@
 			var name = r.itemNameDisplay || r.itemName;
 			return name ? "/items/enchanted_book?name=" + encodeURIComponent(name) : null;
 		}
-		var slug = slugByName[alphaOnly(r.itemNameDisplay || r.itemName)];
-		if(!slug) slug = slugByBaseItem[String(r.baseItem||"").trim().toLowerCase()];
+		var displayName = r.itemNameDisplay || r.itemName;
+		var slug = slugByName[alphaOnly(displayName)];
+		if(!slug){
+			var baseKey = String(r.baseItem||"").trim().toLowerCase();
+			slug = slugByBaseItem[baseKey];
+			// Same fallback-flagging reasoning as index.html's copy of this
+			// function — see its comment.
+			if(slug && displayName && baseKey !== "minecraft:map" && baseKey !== "minecraft:filled_map"){
+				return "/items/" + encodeURIComponent(slug) + "?renamed=" + encodeURIComponent(displayName);
+			}
+		}
 		return slug ? "/items/" + encodeURIComponent(slug) : null;
 	}
 	async function loadTextureCatalogs(onLoaded){
@@ -537,7 +547,8 @@
 		// per-enchantment id) — a specific form's own page is reached via
 		// ?name=..., not a distinct slug. See runItemPage.
 		var exactName = new URLSearchParams(window.location.search).get("name");
-		runItemPage(decodeURIComponent(itemMatch[1]), exactName);
+		var renamedFrom = new URLSearchParams(window.location.search).get("renamed");
+		runItemPage(decodeURIComponent(itemMatch[1]), exactName, renamedFrom);
 	} else {
 		document.getElementById("app").innerHTML =
 			'<div class="notfound"><h1>Page not found</h1>'+
@@ -630,6 +641,7 @@
 	function currencyLabel(c){
 		if(c === "diamond") return "Diamond";
 		if(c === "diamondblock") return "Diamond block";
+		if(c === "diamondstack") return "STX (64 diamond blocks)";
 		return c.charAt(0).toUpperCase() + c.slice(1);
 	}
 	function populateCurrencyOptions(){
@@ -808,7 +820,7 @@
 	}
 
 	// ================= item page =================
-	function runItemPage(slug, exactName){
+	function runItemPage(slug, exactName, renamedFrom){
 		document.title = "Item — SC Trading Post";
 
 		var catalogEntry = null;
@@ -848,11 +860,22 @@
 
 		function renderSkeleton(entry){
 			var subtitle = isRare ? esc(entry.category) : esc(entry.baseItem);
+			// Only for a listing whose real display name wasn't in either
+			// catalog (not a known rare) and landed here purely via its base
+			// item — see itemLibraryUrlFor. Maps are excluded at the link-
+			// generation step already, but re-checked here too since this page
+			// also just trusts whatever ?renamed= is in the URL.
+			var baseKey = String(entry.baseItem||"").trim().toLowerCase();
+			var isMap = baseKey === "minecraft:map" || baseKey === "minecraft:filled_map";
+			var renamedNotice = (renamedFrom && !isRare && !isMap)
+				? '<div class="renamed-notice">'+esc(renamedFrom)+' is renamed and may be a rare we haven\'t catalogued yet; this information is for the base item, '+esc(entry.name)+'. The rare info will be available soon!</div>'
+				: '';
 			var html = '<div class="item-header">'+
 					'<img src="'+esc(entry.texture)+'" class="item-header-icon" alt="" onerror="this.style.visibility=\'hidden\'">'+
 					'<div><h1 class="item-header-name">'+esc(entry.name)+'</h1>'+
 					'<p class="tag">'+subtitle+' &middot; <a href="/items/">&larr; Item Library</a></p></div>'+
 				'</div>'+
+				renamedNotice+
 				(isRare ? rareInfoHtml(entry) : '')+
 				'<p class="history-note" id="historyNote"></p>'+
 				'<div id="itemStatsRow"></div>'+

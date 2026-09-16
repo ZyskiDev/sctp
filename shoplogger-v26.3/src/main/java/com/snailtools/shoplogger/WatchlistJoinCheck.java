@@ -113,7 +113,11 @@ public final class WatchlistJoinCheck {
 	/** Distinct "Marketplace:" color (see ChatFormat.MARKETPLACE) and always sorted ahead of shop-listing matches — see tick(). */
 	private static Component buildMarketplaceMatch(MarketplaceListing m) {
 		MarketplaceListing.PriceInfo price = m.priceInfo();
-		String priceText = price != null ? (price.amount + " " + (price.currency == null ? "?" : price.currency) + " (" + price.label + ")") : "no price set";
+		// "diamondstack" is a marketplace-only currency (real shop signs never
+		// use it) — shown as "STX" everywhere else on the site, not the raw
+		// currency string.
+		String currencyText = price == null ? "?" : "diamondstack".equals(price.currency) ? "STX" : price.currency == null ? "?" : price.currency;
+		String priceText = price != null ? (price.amount + " " + currencyText + " (" + price.label + ")") : "no price set";
 		String bidText = m.bidCount > 0 ? ", " + m.bidCount + " bid" + (m.bidCount > 1 ? "s" : "") : "";
 
 		// "lookingFor" posts are filtered out before this is ever called (see

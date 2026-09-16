@@ -770,7 +770,7 @@
 	// to 1 like every later filter/search change correctly should.
 	var pendingPageRestore = true;
 	var currencyFilters = {}; // lowercase currency -> checked, built from whatever's actually in the data
-	var CURRENCY_LABELS = { diamond: "Diamond", diamondblock: "Diamond block" };
+	var CURRENCY_LABELS = { diamond: "Diamond", diamondblock: "Diamond block", diamondstack: "STX (64 diamond blocks)" };
 
 	// Multiple sort criteria can be active at once — e.g. price ascending AND
 	// stock ascending, applied as primary/tiebreaker in the order they were
@@ -1171,10 +1171,21 @@
 			var name = r.itemNameDisplay || r.itemName;
 			return name ? "items/enchanted_book?name=" + encodeURIComponent(name) : null;
 		}
-		var slug = slugByName[alphaOnly(r.itemNameDisplay || r.itemName)];
+		var displayName = r.itemNameDisplay || r.itemName;
+		var slug = slugByName[alphaOnly(displayName)];
 		if(!slug){
 			var baseKey = String(r.baseItem || "").trim().toLowerCase();
 			slug = slugByBaseItem[baseKey];
+			// Fell back from an exact-name match to the generic base-item page —
+			// this listing's real display name isn't in either catalog (not a
+			// known rare), so the page it's landing on doesn't actually describe
+			// this specific renamed item. Flag it for the item page to show a
+			// notice — except maps, which always have their own unique/blank
+			// name by nature, so that's expected there, not a sign of an
+			// uncatalogued rare.
+			if(slug && displayName && baseKey !== "minecraft:map" && baseKey !== "minecraft:filled_map"){
+				return "items/" + encodeURIComponent(slug) + "?renamed=" + encodeURIComponent(displayName);
+			}
 		}
 		return slug ? "items/" + encodeURIComponent(slug) : null;
 	}

@@ -131,6 +131,15 @@
 //   GET  /marketplace/notifications/for-mc?mcUsername=<name> (public, no session — the MOD calls this on join)
 //     -> undelivered notifications for a VERIFIED account only, marks them delivered
 //   GET  /admin/marketplace/listings?username=<exact> (empty/missing -> []), POST /admin/marketplace/listings/remove (permission "marketplaceListings")
+//
+// Jobs/tasks marketplace — deliberately simpler than the item listings above
+// (see 0015_marketplace_jobs.sql): no bidding, "I'm interested" is a single
+// action that reveals contact info to both sides immediately.
+//   GET  /marketplace/jobs (public, cached)        -> active hiring/forHire posts
+//   POST /marketplace/jobs/create                  body: {type: "hiring"|"forHire", title, description?, world, rewardAmount?, rewardCurrency?, deadline?}
+//   POST /marketplace/jobs/interest                body: {jobId, message?} -> records interest, returns {contactInfo} for the poster, notifies the poster with the responder's contact info
+//   POST /marketplace/jobs/close                   body: {id, status: "fulfilled"|"cancelled"} -> poster only
+//   GET  /marketplace/mine also returns {jobs, myJobInterests, jobInterestsReceived} (the last one includes contactInfo directly — see handleGetMyMarketplace)
 // Active selling/lookingFor listings are also merged straight into GET
 // /listings (see handleGetListings) — tagged marketplace/marketplaceType/
 // marketplaceListingId — so they show up in the site's normal listings
@@ -1089,9 +1098,15 @@ function contactInfoText(admin) {
 	return parts.join("\n");
 }
 
+// "diamondstack" is marketplace-only currency (real shop signs never use
+// it) — shown as "STX" everywhere else (the marketplace page's own
+// CURRENCY_LABELS, in-game WatchlistJoinCheck, etc.), so this baked-in
+// priceLabel (rendered as-is by index.html/list/404.html's listings tables)
+// needs the same abbreviation instead of the raw currency string.
 function marketplacePriceLabel(amount, currency, suffix) {
 	if (amount == null) return null;
-	return `${amount} ${currency || "?"} (${suffix})`;
+	const currencyText = currency === "diamondstack" ? "STX" : currency || "?";
+	return `${amount} ${currencyText} (${suffix})`;
 }
 
 // Maps one marketplaceListings row into the same shape GET /listings
@@ -1224,6 +1239,139 @@ async function handleCreateMarketplaceListing(request, env) {
 	}
 
 	return json({ ok: true, id });
+}
+
+// ---------------- marketplace: jobs/tasks ----------------
+// Deliberately simpler than item listings — see 0015_marketplace_jobs.sql's
+// header comment. No bidding: "I'm interested" is a single action that
+// reveals contact info to both sides right away, and the job stays active
+// (so more than one person can express interest) until the poster closes it.
+
+const MARKETPLACE_JOB_TYPES = new Set(["hiring", "forHire"]);
+
+async function handleCreateMarketplaceJob(request, env) {
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+
+	const type = MARKETPLACE_JOB_TYPES.has(body.type) ? body.type : null;
+	if (!type) return json({ error: "type must be 'hiring' or 'forHire'" }, 400);
+	const title = String(body.title || "").trim().slice(0, 100);
+	if (!title) return json({ error: "title is required" }, 400);
+	const description = body.description ? String(body.description).trim().slice(0, 1000) : null;
+	const world = MARKETPLACE_WORLDS.has(body.world) ? body.world : null;
+	if (!world) return json({ error: "world must be 'Firefly', 'Honeybee', or 'Cross-world'" }, 400);
+	const rewardAmount = body.rewardAmount != null && body.rewardAmount !== "" ? Number(body.rewardAmount) : null;
+	const rewardCurrency = rewardAmount != null ? String(body.rewardCurrency || "").trim() : null;
+	if (rewardAmount != null && (!(rewardAmount > 0) || !MARKETPLACE_CURRENCIES.has(rewardCurrency))) {
+		return json({ error: "rewardCurrency must be diamond, diamondblock, or diamondstack, with a positive rewardAmount" }, 400);
+	}
+	let deadline = null;
+	if (body.deadline) {
+		const d = new Date(body.deadline);
+		if (!isNaN(d.getTime())) deadline = d.toISOString();
+	}
+
+	const id = newId();
+	const now = new Date();
+	const createdAt = now.toISOString();
+	const expiresAt = new Date(now.getTime() + MARKETPLACE_LISTING_LIFETIME_MS).toISOString();
+
+	await env.DB.prepare(
+		`INSERT INTO marketplaceJobs (id, accountId, type, title, description, rewardAmount, rewardCurrency, world, deadline, status, createdAt, expiresAt)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`
+	).bind(id, auth.admin.id, type, title, description, rewardAmount, rewardCurrency, world, deadline, createdAt, expiresAt).run();
+
+	return json({ ok: true, id });
+}
+
+// GET /marketplace/jobs — public, cached. Same shape philosophy as GET
+// /marketplace/listings: everything needed to render the list without a
+// second round trip, but never bidder/interest identity (see
+// handleGetMyMarketplace for the private "who's interested" view).
+async function handleGetMarketplaceJobs(request, env, ctx) {
+	return cachedGet(request, ctx, CACHE_TTL_SECONDS, async () => {
+		const { results } = await env.DB.prepare(
+			`SELECT mj.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername, a.mcVerified AS accountMcVerified
+			 FROM marketplaceJobs mj JOIN admins a ON a.id = mj.accountId
+			 WHERE mj.status = 'active' AND mj.expiresAt > ?`
+		).bind(new Date().toISOString()).all();
+
+		const jobIds = results.map((r) => r.id);
+		const interestCountByJob = new Map();
+		if (jobIds.length > 0) {
+			for (const chunk of chunkArray(jobIds, MAX_QUERY_PARAMS_PER_CHUNK)) {
+				const placeholders = chunk.map(() => "?").join(",");
+				const { results: counts } = await env.DB.prepare(
+					`SELECT jobId, COUNT(*) as c FROM marketplaceJobInterests WHERE jobId IN (${placeholders}) GROUP BY jobId`
+				).bind(...chunk).all();
+				for (const row of counts) interestCountByJob.set(row.jobId, row.c);
+			}
+		}
+
+		return results.map((j) => ({
+			id: j.id, type: j.type, title: j.title, description: j.description,
+			rewardAmount: j.rewardAmount, rewardCurrency: j.rewardCurrency,
+			world: j.world, deadline: j.deadline,
+			createdAt: j.createdAt, expiresAt: j.expiresAt,
+			poster: j.accountMcUsername || j.accountUsername, posterVerified: !!j.accountMcVerified,
+			interestCount: interestCountByJob.get(j.id) || 0,
+		}));
+	});
+}
+
+// A single action, not a bid — records interest, then immediately hands the
+// poster's contact info back in the response (for the responder) and
+// notifies the poster with the responder's contact info (so neither side
+// has to check back). The job stays active either way.
+async function handleExpressJobInterest(request, env) {
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const jobId = String(body.jobId || "");
+	const message = body.message ? String(body.message).trim().slice(0, 300) : null;
+	if (!jobId) return json({ error: "jobId is required" }, 400);
+
+	const job = await env.DB.prepare("SELECT * FROM marketplaceJobs WHERE id = ?").bind(jobId).first();
+	if (!job || job.status !== "active") return json({ error: "That job isn't open" }, 400);
+	if (job.accountId === auth.admin.id) return json({ error: "You can't express interest in your own job" }, 400);
+
+	const existing = await env.DB.prepare(
+		"SELECT id FROM marketplaceJobInterests WHERE jobId = ? AND interestedAccountId = ?"
+	).bind(jobId, auth.admin.id).first();
+	if (existing) return json({ error: "You've already expressed interest in this job" }, 400);
+
+	await env.DB.prepare(
+		"INSERT INTO marketplaceJobInterests (id, jobId, interestedAccountId, message, createdAt) VALUES (?, ?, ?, ?, ?)"
+	).bind(newId(), jobId, auth.admin.id, message, new Date().toISOString()).run();
+
+	const poster = await env.DB.prepare("SELECT * FROM admins WHERE id = ?").bind(job.accountId).first();
+	const verb = job.type === "hiring" ? "wants the job" : "wants to hire you";
+	await notifyAccount(env, job.accountId, "jobInterest",
+		`${auth.admin.username} ${verb} for your "${job.title}" post! Contact them via:\n${contactInfoText(auth.admin)}`, jobId);
+
+	return json({ ok: true, contactInfo: poster ? contactInfoText(poster) : null });
+}
+
+async function handleCloseMarketplaceJob(request, env) {
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const id = String(body.id || "");
+	const status = body.status === "fulfilled" || body.status === "cancelled" ? body.status : null;
+	if (!id || !status) return json({ error: "id and a valid status ('fulfilled' or 'cancelled') are required" }, 400);
+
+	const job = await env.DB.prepare("SELECT * FROM marketplaceJobs WHERE id = ?").bind(id).first();
+	if (!job) return json({ error: "Job not found" }, 404);
+	if (job.accountId !== auth.admin.id) return json({ error: "Not your job listing" }, 403);
+	if (job.status !== "active") return json({ error: "Job isn't active" }, 400);
+
+	await env.DB.prepare("UPDATE marketplaceJobs SET status = ?, closedAt = ?, closedReason = ? WHERE id = ?")
+		.bind(status, new Date().toISOString(), status === "fulfilled" ? "marked fulfilled by poster" : "cancelled by poster", id).run();
+	return json({ ok: true });
 }
 
 async function handleCancelMarketplaceListing(request, env) {
@@ -1380,7 +1528,35 @@ async function handleGetMyMarketplace(request, env) {
 		}
 	}
 
-	return json({ listings, myBids, bidsReceived });
+	const { results: jobs } = await env.DB.prepare("SELECT * FROM marketplaceJobs WHERE accountId = ? ORDER BY createdAt DESC").bind(auth.admin.id).all();
+	const { results: myJobInterests } = await env.DB.prepare(
+		`SELECT ji.*, j.title, j.world FROM marketplaceJobInterests ji JOIN marketplaceJobs j ON j.id = ji.jobId WHERE ji.interestedAccountId = ? ORDER BY ji.createdAt DESC`
+	).bind(auth.admin.id).all();
+
+	// Interest received on the caller's own jobs — unlike bidsReceived above,
+	// this includes the interested person's contact info directly: expressing
+	// interest IS the reveal moment for jobs (no accept step), so by the time
+	// the poster is looking at this list they're already meant to have it.
+	const jobIds = jobs.map((j) => j.id);
+	const jobInterestsReceived = [];
+	if (jobIds.length > 0) {
+		for (const chunk of chunkArray(jobIds, MAX_QUERY_PARAMS_PER_CHUNK)) {
+			const placeholders = chunk.map(() => "?").join(",");
+			const { results } = await env.DB.prepare(
+				`SELECT ji.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername, a.mcVerified AS accountMcVerified, a.contactDiscord, a.contactTimezone
+				 FROM marketplaceJobInterests ji JOIN admins a ON a.id = ji.interestedAccountId
+				 WHERE ji.jobId IN (${placeholders})`
+			).bind(...chunk).all();
+			jobInterestsReceived.push(...results.map((r) => ({
+				id: r.id, jobId: r.jobId, message: r.message, createdAt: r.createdAt,
+				interestedUsername: r.accountMcUsername || r.accountUsername,
+				interestedVerified: !!r.accountMcVerified,
+				contactInfo: contactInfoText(r),
+			})));
+		}
+	}
+
+	return json({ listings, myBids, bidsReceived, jobs, myJobInterests, jobInterestsReceived });
 }
 
 async function handleGetMarketplaceNotifications(request, env) {
@@ -1497,6 +1673,17 @@ async function expireOldMarketplaceListings(env) {
 	const stmts = results.map((r) => env.DB.prepare("UPDATE marketplaceListings SET status = 'expired', closedAt = ? WHERE id = ?").bind(now, r.id));
 	await env.DB.batch(stmts);
 	for (const r of results) await notifyAccount(env, r.accountId, "listingExpired", `Your ${r.itemName} listing expired after 14 days with no accepted offer.`, r.id);
+	return { expired: results.length };
+}
+
+// Same 14-day lifetime/piggybacked-cron idea as expireOldMarketplaceListings above.
+async function expireOldMarketplaceJobs(env) {
+	const now = new Date().toISOString();
+	const { results } = await env.DB.prepare("SELECT id, accountId, title FROM marketplaceJobs WHERE status = 'active' AND expiresAt <= ?").bind(now).all();
+	if (results.length === 0) return { expired: 0 };
+	const stmts = results.map((r) => env.DB.prepare("UPDATE marketplaceJobs SET status = 'expired', closedAt = ? WHERE id = ?").bind(now, r.id));
+	await env.DB.batch(stmts);
+	for (const r of results) await notifyAccount(env, r.accountId, "jobExpired", `Your "${r.title}" job post expired after 14 days.`, r.id);
 	return { expired: results.length };
 }
 
@@ -2846,6 +3033,10 @@ const ROUTES = [
 	["POST", "/marketplace/bids/withdraw", handleWithdrawBid],
 	["POST", "/marketplace/bids/accept", handleAcceptBid],
 	["POST", "/marketplace/bids/reject", handleRejectBid],
+	["GET", "/marketplace/jobs", handleGetMarketplaceJobs],
+	["POST", "/marketplace/jobs/create", handleCreateMarketplaceJob],
+	["POST", "/marketplace/jobs/interest", handleExpressJobInterest],
+	["POST", "/marketplace/jobs/close", handleCloseMarketplaceJob],
 	["GET", "/marketplace/mine", handleGetMyMarketplace],
 	["GET", "/marketplace/notifications", handleGetMarketplaceNotifications],
 	["POST", "/marketplace/notifications/mark-read", handleMarkNotificationsRead],
@@ -2885,6 +3076,7 @@ export default {
 		ctx.waitUntil(computeDailySnapshots(env));
 		ctx.waitUntil(snapshotListingsToR2(env));
 		ctx.waitUntil(expireOldMarketplaceListings(env));
+		ctx.waitUntil(expireOldMarketplaceJobs(env));
 		ctx.waitUntil(removeStaleListings(env));
 	},
 };

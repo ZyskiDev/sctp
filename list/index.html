@@ -253,7 +253,7 @@
 	function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 	function fmtNum(n){ return Number(n).toLocaleString(); }
 
-	var CURRENCY_LABELS = { diamond:"Diamonds", diamondblock:"Diamond Blocks" };
+	var CURRENCY_LABELS = { diamond:"Diamonds", diamondblock:"Diamond Blocks", diamondstack:"STX (64 Diamond Blocks)" };
 	function currencyLabel(c){
 		var key = String(c||"").toLowerCase();
 		return CURRENCY_LABELS[key] || (key.charAt(0).toUpperCase() + key.slice(1));
