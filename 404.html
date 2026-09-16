@@ -647,7 +647,7 @@
 					'<h1 class="profile-name">'+esc(username)+'</h1>'+
 					'<span class="world-badge">'+esc(world)+'</span>'+
 					(hasOtherWorldListings ? '<span class="other-world-link">also sells on <a href="/s/'+otherSlug+'/'+encodeURIComponent(username)+'">'+esc(otherWorld)+'</a></span>' : '')+
-					'<button type="button" class="share-player-btn" data-share-url="'+esc(API_BASE+"/seller/"+encodeURIComponent(world)+"/"+encodeURIComponent(username))+'">Share</button>'+
+					'<button type="button" class="share-player-btn" data-share-url="'+esc(location.origin+"/s/"+worldSlug+"/"+encodeURIComponent(username))+'">Share</button>'+
 					'<a class="report-player-btn" href="/report/?player='+encodeURIComponent(username)+'&world='+encodeURIComponent(world)+'">Report this player</a>'+
 				'</div>'+
 				(bio ? '<p class="profile-bio">'+esc(bio)+'</p>' : '')+
@@ -900,7 +900,7 @@
 					'<img src="'+esc(entry.texture)+'" class="item-header-icon" alt="" onerror="this.style.visibility=\'hidden\'">'+
 					'<div><h1 class="item-header-name">'+esc(entry.name)+'</h1>'+
 					'<p class="tag">'+subtitle+' &middot; <a href="/items/">&larr; Item Library</a></p></div>'+
-					'<button type="button" class="share-item-btn" data-share-url="'+esc(API_BASE+"/item/"+encodeURIComponent(slug))+'">Share</button>'+
+					'<button type="button" class="share-item-btn" data-share-url="'+esc(location.origin+"/items/"+encodeURIComponent(slug))+'">Share</button>'+
 				'</div>'+
 				renamedNotice+
 				(isRare ? rareInfoHtml(entry) : '')+
@@ -1176,7 +1176,7 @@
 					'<img src="'+esc(catalogEntry.texture)+'" class="item-header-icon" alt="" onerror="this.style.visibility=\'hidden\'">'+
 					'<div><h1 class="item-header-name">Enchanted Books</h1>'+
 					'<p class="tag">Every enchantment/level combination is its own item, each with its own price history &middot; <a href="/items/">&larr; Item Library</a></p></div>'+
-					'<button type="button" class="share-item-btn" data-share-url="'+esc(API_BASE+"/item/"+encodeURIComponent(slug))+'">Share</button>'+
+					'<button type="button" class="share-item-btn" data-share-url="'+esc(location.origin+"/items/"+encodeURIComponent(slug))+'">Share</button>'+
 				'</div>'+
 				(forms.length === 0
 					? '<div class="empty-state"><h3>No enchanted books currently for sale</h3><p>Check back once someone lists one.</p></div>'

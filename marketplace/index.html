@@ -250,10 +250,14 @@
 	// ---------------- share modal (used by both item listings and jobs — see
 	// GET /listing/<id> on the Worker, which looks up whichever table the id
 	// actually belongs to) ----------------
-	function openShareModal(id, label){
+	// kind is "listing" (an item post) or "job" — both already have a real,
+	// working deep link on this same page (see the #listing=/#job= handling
+	// in loadListings/loadJobs), so the share link just points back here
+	// instead of a separate server-rendered page on another domain.
+	function openShareModal(id, label, kind){
 		var wrap = document.createElement("div");
 		wrap.className = "modal-bg";
-		var link = API_BASE + "/listing/" + encodeURIComponent(id);
+		var link = location.origin + "/marketplace/#" + (kind === "job" ? "job=" : "listing=") + encodeURIComponent(id);
 		wrap.innerHTML = '<div class="modal">' +
 			'<h2>Share</h2>' +
 			'<p class="lc-meta" style="margin-bottom:12px;">' + esc(label) + '</p>' +
@@ -403,7 +407,7 @@
 		grid.querySelectorAll("[data-share-listing]").forEach(function(btn){
 			btn.addEventListener("click", function(){
 				var l = rows.filter(function(x){ return x.id === btn.getAttribute("data-share-listing"); })[0];
-				if(l) openShareModal(l.id, l.itemName + " — " + l.seller);
+				if(l) openShareModal(l.id, l.itemName + " — " + l.seller, "listing");
 			});
 		});
 	}
@@ -493,7 +497,7 @@
 		grid.querySelectorAll("[data-share-job]").forEach(function(btn){
 			btn.addEventListener("click", function(){
 				var j = rows.filter(function(x){ return x.id === btn.getAttribute("data-share-job"); })[0];
-				if(j) openShareModal(j.id, j.title + " — " + j.poster);
+				if(j) openShareModal(j.id, j.title + " — " + j.poster, "job");
 			});
 		});
 	}
@@ -537,7 +541,7 @@
 		wrap.innerHTML = html;
 		document.body.appendChild(wrap);
 		document.getElementById("jobDetailClose").onclick = function(){ wrap.remove(); };
-		document.getElementById("jobDetailShare").onclick = function(){ openShareModal(j.id, j.title + " — " + j.poster); };
+		document.getElementById("jobDetailShare").onclick = function(){ openShareModal(j.id, j.title + " — " + j.poster, "job"); };
 		// Same reasoning as the New Listing/New Job forms — no outside-click-to-close.
 
 		var area = document.getElementById("jobInterestArea");
@@ -648,7 +652,7 @@
 		wrap.innerHTML = html;
 		document.body.appendChild(wrap);
 		document.getElementById("detailClose").onclick = function(){ wrap.remove(); };
-		document.getElementById("detailShare").onclick = function(){ openShareModal(l.id, l.itemName + " — " + l.seller); };
+		document.getElementById("detailShare").onclick = function(){ openShareModal(l.id, l.itemName + " — " + l.seller, "listing"); };
 		wrap.addEventListener("click", function(e){ if(e.target === wrap) wrap.remove(); });
 
 		var placeArea = document.getElementById("bidPlaceArea");

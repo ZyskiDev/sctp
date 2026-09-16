@@ -427,12 +427,23 @@
 	}
 	.share-btn:hover{color:var(--accent);border-color:var(--accent);}
 
-	.similar-listings{list-style:none;padding:0;margin:0 0 16px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
-	.similar-listings li{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px;}
+	.similar-listings{list-style:none;padding:0;margin:0 0 16px;border:1px solid var(--line);border-radius:10px;overflow:hidden;max-height:340px;overflow-y:auto;}
+	.similar-listings li{padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px;}
 	.similar-listings li:last-child{border-bottom:none;}
+	.similar-listings .sl-top{display:flex;justify-content:space-between;gap:10px;}
 	.similar-listings .sl-seller{color:var(--text);}
-	.similar-listings .sl-price{color:var(--accent);white-space:nowrap;}
+	.similar-listings .sl-seller a{color:var(--text);text-decoration:underline;}
+	.similar-listings .sl-seller a:hover{color:var(--accent);}
+	.similar-listings .sl-world{color:var(--muted);font-weight:400;}
+	.similar-listings .sl-price{color:var(--accent);white-space:nowrap;font-weight:600;}
+	.similar-listings .sl-meta{color:var(--muted);font-size:11.5px;margin-top:3px;}
 	.similar-listings-empty{color:var(--muted);font-size:13px;margin:0 0 16px;}
+	.share-avg{margin-bottom:18px;}
+	.share-avg h4, .share-similar-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;}
+	.share-avg table{width:100%;border-collapse:collapse;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:12.5px;}
+	.share-avg th, .share-avg td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);}
+	.share-avg tr:last-child th, .share-avg tr:last-child td{border-bottom:none;}
+	.share-avg th{color:var(--muted);font-weight:600;}
 	.share-link-row{display:flex;gap:8px;margin-bottom:6px;}
 	.share-link-row input{
 		flex:1;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
@@ -1295,6 +1306,14 @@
 
 		populateCurrencyOptions();
 		applyFilters(true);
+
+		// Landing here via a Share link (see openShare) — jump straight to
+		// that listing's popup instead of making the recipient search for it.
+		var sharedId = new URLSearchParams(location.search).get("listing");
+		if(sharedId){
+			var sharedRow = allListings.filter(function(r){ return r.id === sharedId; })[0];
+			if(sharedRow) openShare(sharedRow);
+		}
 	}
 
 	function currencyLabel(c){
@@ -1933,11 +1952,21 @@
 	}
 
 	// ---------------- share modal ----------------
+	// The share link points back at this same page (?listing=<id>) rather
+	// than a separate server-rendered page — see loadListings()'s auto-open
+	// check below. That sacrifices a real Discord/etc. embed (static GitHub
+	// Pages can't generate per-listing og:tags for a link crawlers never
+	// execute JS on), but keeps every shared link a real sctp.nl page with
+	// the full interactive site behind it, which is what was asked for.
 	function openShare(row){
-		document.getElementById("shareListingLabel").textContent =
-			row.itemNameDisplay + " — " + row.priceLabel + " — sold by " + row.seller + " (" + row.world + ")";
+		var itemUrl = itemLibraryUrlFor(row);
+		var itemHtml = itemUrl ? '<a href="'+esc(itemUrl)+'">'+esc(row.itemNameDisplay)+'</a>' : esc(row.itemNameDisplay);
+		var rowSellerUrl = sellerUrl(row.seller, row.world);
+		var sellerHtml = rowSellerUrl ? '<a href="'+esc(rowSellerUrl)+'">'+esc(row.seller)+'</a>' : esc(row.seller);
+		document.getElementById("shareListingLabel").innerHTML =
+			itemHtml + " — " + esc(row.priceLabel) + " — sold by " + sellerHtml + " (" + esc(row.world) + ")";
 
-		var link = API_BASE + "/listing/" + encodeURIComponent(row.id);
+		var link = location.origin + "/?listing=" + encodeURIComponent(row.id);
 		var linkInput = document.getElementById("shareLinkInput");
 		linkInput.value = link;
 
@@ -1946,21 +1975,51 @@
 		statusEl.className = "file-status";
 
 		var normalized = alphaOnly(row.itemNameDisplay || row.itemName);
-		var similar = allListings.filter(function(r){
-			return r !== row && r.id !== row.id && alphaOnly(r.itemNameDisplay || r.itemName) === normalized;
-		}).sort(function(a, b){
-			return priceInDiamonds(a) - priceInDiamonds(b);
-		}).slice(0, 6);
+		// [DISPLAY] listings aren't real purchasable stock — excluded from both
+		// the average and the "other sellers" list, same convention as the
+		// main table's price summary (see renderPriceSummary).
+		var itemRows = allListings.filter(function(r){
+			return alphaOnly(r.itemNameDisplay || r.itemName) === normalized && String(r.currency||"").toLowerCase() !== "display";
+		});
 
-		var wrap = document.getElementById("shareSimilarWrap");
+		var worlds = ["Firefly","Honeybee"];
+		var avgRowsHtml = worlds.map(function(world){
+			var rows = itemRows.filter(function(r){ return r.world === world; });
+			if(!rows.length) return '<tr><td>'+esc(world)+'</td><td colspan="2">No listings</td></tr>';
+			var sum = rows.reduce(function(acc,r){ return acc + pricePerItem(r); }, 0);
+			var per1 = sum / rows.length;
+			return '<tr><td>'+esc(world)+'</td><td>'+fmtAvgPrice(per1)+'</td><td>'+fmtAvgPrice(per1*64)+'</td></tr>';
+		}).join("");
+		var avgHtml = '<div class="share-avg"><h4>Average price for this item</h4><table><thead><tr><th>World</th><th>Per 1</th><th>Per 64</th></tr></thead><tbody>'+avgRowsHtml+'</tbody></table></div>';
+
+		var similar = itemRows.filter(function(r){
+			return r.id !== row.id;
+		}).sort(function(a, b){
+			return pricePerItem(a) - pricePerItem(b);
+		}).slice(0, 12);
+
+		var listHtml;
 		if(similar.length){
-			wrap.innerHTML = '<ul class="similar-listings">' + similar.map(function(s){
-				return '<li><span class="sl-seller">' + esc(s.seller) + ' (' + esc(s.world) + ')</span>' +
-					'<span class="sl-price">' + esc(s.priceLabel) + '</span></li>';
+			listHtml = '<ul class="similar-listings">' + similar.map(function(s){
+				var sUrl = sellerUrl(s.seller, s.world);
+				var sellerHtml = sUrl ? '<a href="'+esc(sUrl)+'">'+esc(s.seller)+'</a>' : esc(s.seller);
+				var stockText = s.marketplace
+					? (s.marketplaceType === "lookingFor" ? "wants " : "has ") + fmtNum(s.amount)
+					: fmtNum(s.amount) + ' (' + s.stacksInStock + ' ' + (s.bulk ? 'shulks' : s.stackSize === 64 ? 'stacks' : 'groups') + ')';
+				return '<li>' +
+					'<div class="sl-top"><span class="sl-seller">'+sellerHtml+' <span class="sl-world">('+esc(s.world)+')</span></span>' +
+						'<span class="sl-price">'+esc(s.priceLabel)+'</span></div>' +
+					'<div class="sl-meta">'+esc(stockText)+' in stock &middot; '+esc(s.position||'—')+' &middot; seen '+relTime(s.lastSeen)+'</div>' +
+				'</li>';
 			}).join("") + '</ul>';
 		} else {
-			wrap.innerHTML = '<p class="similar-listings-empty">No other sellers currently list this item.</p>';
+			listHtml = '<p class="similar-listings-empty">No other sellers currently list this item.</p>';
 		}
+
+		var wrap = document.getElementById("shareSimilarWrap");
+		wrap.innerHTML = avgHtml +
+			'<p class="share-similar-label">Other sellers'+(similar.length ? ' — cheapest first' : '')+'</p>' +
+			listHtml;
 
 		document.getElementById("shareBackdrop").classList.add("open");
 	}
