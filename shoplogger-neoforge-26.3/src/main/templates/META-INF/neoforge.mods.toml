@@ -1,0 +1,29 @@
+license="${mod_license}"
+
+[[mods]] #mandatory
+modId="${mod_id}" #mandatory
+version="${mod_version}" #mandatory
+displayName="${mod_name}" #mandatory
+description='''
+Logs Snailcraft-style chest shop signs and contents (when you open them) to CSV/Excel.
+'''
+
+# FML discovers/loads the Mixin config purely from this TOML declaration —
+# no Gradle-side wiring needed on modern (unobfuscated) MC, unlike Fabric
+# Loom which wires it via fabric.mod.json's "mixins" array instead.
+[[mixins]]
+config="shoplogger.mixins.json"
+
+[[dependencies.${mod_id}]]
+	modId="neoforge"
+	type="required"
+	versionRange="[${neo_version_min},)"
+	ordering="NONE"
+	side="CLIENT"
+
+[[dependencies.${mod_id}]]
+	modId="minecraft"
+	type="required"
+	versionRange="${minecraft_version_range}"
+	ordering="NONE"
+	side="CLIENT"

@@ -500,6 +500,26 @@
 	.download-option span{font-family:var(--font-mono);color:var(--muted);font-size:12px;}
 	.download-reminder{font-size:12.5px;color:var(--muted);margin:0 0 4px;}
 	.download-reminder strong{color:var(--shell);font-weight:600;}
+	.download-reminder a{color:var(--accent);}
+
+	.dl-step-label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin:14px 0 6px;}
+	.dl-step-label:first-of-type{margin-top:0;}
+	.segmented{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:4px;}
+	.segmented button{
+		flex:1;background:var(--panel-alt);border:none;color:var(--muted);
+		padding:9px 14px;font-weight:600;font-size:13px;cursor:pointer;
+		border-right:1px solid var(--line);font-family:inherit;text-align:center;
+	}
+	.segmented button:last-child{border-right:none;}
+	.segmented button.active{background:var(--accent);color:var(--accent-ink);}
+	.download-warning{
+		background:rgba(226,163,61,0.12);border:1px solid var(--warn);color:var(--warn);
+		border-radius:10px;padding:10px 12px;font-size:12.5px;margin:14px 0;
+	}
+	.download-warning a{color:var(--warn);font-weight:700;text-decoration:underline;white-space:nowrap;}
+	.download-option-cta{margin:4px 0 18px;text-align:center;border-color:var(--accent);}
+	.download-option-cta:hover{border-color:var(--accent);background:rgba(183,226,61,0.08);}
+	.download-option-cta strong{color:var(--accent);font-size:15px;}
 
 	.shared-shop-cta{text-align:center;padding:8px 0 28px;}
 	.shared-shop-cta button{
@@ -702,20 +722,33 @@
 <div class="modal-backdrop" id="downloadBackdrop">
 	<div class="modal">
 		<h2>Download Shop Logger</h2>
-		<p>The current version, for Minecraft 26.2 or 26.3.</p>
-		<div class="download-options">
-			<a class="download-option" href="shoplogger-26.2-1.6.jar" download="shoplogger-26.2-1.6.jar">
-				<strong>Minecraft 26.2</strong>
-				<span>shoplogger-26.2-1.6.jar</span>
-			</a>
-			<a class="download-option" href="shoplogger-26.3-1.6.jar" download="shoplogger-26.3-1.6.jar">
-				<strong>Minecraft 26.3</strong>
-				<span>shoplogger-26.3-1.6.jar</span>
-			</a>
+		<p>Pick your mod loader and Minecraft version.</p>
+
+		<div class="dl-step-label">1. Mod loader</div>
+		<div class="segmented" id="dlLoaderSeg">
+			<button type="button" data-v="fabric" class="active">Fabric</button>
+			<button type="button" data-v="neoforge">NeoForge</button>
 		</div>
-		<p class="download-reminder">Requires <strong>Fabric API</strong> installed alongside the mod, and <strong>Fabric Loader 0.19.3</strong> or newer.</p>
-		<p class="download-reminder">Thanks to <strong>Zyski</strong> for all the QOL features in the mod!</p>
-		<p class="download-reminder">You can view the <strong>[source code](https://github.com/maxolotled/sctp)</strong> on Github.</p>
+
+		<div class="dl-step-label">2. Minecraft version</div>
+		<div class="segmented" id="dlVersionSeg">
+			<button type="button" data-v="26.2" class="active">26.2</button>
+			<button type="button" data-v="26.3">26.3</button>
+		</div>
+
+		<div class="download-warning" id="dlFabricWarning" hidden>
+			Fabric also requires <strong>Fabric API</strong> installed alongside this mod — it won't work without it.
+			<a href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener">Get Fabric API on Modrinth &rarr;</a>
+		</div>
+
+		<a class="download-option download-option-cta" id="dlDownloadBtn" href="#" download>
+			<strong id="dlDownloadLabel">Download</strong>
+			<span id="dlDownloadFile"></span>
+		</a>
+
+		<p class="download-reminder">New to installing mods? See the <a href="/docs/installation">installation guide</a>.</p>
+		<p class="download-reminder">View the <a href="https://github.com/maxolotled/sctp" target="_blank" rel="noopener">source code on GitHub</a>.</p>
+		<p class="download-reminder">Thanks to <strong>Zyski</strong> for the QOL features, <strong>tinatina5252</strong> for feedback, testing, and tons of general help, and <strong>LadyMaledicte</strong> for the rare item library.</p>
 		<p class="download-reminder"><a href="#" id="openArchived">Looking for an older Minecraft version? Archived downloads</a></p>
 		<div class="modal-actions">
 			<button id="closeDownload" type="button">Close</button>
@@ -1803,8 +1836,29 @@
 	}
 
 	// ---------------- download modal ----------------
+	var DOWNLOAD_JARS = {
+		"fabric|26.2": "shoplogger-26.2-1.6.jar",
+		"fabric|26.3": "shoplogger-26.3-1.6.jar",
+		"neoforge|26.2": "shoplogger-neoforge-26.2-1.6.jar",
+		"neoforge|26.3": "shoplogger-neoforge-26.3-1.6.jar"
+	};
+	var dlLoader = "fabric";
+	var dlVersion = "26.2";
+
+	function updateDownloadSelection(){
+		var file = DOWNLOAD_JARS[dlLoader + "|" + dlVersion];
+		var btn = document.getElementById("dlDownloadBtn");
+		btn.href = file;
+		btn.setAttribute("download", file);
+		document.getElementById("dlDownloadFile").textContent = file;
+		document.getElementById("dlDownloadLabel").textContent =
+			"Download for " + (dlLoader === "fabric" ? "Fabric" : "NeoForge") + " " + dlVersion;
+		document.getElementById("dlFabricWarning").hidden = dlLoader !== "fabric";
+	}
+
 	function openDownload(){
 		document.getElementById("downloadBackdrop").classList.add("open");
+		updateDownloadSelection();
 	}
 	function closeDownload(){
 		document.getElementById("downloadBackdrop").classList.remove("open");
@@ -2133,6 +2187,22 @@
 	document.getElementById("closeDownload").addEventListener("click", closeDownload);
 	document.getElementById("downloadBackdrop").addEventListener("click", function(e){
 		if(e.target === this) closeDownload();
+	});
+	document.querySelectorAll("#dlLoaderSeg button").forEach(function(btn){
+		btn.addEventListener("click", function(){
+			document.querySelectorAll("#dlLoaderSeg button").forEach(function(b){ b.classList.remove("active"); });
+			btn.classList.add("active");
+			dlLoader = btn.getAttribute("data-v");
+			updateDownloadSelection();
+		});
+	});
+	document.querySelectorAll("#dlVersionSeg button").forEach(function(btn){
+		btn.addEventListener("click", function(){
+			document.querySelectorAll("#dlVersionSeg button").forEach(function(b){ b.classList.remove("active"); });
+			btn.classList.add("active");
+			dlVersion = btn.getAttribute("data-v");
+			updateDownloadSelection();
+		});
 	});
 
 	document.getElementById("openArchived").addEventListener("click", function(e){

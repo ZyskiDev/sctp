@@ -2,6 +2,11 @@ shoplogger-v*/build/
 shoplogger-v*/.gradle/
 shoplogger-v*/.jdk/
 shoplogger-v*/*.log
+shoplogger-neoforge-*/build/
+shoplogger-neoforge-*/.gradle/
+shoplogger-neoforge-*/run/
+shoplogger-neoforge-*/repo/
+shoplogger-neoforge-*/*.log
 .claude/
 trading-post-api/**/.wrangler/
 .vscode/

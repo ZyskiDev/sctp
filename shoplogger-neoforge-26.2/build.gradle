@@ -1,0 +1,69 @@
+plugins {
+	id 'java-library'
+	id 'net.neoforged.moddev' version '2.0.147'
+}
+
+version = mod_version
+group = mod_group_id
+
+repositories {
+}
+
+base {
+	archivesName = mod_id
+}
+
+// Mojang ships Java 25 to end users in 26.2, so the mod targets Java 25 —
+// matches shoplogger-v26.2/v26.3 (Fabric).
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+neoForge {
+	version = project.neo_version
+
+	runs {
+		client {
+			client()
+			systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+		}
+
+		configureEach {
+			systemProperty 'forge.logging.markers', 'REGISTRIES'
+			logLevel = org.slf4j.event.Level.DEBUG
+		}
+	}
+
+	mods {
+		"${mod_id}" {
+			sourceSet(sourceSets.main)
+		}
+	}
+}
+
+dependencies {
+}
+
+// Expands ${...} placeholders in src/main/templates into build/generated —
+// same mechanism the stock MDK uses for neoforge.mods.toml (mod_version etc.
+// need to come from gradle.properties, not be hand-duplicated in the TOML).
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+	var replaceProperties = [
+			minecraft_version      : minecraft_version,
+			minecraft_version_range: minecraft_version_range,
+			neo_version            : neo_version,
+			neo_version_min        : neo_version_min,
+			mod_id                 : mod_id,
+			mod_name               : mod_name,
+			mod_license            : mod_license,
+			mod_version            : mod_version,
+	]
+	inputs.properties replaceProperties
+	expand replaceProperties
+	from "src/main/templates"
+	into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+}
