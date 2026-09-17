@@ -59,11 +59,17 @@
 //   POST /account/contact-info               body: {contactDiscord?, contactTimezone?} -- free text, shown to the other party once a trade is confirmed (see contactInfoText)
 //
 // Self-service registration (see register/index.html and /verify at the repo root):
+//   POST /account/register/direct            body: {mcUsername, password} -> {token, ...} (logs them in immediately)
+//     Currently what the website actually uses — takes the typed username on trust
+//     (mcVerified: 0), no real login check. See handleDirectRegistration.
 //   POST /account/register/start             body: {mcUsername} -> {code, joinAddress, expiresAt}
 //   GET  /account/register/status?code=      (public, polled by the website) -> {verified, mcUsername}
 //   POST /account/register/complete          body: {code, password} -> {token, ...} (logs them in immediately)
 //   POST /account/register/verify-callback   (VERIFY_SERVER_SECRET only, called by java_server.py) body: {code, mcUsername, mcUuid?}
 //   GET  /account/register/find-pending      (VERIFY_SERVER_SECRET only, called by bedrock_bridge.py) ?mcUsername= -> {code}
+//     The 5 routes above implement the real join-a-server verification flow — not
+//     currently wired up to the frontend (see /account/register/direct), but left
+//     intact so it's a frontend swap, not a rebuild, to turn verification back on.
 //
 // Permission bucket "reports":
 //   GET  /admin/reports
@@ -874,6 +880,43 @@ async function handleCompleteRegistration(request, env) {
 		.bind(token, id, now, expiresAt).run();
 
 	return json({ token, username: pending.mcUsername, isHeadAdmin: false, permissions: [], expiresAt, mcUsername: pending.mcUsername, mcVerified: true });
+}
+
+// The real join-a-verify-server flow (handleStartRegistration/
+// handleRegistrationVerifyCallback/handleCompleteRegistration above) is
+// temporarily bypassed on the website — register/index.html calls this
+// instead, taking the typed Minecraft username on trust (mcVerified: 0)
+// rather than confirming it via a real login. The old verified flow's
+// routes/tables are untouched so re-enabling it later is just a frontend
+// swap back, not a backend rebuild.
+async function handleDirectRegistration(request, env) {
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const mcUsername = String(body.mcUsername || "").trim();
+	const password = String(body.password || "");
+	if (!isValidClaimedMcUsername(mcUsername)) {
+		return json({ error: "That doesn't look like a valid Minecraft username (Bedrock accounts: include the leading '.')" }, 400);
+	}
+	if (password.length < 8) return json({ error: "password must be at least 8 characters" }, 400);
+
+	const existing = await env.DB.prepare("SELECT id FROM admins WHERE username = ?").bind(mcUsername).first();
+	if (existing) return json({ error: "An account for this Minecraft username already exists — log in instead, or ask a head admin for help." }, 409);
+
+	const id = crypto.randomUUID();
+	const salt = newSaltHex();
+	const hash = await hashPassword(password, salt);
+	const now = new Date().toISOString();
+	await env.DB.prepare(
+		"INSERT INTO admins (id, username, passwordHash, passwordSalt, isHeadAdmin, permissions, createdAt, createdBy, mcUsername, mcVerified) VALUES (?, ?, ?, ?, 0, '[]', ?, 'self-registration-unverified', ?, 0)"
+	).bind(id, mcUsername, hash, salt, now, mcUsername).run();
+
+	// Log them in immediately — "done" should mean done, not "now go log in separately".
+	const token = newToken();
+	const expiresAt = new Date(Date.now() + ADMIN_SESSION_TTL_MS).toISOString();
+	await env.DB.prepare("INSERT INTO adminSessions (token, adminId, createdAt, expiresAt) VALUES (?, ?, ?, ?)")
+		.bind(token, id, now, expiresAt).run();
+
+	return json({ token, username: mcUsername, isHeadAdmin: false, permissions: [], expiresAt, mcUsername: mcUsername, mcVerified: false });
 }
 
 // ---------------- blocked sellers ----------------
@@ -2876,15 +2919,18 @@ async function handleGetWorldStats(request, env, ctx) {
 	});
 }
 
-// Any logged-in account (see requireAnyAdmin) with a VERIFIED linked Minecraft
-// username can see their own shop's stats — nobody else's. Everything derived
-// from inferredSold/inferredRevenueDiamonds is an ESTIMATE (see
+// Any logged-in account (see requireAnyAdmin) with a linked Minecraft
+// username can see their own shop's stats — nobody else's. Verification is
+// currently disabled account-wide (see handleDirectRegistration), so this
+// only requires mcUsername to be set, not mcVerified — the same trust level
+// as everything else self-service right now. Everything derived from
+// inferredSold/inferredRevenueDiamonds is an ESTIMATE (see
 // computeSellerItemStats' doc comment) and must be presented as such.
 async function handleGetMyStats(request, env) {
 	const auth = await requireAnyAdmin(request, env);
 	if (!auth.ok) return auth.response;
-	if (!auth.admin.mcVerified || !auth.admin.mcUsername) {
-		return json({ error: "Link and verify your Minecraft username first (ask a head admin)." }, 403);
+	if (!auth.admin.mcUsername) {
+		return json({ error: "Link your Minecraft username first." }, 403);
 	}
 	const sellerKey = auth.admin.mcUsername.toLowerCase();
 
@@ -3030,6 +3076,7 @@ const ROUTES = [
 	["GET", "/account/me", handleGetAccountMe],
 	["POST", "/account/contact-info", handleSetAccountContactInfo],
 	["POST", "/account/register/start", handleStartRegistration],
+	["POST", "/account/register/direct", handleDirectRegistration],
 	["GET", "/account/register/status", handleGetRegistrationStatus],
 	["POST", "/account/register/complete", handleCompleteRegistration],
 	["POST", "/account/register/verify-callback", handleRegistrationVerifyCallback],

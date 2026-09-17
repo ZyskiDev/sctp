@@ -28,10 +28,6 @@
 	.back-link:hover{color:var(--accent);border-color:var(--accent-dim);}
 
 	main{padding:36px 0 60px;}
-	.steps{display:flex;gap:6px;margin-bottom:24px;}
-	.step-dot{flex:1;height:4px;border-radius:2px;background:var(--line);}
-	.step-dot.done{background:var(--accent);}
-	.step-dot.active{background:var(--accent-dim);}
 
 	.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;}
 	.card h2{font-family:var(--font-display);font-size:19px;margin:0 0 6px;}
@@ -54,15 +50,10 @@
 	.err{color:var(--bad);font-size:12.5px;margin:0 0 10px;}
 	.ok{color:var(--accent);font-size:13px;margin:0 0 10px;}
 
-	.join-address{font-family:var(--font-mono);font-size:18px;color:var(--accent);background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;padding:14px;text-align:center;margin:14px 0;user-select:all;}
-	.join-address-split{display:flex;gap:10px;margin:14px 0;}
-	.join-address-split div{flex:1;background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-align:center;}
-	.join-address-split .label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;font-family:var(--font-body);user-select:none;}
-	.join-address-split .value{display:block;font-family:var(--font-mono);font-size:17px;color:var(--accent);user-select:all;}
-	.waiting-row{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:14px 0;}
-	.spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin 0.8s linear infinite;flex:0 0 auto;}
-	@keyframes spin{to{transform:rotate(360deg);}}
-	.warn-note{background:rgba(226,163,61,0.12);border:1px solid var(--warn);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:16px;}
+	.disclaimer{
+		background:rgba(226,100,61,0.14);border:1px solid var(--bad);color:var(--bad);
+		border-radius:10px;padding:12px 14px;font-size:13px;font-weight:600;line-height:1.4;margin-bottom:20px;
+	}
 
 	footer.site{padding:20px 0 40px;color:var(--muted);font-size:12.5px;text-align:center;}
 	[hidden]{display:none!important;}
@@ -81,16 +72,13 @@
 </header>
 
 <main class="wrap">
-	<div class="steps">
-		<div class="step-dot" id="dot1"></div>
-		<div class="step-dot" id="dot2"></div>
-		<div class="step-dot" id="dot3"></div>
-	</div>
+	<!-- Sign-up form. Verification (join-a-server) is temporarily disabled —
+	     see /account/register/direct in worker.js — so this takes the typed
+	     username on trust, backed only by the disclaimer below. -->
+	<div class="card" id="stepForm">
+		<h2>Create your account</h2>
+		<p class="lede">Enter your Minecraft username and pick a password.</p>
 
-	<!-- Step 1: enter MC username -->
-	<div class="card" id="step1">
-		<h2>What's your Minecraft username?</h2>
-		<p class="lede">We'll verify it's really you by having you join a MC server.</p>
 		<div class="platform-toggle">
 			<button type="button" class="active" data-platform="java">Java Edition</button>
 			<button type="button" data-platform="bedrock">Bedrock Edition</button>
@@ -99,37 +87,13 @@
 			<label id="usernameLabel">Minecraft username</label>
 			<input type="text" id="mcUsernameInput" maxlength="16" autocomplete="off" placeholder="Steve">
 		</div>
-		<p class="err" id="step1Err" hidden></p>
-		<button type="button" class="btn" id="step1Continue">Continue</button>
-	</div>
 
-	<!-- Step 2: join the verify server -->
-	<div class="card" id="step2" hidden>
-		<h2 id="step2Title">Join the verification server</h2>
-		<div id="javaInstructions" hidden>
-			<p class="lede">Add this as a server in Minecraft and join it — you'll see a message and get disconnected right away.</p>
-			<div class="join-address" id="joinAddress"></div>
-		</div>
-		<div id="bedrockInstructions" hidden>
-			<p class="lede">Add this server in Minecraft (Bedrock) - Server Address and Port are two <b>separate</b> fields in the Add Server screen, don't type them together into one box - then join it. You'll see a message and get disconnected right away.</p>
-			<div class="join-address-split">
-				<div><span class="label">Server Address</span><span class="value">verify.sctp.nl</span></div>
-				<div><span class="label">Port</span><span class="value">19132</span></div>
-			</div>
-			<p class="lede" style="margin-top:-6px;">Make sure the username you entered matches exactly what you play as, no . in front!</p>
-		</div>
-		<div class="waiting-row" id="waitingRow"><div class="spinner"></div><span>Waiting for you to join…</span></div>
-		<p class="err" id="step2Err" hidden></p>
-	</div>
+		<div class="disclaimer">If you enter anything other than your real MC username used to play SC with, your account will be disabled!</div>
 
-	<!-- Step 3: pick a password -->
-	<div class="card" id="step3" hidden>
-		<h2>Pick a password</h2>
-		<p class="ok" id="verifiedAs"></p>
 		<div class="field"><label>Password</label><input type="password" id="passwordInput" autocomplete="new-password"></div>
 		<div class="field"><label>Confirm password</label><input type="password" id="passwordConfirmInput" autocomplete="new-password"></div>
-		<p class="err" id="step3Err" hidden></p>
-		<button type="button" class="btn" id="step3Submit">Finish</button>
+		<p class="err" id="formErr" hidden></p>
+		<button type="button" class="btn" id="formSubmit">Create account</button>
 	</div>
 
 	<!-- Done -->
@@ -140,7 +104,7 @@
 </main>
 
 <footer class="site">
-	<div class="wrap">Already have an account? <a href="../">Log in from the homepage.</a> · <a href="#" id="cantVerifyLink">Can't verify?</a></div>
+	<div class="wrap">Already have an account? <a href="../">Log in from the homepage.</a></div>
 </footer>
 
 <script src="/account-widget.js" defer></script>
@@ -150,22 +114,11 @@
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var SESSION_KEY = "sctp_session"; // same key account-widget.js uses, so logging in here "just works" everywhere else too
-	var POLL_MS = 3000;
 
 	var platform = "java";
-	var code = null;
-	var pollTimer = null;
 
-	function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-	function setStepDots(active){
-		["dot1","dot2","dot3"].forEach(function(id, i){
-			var el = document.getElementById(id);
-			el.classList.toggle("done", i < active - 1);
-			el.classList.toggle("active", i === active - 1);
-		});
-	}
 	function showStep(id){
-		["step1","step2","step3","stepDone"].forEach(function(s){ document.getElementById(s).hidden = (s !== id); });
+		["stepForm","stepDone"].forEach(function(s){ document.getElementById(s).hidden = (s !== id); });
 	}
 
 	document.querySelectorAll(".platform-toggle button").forEach(function(btn){
@@ -174,87 +127,32 @@
 			btn.classList.add("active");
 			platform = btn.getAttribute("data-platform");
 			document.getElementById("usernameLabel").textContent = platform === "bedrock" ? "Bedrock gamertag (no leading dot needed here)" : "Minecraft username";
-			document.getElementById("mcUsernameInput").placeholder = platform === "bedrock" ? "Steve" : "Steve";
 		});
 	});
 
-	// ---------------- step 1 ----------------
-	document.getElementById("step1Continue").addEventListener("click", function(){
-		var errEl = document.getElementById("step1Err");
+	document.getElementById("formSubmit").addEventListener("click", function(){
+		var errEl = document.getElementById("formErr");
 		errEl.hidden = true;
 		var raw = document.getElementById("mcUsernameInput").value.trim();
 		if(!raw){ errEl.textContent = "Enter your username first."; errEl.hidden = false; return; }
 		var mcUsername = platform === "bedrock" ? ("." + raw.replace(/^\./, "")) : raw;
 
-		fetch(API_BASE + "/account/register/start", {
-			method: "POST", headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ mcUsername: mcUsername }),
-		}).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
-			.then(function(res){
-				if(!res.ok){ errEl.textContent = res.data.error || "Couldn't start registration."; errEl.hidden = false; return; }
-				code = res.data.code;
-				document.getElementById("joinAddress").textContent = res.data.joinAddress;
-				document.getElementById("javaInstructions").hidden = platform !== "java";
-				document.getElementById("bedrockInstructions").hidden = platform !== "bedrock";
-				setStepDots(2);
-				showStep("step2");
-				startPolling();
-			})
-			.catch(function(){ errEl.textContent = "Network error — please try again."; errEl.hidden = false; });
-	});
-
-	// ---------------- step 2 (polling) ----------------
-	function startPolling(){
-		if(pollTimer) clearInterval(pollTimer);
-		pollTimer = setInterval(function(){
-			fetch(API_BASE + "/account/register/status?code=" + encodeURIComponent(code))
-				.then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
-				.then(function(res){
-					if(!res.ok){
-						clearInterval(pollTimer);
-						document.getElementById("step2Err").textContent = res.data.error || "That code expired — please start over.";
-						document.getElementById("step2Err").hidden = false;
-						document.getElementById("waitingRow").hidden = true;
-						return;
-					}
-					if(res.data.verified){
-						clearInterval(pollTimer);
-						document.getElementById("verifiedAs").textContent = "Verified as " + res.data.mcUsername + " ✓";
-						setStepDots(3);
-						showStep("step3");
-					}
-				})
-				.catch(function(){ /* transient network hiccup — just try again next tick */ });
-		}, POLL_MS);
-	}
-
-	// ---------------- step 3 ----------------
-	document.getElementById("step3Submit").addEventListener("click", function(){
-		var errEl = document.getElementById("step3Err");
-		errEl.hidden = true;
 		var pw = document.getElementById("passwordInput").value;
 		var pw2 = document.getElementById("passwordConfirmInput").value;
 		if(pw.length < 8){ errEl.textContent = "Password must be at least 8 characters."; errEl.hidden = false; return; }
 		if(pw !== pw2){ errEl.textContent = "Passwords don't match."; errEl.hidden = false; return; }
 
-		fetch(API_BASE + "/account/register/complete", {
+		fetch(API_BASE + "/account/register/direct", {
 			method: "POST", headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ code: code, password: pw }),
+			body: JSON.stringify({ mcUsername: mcUsername, password: pw }),
 		}).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
 			.then(function(res){
-				if(!res.ok){ errEl.textContent = res.data.error || "Couldn't finish registration."; errEl.hidden = false; return; }
+				if(!res.ok){ errEl.textContent = res.data.error || "Couldn't create your account."; errEl.hidden = false; return; }
 				try { localStorage.setItem(SESSION_KEY, JSON.stringify(res.data)); } catch(e){}
 				showStep("stepDone");
 			})
 			.catch(function(){ errEl.textContent = "Network error — please try again."; errEl.hidden = false; });
 	});
-
-	document.getElementById("cantVerifyLink").addEventListener("click", function(e){
-		e.preventDefault();
-		if(window.sctpAccount && window.sctpAccount.openHelp) window.sctpAccount.openHelp();
-	});
-
-	setStepDots(1);
 })();
 </script>
 </body>

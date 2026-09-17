@@ -41,9 +41,6 @@
 
 	// Small public surface so a page's own script can read login state (the
 	// marketplace page and admin.html both need this) and react to changes.
-	// openHelp is also called directly from register/index.html's "Can't
-	// verify?" button, since that page already loads this script for its own
-	// header — one shared popup instead of duplicating the same content twice.
 	window.sctpAccount = { getSession: getSession, API_BASE: API_BASE, clearSession: clearSession, openHelp: openHelp };
 
 	// Same content for "forgot password" and "can't verify" — there's no

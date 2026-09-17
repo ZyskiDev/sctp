@@ -97,6 +97,13 @@
 	   preview box, and overflow:hidden just clips most of it off instead of
 	   scaling it down. */
 	#tipPreviewWrap svg{width:100%;height:auto;display:block;}
+
+	.tip-style-seg{display:flex;flex-wrap:wrap;gap:8px;}
+	.tip-style-btn{
+		background:var(--panel-alt);border:1px solid var(--line);color:var(--muted);
+		border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+	}
+	.tip-style-btn.active{border-color:var(--tip-style-color, var(--accent));color:var(--text);background:rgba(255,255,255,0.04);box-shadow:inset 0 0 0 1px var(--tip-style-color, var(--accent));}
 </style>
 </head>
 <body>
@@ -356,9 +363,11 @@
 
 		<section data-perm="__headAdminOnly__">
 		<details class="section-toggle" open>
-		<summary>Tip of the Week poster</summary>
+		<summary>Marketing poster generator</summary>
 		<div class="card">
-			<div class="meta" style="margin-bottom:10px;">Generates a 1080&times;1080 promo graphic (SVG) in the site's own brand style. Fill in the fields, hit Generate, then download.</div>
+			<div class="meta" style="margin-bottom:10px;">Generates a 1080&times;1080 promo graphic (SVG) in the site's own brand style. Pick a style, fill in the fields, hit Generate, then download.</div>
+			<label for="tipStyle">Style</label>
+			<div id="tipStyleSeg" class="tip-style-seg" style="margin:6px 0 12px;"></div>
 			<label for="tipTitle">Title (small label at top)</label>
 			<input type="text" id="tipTitle" value="TIP OF THE WEEK" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
 			<label for="tipHeader1">Header (white)</label>
@@ -1119,10 +1128,68 @@
 		});
 	}
 
+	// Every style below shares the exact same layout as the original hand-made
+	// sctp-tip-*.svg template (brand mark, eyebrow bar, gradient two-line
+	// headline, auto-wrapped body, pill badge, footer bar) — only the accent
+	// palette, brand-mark icon, and default copy differ, so buildTipSvg() just
+	// takes a style object instead of every color being hardcoded.
+	var TIP_STYLES = {
+		tip: {
+			label: "Tip of the Week", icon: "🛒",
+			accent1: "#B7E23D", accentMid: "#6FE3C8", accent2: "#4FC3F7", markEnd: "#87AE29",
+			defaultTitle: "TIP OF THE WEEK"
+		},
+		feature: {
+			label: "New Feature", icon: "✨",
+			accent1: "#4FC3F7", accentMid: "#6FE3C8", accent2: "#B7E23D", markEnd: "#2E86C1",
+			defaultTitle: "NEW FEATURE"
+		},
+		event: {
+			label: "Event / Sale", icon: "🎉",
+			accent1: "#E2C13D", accentMid: "#E2A33D", accent2: "#E2643D", markEnd: "#B58F1E",
+			defaultTitle: "LIMITED TIME"
+		},
+		milestone: {
+			label: "Milestone", icon: "🏆",
+			accent1: "#C78CE8", accentMid: "#8C93E8", accent2: "#4FC3F7", markEnd: "#8C5CB0",
+			defaultTitle: "MILESTONE"
+		},
+		outage: {
+			label: "Outage / Bad news", icon: "⚠️",
+			accent1: "#E2643D", accentMid: "#E2A33D", accent2: "#E2643D", markEnd: "#B5432A",
+			defaultTitle: "SERVICE NOTICE"
+		}
+	};
+	var TIP_STYLE_ORDER = ["tip", "feature", "event", "milestone", "outage"];
+	var currentTipStyleKey = "tip";
+
+	function renderTipStyleSeg(){
+		var wrap = document.getElementById("tipStyleSeg");
+		wrap.innerHTML = TIP_STYLE_ORDER.map(function(key){
+			var s = TIP_STYLES[key];
+			return '<button type="button" class="tip-style-btn' + (key === currentTipStyleKey ? ' active' : '') +
+				'" data-style="' + key + '" style="--tip-style-color:' + s.accent1 + ';">' + s.icon + ' ' + s.label + '</button>';
+		}).join("");
+		wrap.querySelectorAll(".tip-style-btn").forEach(function(btn){
+			btn.addEventListener("click", function(){
+				var newKey = btn.getAttribute("data-style");
+				var titleEl = document.getElementById("tipTitle");
+				// Only swap the title text if it's still whatever the previous
+				// style defaulted to (or blank) — never clobber a custom title.
+				var prevDefault = TIP_STYLES[currentTipStyleKey].defaultTitle;
+				if(!titleEl.value.trim() || titleEl.value.trim() === prevDefault){
+					titleEl.value = TIP_STYLES[newKey].defaultTitle;
+				}
+				currentTipStyleKey = newKey;
+				renderTipStyleSeg();
+			});
+		});
+	}
+
 	// Same visual template as the hand-made sctp-tip-*.svg files: brand mark,
 	// eyebrow bar, white/gradient two-line headline, auto-wrapped body, a
 	// pill-shaped "circle text" badge, and a footer bar with bottom-left text.
-	function buildTipSvg(fields){
+	function buildTipSvg(fields, style){
 		var bodyLines = wrapText(fields.body, 928, "36px Arial, Helvetica, sans-serif");
 		var bodyY = [650, 700, 750, 800, 850];
 		var bodySvg = bodyLines.slice(0, bodyY.length).map(function(line, i){
@@ -1137,18 +1204,18 @@
 		return '<svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">\n' +
 			'\t<defs>\n' +
 			'\t\t<radialGradient id="glow" cx="18%" cy="8%" r="75%">\n' +
-			'\t\t\t<stop offset="0%" stop-color="#B7E23D" stop-opacity="0.16"/>\n' +
-			'\t\t\t<stop offset="55%" stop-color="#B7E23D" stop-opacity="0.04"/>\n' +
-			'\t\t\t<stop offset="100%" stop-color="#B7E23D" stop-opacity="0"/>\n' +
+			'\t\t\t<stop offset="0%" stop-color="' + style.accent1 + '" stop-opacity="0.16"/>\n' +
+			'\t\t\t<stop offset="55%" stop-color="' + style.accent1 + '" stop-opacity="0.04"/>\n' +
+			'\t\t\t<stop offset="100%" stop-color="' + style.accent1 + '" stop-opacity="0"/>\n' +
 			'\t\t</radialGradient>\n' +
 			'\t\t<linearGradient id="accentText" x1="0%" y1="0%" x2="100%" y2="0%">\n' +
-			'\t\t\t<stop offset="0%" stop-color="#B7E23D"/>\n' +
-			'\t\t\t<stop offset="55%" stop-color="#6FE3C8"/>\n' +
-			'\t\t\t<stop offset="100%" stop-color="#4FC3F7"/>\n' +
+			'\t\t\t<stop offset="0%" stop-color="' + style.accent1 + '"/>\n' +
+			'\t\t\t<stop offset="55%" stop-color="' + style.accentMid + '"/>\n' +
+			'\t\t\t<stop offset="100%" stop-color="' + style.accent2 + '"/>\n' +
 			'\t\t</linearGradient>\n' +
 			'\t\t<linearGradient id="markGrad" x1="0%" y1="0%" x2="100%" y2="100%">\n' +
-			'\t\t\t<stop offset="0%" stop-color="#B7E23D"/>\n' +
-			'\t\t\t<stop offset="100%" stop-color="#87AE29"/>\n' +
+			'\t\t\t<stop offset="0%" stop-color="' + style.accent1 + '"/>\n' +
+			'\t\t\t<stop offset="100%" stop-color="' + style.markEnd + '"/>\n' +
 			'\t\t</linearGradient>\n' +
 			'\t\t<filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">\n' +
 			'\t\t\t<feGaussianBlur stdDeviation="18" result="blur"/>\n' +
@@ -1157,7 +1224,7 @@
 			'\t</defs>\n' +
 			'\t<rect width="1080" height="1080" fill="#101B14"/>\n' +
 			'\t<rect width="1080" height="1080" fill="url(#glow)"/>\n' +
-			'\t<g opacity="0.10" fill="#B7E23D">\n' +
+			'\t<g opacity="0.10" fill="' + style.accent1 + '">\n' +
 			'\t\t<rect x="880" y="120" width="26" height="26" transform="rotate(45 893 133)"/>\n' +
 			'\t\t<rect x="940" y="200" width="16" height="16" transform="rotate(45 948 208)"/>\n' +
 			'\t\t<rect x="80" y="900" width="20" height="20" transform="rotate(45 90 910)"/>\n' +
@@ -1166,7 +1233,7 @@
 			'\t</g>\n' +
 			'\t<rect x="28" y="28" width="1024" height="1024" rx="36" fill="none" stroke="#33453A" stroke-width="2"/>\n' +
 			'\t<rect x="76" y="80" width="64" height="64" rx="14" fill="url(#markGrad)"/>\n' +
-			'\t<text x="108" y="124" font-family="Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji, sans-serif" font-size="34" text-anchor="middle">🛒</text>\n' +
+			'\t<text x="108" y="124" font-family="Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji, sans-serif" font-size="34" text-anchor="middle">' + style.icon + '</text>\n' +
 			'\t<text x="156" y="103" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" letter-spacing="1" fill="#D9C89A">SNAILCRAFT</text>\n' +
 			'\t<text x="156" y="128" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" letter-spacing="1" fill="#D9C89A">TRADING POST</text>\n' +
 			'\t<text x="76" y="330" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" letter-spacing="6" fill="url(#accentText)">' + escXml(fields.title) + '</text>\n' +
@@ -1174,8 +1241,8 @@
 			'\t<text x="76" y="470" font-family="Georgia, \'Times New Roman\', serif" font-size="84" font-weight="700" fill="#EAEFE7">' + escXml(fields.header1) + '</text>\n' +
 			'\t<text x="76" y="562" font-family="Georgia, \'Times New Roman\', serif" font-size="84" font-weight="700" fill="url(#accentText)" filter="url(#softGlow)">' + escXml(fields.header2) + '</text>\n' +
 			bodySvg + '\n' +
-			'\t<rect x="76" y="864" width="' + chipWidth + '" height="70" rx="35" fill="#1B2A20" stroke="#B7E23D" stroke-width="2"/>\n' +
-			'\t<text x="106" y="909" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800" fill="#B7E23D">' + escXml(fields.circleText) + '</text>\n' +
+			'\t<rect x="76" y="864" width="' + chipWidth + '" height="70" rx="35" fill="#1B2A20" stroke="' + style.accent1 + '" stroke-width="2"/>\n' +
+			'\t<text x="106" y="909" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800" fill="' + style.accent1 + '">' + escXml(fields.circleText) + '</text>\n' +
 			'\t<rect x="0" y="984" width="1080" height="96" fill="#0C140F"/>\n' +
 			'\t<line x1="0" y1="984" x2="1080" y2="984" stroke="#33453A" stroke-width="2"/>\n' +
 			'\t<text x="76" y="1041" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#D9C89A">' + escXml(fields.footer) + '</text>\n' +
@@ -1186,15 +1253,16 @@
 	var lastTipSvg = null;
 
 	function generateTipPoster(){
+		var style = TIP_STYLES[currentTipStyleKey];
 		var fields = {
-			title: document.getElementById("tipTitle").value.trim() || "TIP OF THE WEEK",
+			title: document.getElementById("tipTitle").value.trim() || style.defaultTitle,
 			header1: document.getElementById("tipHeader1").value.trim(),
 			header2: document.getElementById("tipHeader2").value.trim(),
 			body: document.getElementById("tipBody").value.trim(),
 			circleText: document.getElementById("tipCircleText").value.trim(),
 			footer: document.getElementById("tipFooterText").value.trim(),
 		};
-		lastTipSvg = buildTipSvg(fields);
+		lastTipSvg = buildTipSvg(fields, style);
 		document.getElementById("tipPreviewWrap").innerHTML = lastTipSvg;
 		document.getElementById("tipDownloadBtn").disabled = false;
 	}
@@ -1204,7 +1272,7 @@
 		var blob = new Blob([lastTipSvg], { type: "image/svg+xml" });
 		var url = URL.createObjectURL(blob);
 		var a = document.createElement("a");
-		var slug = (document.getElementById("tipHeader1").value + "-" + document.getElementById("tipHeader2").value)
+		var slug = (currentTipStyleKey + "-" + document.getElementById("tipHeader1").value + "-" + document.getElementById("tipHeader2").value)
 			.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "poster";
 		a.href = url;
 		a.download = "sctp-tip-" + slug + ".svg";
@@ -1343,6 +1411,7 @@
 	document.getElementById("marketplaceModSearchBtn").addEventListener("click", searchMarketplaceMod);
 	document.getElementById("marketplaceModSearchUsername").addEventListener("keydown", function(e){ if(e.key === "Enter") searchMarketplaceMod(); });
 	document.getElementById("runSnapshotBtn").addEventListener("click", runSnapshotNow);
+	renderTipStyleSeg();
 	document.getElementById("tipGenerateBtn").addEventListener("click", generateTipPoster);
 	document.getElementById("tipDownloadBtn").addEventListener("click", downloadTipPoster);
 
