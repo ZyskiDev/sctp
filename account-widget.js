@@ -18,9 +18,6 @@
 		".acct-menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel,#1B2A20);border:1px solid var(--line,#33453A);border-radius:10px;padding:6px;min-width:170px;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,0.35);}" +
 		".acct-menu a,.acct-menu button{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--text,#EAEFE7);padding:8px 10px;border-radius:6px;font-size:13px;cursor:pointer;text-decoration:none;font-family:inherit;box-sizing:border-box;}" +
 		".acct-menu a:hover,.acct-menu button:hover{background:var(--panel-alt,#22332A);}" +
-		".acct-menu .acct-soon{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;font-size:13px;color:var(--muted,#8FA593);opacity:.6;cursor:not-allowed;user-select:none;}" +
-		".acct-menu .acct-soon b{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#2a1d00;padding:1px 7px;border-radius:999px;opacity:1;background:linear-gradient(110deg,#E2A33D 0%,#FFE9A8 22%,#E2A33D 44%,#FFD25E 66%,#E2A33D 100%);background-size:250% 100%;animation:acctSoonShine 2.6s linear infinite;}" +
-		"@keyframes acctSoonShine{from{background-position:120% 0;}to{background-position:-120% 0;}}" +
 		".acct-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;box-sizing:border-box;}" +
 		".acct-modal{background:var(--panel,#1B2A20);border:1px solid var(--line,#33453A);border-radius:14px;padding:22px;width:100%;max-width:300px;box-sizing:border-box;font-family:inherit;}" +
 		".acct-modal h2{margin:0 0 14px;font-size:17px;color:var(--text,#EAEFE7);font-family:inherit;}" +
@@ -87,7 +84,7 @@
 		var isAdmin = session.isHeadAdmin || (session.permissions && session.permissions.length > 0);
 		var html = '<a href="/marketplace/#mine">My Marketplace</a>';
 		html += '<a href="/stats/mine/">My Shop Statistics</a>';
-		html += '<div class="acct-soon" aria-disabled="true">Mapart Management <b>Coming soon</b></div>';
+		html += '<a href="/mapart/manage/">Mapart Management</a>';
 		html += '<a href="/store/manage/">Manage my store</a>';
 		html += '<a href="/account/">Account Settings</a>';
 		if (isAdmin) html += '<a href="/admin.html">Admin Panel</a>';
