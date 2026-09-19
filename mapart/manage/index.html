@@ -79,6 +79,9 @@
 	.size-row{display:flex;align-items:center;gap:8px;}
 	.size-row input{width:80px;}
 	.disclaimer{background:rgba(226,163,61,0.1);border:1px solid var(--warn);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13.5px;font-weight:600;margin-top:12px;}
+	.claim-filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+	.claim-filters .claim-search{flex:1 1 260px;max-width:380px;margin-bottom:0;}
+	.claim-filters select{width:auto;}
 	.claim-search{width:100%;max-width:380px;margin-bottom:12px;}
 	.claim-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
 	.claim-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;}
@@ -154,7 +157,10 @@
 
 		<h2 class="section">Claim a mapart</h2>
 		<p class="notice" style="margin-bottom:14px;">Found a piece of yours that's listed under the wrong name, or with no artist? Claim it to fix it. Pieces already claimed by someone else can't be taken &mdash; ask a head admin if that's wrong.</p>
-		<input type="text" class="claim-search" id="claimSearch" placeholder="Search unclaimed mapart by title or artist…">
+		<div class="claim-filters">
+			<input type="text" class="claim-search" id="claimSearch" placeholder="Search unclaimed mapart by title or artist…">
+			<select id="claimWorld"><option value="">Both worlds</option><option value="Firefly">Firefly</option><option value="Honeybee">Honeybee</option></select>
+		</div>
 		<p class="help" id="claimCount" style="color:var(--muted);font-size:13px;margin:0 0 12px;"></p>
 		<div class="claim-list" id="claimList"></div>
 	</div>
@@ -317,10 +323,12 @@
 
 	function renderClaimable(){
 		var q = document.getElementById("claimSearch").value.trim().toLowerCase();
+		var world = document.getElementById("claimWorld").value;
 		var mineIds = {};
 		mine.forEach(function(m){ mineIds[m.id] = true; });
 		var rows = catalog.filter(function(m){
 			if(m.claimed || mineIds[m.id]) return false;
+			if(world && m.world !== world) return false;
 			if(!q) return true;
 			return (m.title || "").toLowerCase().indexOf(q) !== -1 || (m.artist || "").toLowerCase().indexOf(q) !== -1;
 		});
@@ -525,6 +533,7 @@
 	});
 
 	document.getElementById("claimSearch").addEventListener("input", renderClaimable);
+	document.getElementById("claimWorld").addEventListener("change", renderClaimable);
 	document.getElementById("mineSearch").addEventListener("input", filterMine);
 
 	function start(){
