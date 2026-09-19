@@ -71,7 +71,6 @@
 	.lc-bid-line{font-family:var(--font-mono);font-size:12.5px;color:var(--shell);margin-bottom:6px;}
 	.lc-notes{color:var(--text);font-size:13px;margin:0 0 10px;opacity:0.85;}
 	.lc-foot{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted);}
-	.verified{color:var(--accent);}
 	.empty-state{color:var(--muted);font-size:13.5px;padding:30px 0;text-align:center;}
 
 	.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;}
@@ -393,7 +392,7 @@
 				(bidLine ? '<div class="lc-bid-line">' + esc(bidLine) + '</div>' : '') +
 				(l.notes ? '<p class="lc-notes">' + esc(l.notes) + '</p>' : '') +
 				'<div class="lc-foot">' +
-					'<span>' + esc(l.seller) + (l.sellerVerified ? ' <span class="verified">&#10003;</span>' : '') + '</span>' +
+					'<span>' + esc(l.seller) + '</span>' +
 				'</div>' +
 				'<div style="display:flex;gap:8px;margin-top:10px;">' +
 					'<button type="button" class="btn-ghost" style="flex:1;" data-open-listing="' + esc(l.id) + '">' + (l.type === "selling" ? "View / Bid" : "View") + '</button>' +
@@ -482,7 +481,7 @@
 				'<div class="lc-price">' + esc(rewardText(j)) + '</div>' +
 				(j.description ? '<p class="lc-notes">' + esc(j.description.length > 140 ? j.description.slice(0, 140) + "…" : j.description) + '</p>' : '') +
 				'<div class="lc-foot">' +
-					'<span>' + esc(j.poster) + (j.posterVerified ? ' <span class="verified">&#10003;</span>' : '') + '</span>' +
+					'<span>' + esc(j.poster) + '</span>' +
 					'<span>' + (j.interestCount ? j.interestCount + " interested" : "No interest yet") + '</span>' +
 				'</div>' +
 				'<div style="display:flex;gap:8px;margin-top:10px;">' +
@@ -532,7 +531,7 @@
 		wrap.className = "modal-bg";
 		var html = '<div class="modal">' +
 			'<h2 style="margin-bottom:4px;">' + esc(j.title) + '</h2>' + jobBadgeHtml(j) +
-			'<p class="lc-meta" style="margin-top:10px;">' + esc(j.world) + ' · posted by ' + esc(j.poster) + (j.posterVerified ? ' <span class="verified">&#10003;</span>' : '') + '</p>' +
+			'<p class="lc-meta" style="margin-top:10px;">' + esc(j.world) + ' · posted by ' + esc(j.poster) + '</p>' +
 			'<p class="lc-meta">Posted ' + esc(new Date(j.createdAt).toLocaleDateString()) + ' · expires ' + esc(new Date(j.expiresAt).toLocaleDateString()) + (j.deadline ? ' · needed by ' + esc(new Date(j.deadline).toLocaleDateString()) : '') + '</p>' +
 			'<div class="lc-price">' + esc(rewardText(j)) + '</div>' +
 			(j.description ? '<p class="lc-notes">' + esc(j.description) + '</p>' : '') +
@@ -636,7 +635,7 @@
 			: currencyText(l.budget, l.budgetCurrency) + " (budget)";
 		var html = '<div class="modal">' +
 			'<div class="lc-heading" style="margin-bottom:12px;">' + iconImgHtml(l.itemName, "lc-icon-lg") + '<h2 style="margin:0;">' + esc(l.itemName) + '</h2></div>' +
-			'<p class="lc-meta">' + esc(l.world) + ' · qty ' + fmtNum(l.quantity) + ' · posted by ' + esc(l.seller) + (l.sellerVerified ? ' <span class="verified">&#10003;</span>' : '') + '</p>' +
+			'<p class="lc-meta">' + esc(l.world) + ' · qty ' + fmtNum(l.quantity) + ' · posted by ' + esc(l.seller) + '</p>' +
 			'<p class="lc-meta">Posted ' + esc(new Date(l.createdAt).toLocaleDateString()) + ' · expires ' + esc(new Date(l.expiresAt).toLocaleDateString()) + '</p>' +
 			'<div class="lc-price">' + esc(priceLine || "—") + '</div>' +
 			(l.notes ? '<p class="lc-notes">' + esc(l.notes) + '</p>' : '');
@@ -843,7 +842,7 @@
 		var jobsHtml = (data.jobs || []).length ? data.jobs.map(function(j){
 			var received = interestsByJob[j.id] || [];
 			var interestHtml = received.length ? received.map(function(i){
-				return '<div class="bid-row" style="align-items:flex-start;"><span>' + esc(i.interestedUsername) + (i.interestedVerified ? ' <span class="verified">&#10003;</span>' : '') + (i.message ? ' — "' + esc(i.message) + '"' : '') +
+				return '<div class="bid-row" style="align-items:flex-start;"><span>' + esc(i.interestedUsername) + (i.message ? ' — "' + esc(i.message) + '"' : '') +
 					'<br><span class="lc-meta" style="white-space:pre-line;">' + esc(i.contactInfo) + '</span></span></div>';
 			}).join("") : '<p class="lc-meta">No interest yet.</p>';
 			return '<div class="listing-card" style="margin-bottom:12px;">' +

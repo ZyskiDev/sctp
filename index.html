@@ -346,6 +346,7 @@
 	   outline reads as "categorically different" at a glance (this is a
 	   marketplace post, not a real shop), not just "a different color". */
 	.badge.marketplace{background:transparent;border:1px solid var(--shell);color:var(--shell);}
+	.badge.mapart{background:rgba(140,147,232,0.16);color:var(--info);}
 	tr.marketplace-row{background:rgba(217,200,154,0.05);}
 	tr.marketplace-row:hover{background:rgba(217,200,154,0.09);}
 	.price-main{font-family:var(--font-mono);font-weight:600;}
@@ -624,7 +625,7 @@
 			</div>
 
 			<div class="f-group">
-				<label class="f-checkbox"><input type="checkbox" id="fHideDisplay"> Hide display-only listings</label>
+				<label class="f-checkbox"><input type="checkbox" id="fHideDisplay"> Hide display-only listings (incl. mapart gallery)</label>
 			</div>
 
 			<div class="f-group">
@@ -1128,7 +1129,8 @@
 	// no more GitHub Pages build-queue delay between an upload and it showing
 	// up. No cache-busting query param needed either: the Worker's cache TTL
 	// is now the only thing controlling freshness.
-	var DATA_URL = API_BASE + "/listings";
+	// ?mapart=1 adds one pseudo-listing per mapart gallery piece (see worker.js getMapartGalleryRows).
+	var DATA_URL = API_BASE + "/listings?mapart=1";
 	var SHARED_SHOPS_URL = API_BASE + "/shared-shops";
 	var RARE_ITEMS_URL = API_BASE + "/rare-items";
 	var ITEM_LANG_URL = "data/item-lang-table.json";
@@ -1690,7 +1692,9 @@
 				? '<span class="info-icon" tabindex="0">i<span class="tooltip">'+esc(rareMatches.join(" "))+'</span></span>'
 				: '';
 			var manual = isManualListing(r);
-			var stockCell = r.marketplace
+			var stockCell = r.mapartGallery
+				? '&mdash;'
+				: r.marketplace
 				? (r.marketplaceType === "lookingFor" ? "wants " : "has ")+fmtNum(r.amount)
 				: manual
 					? '&infin;'+manualIcon("Added manually by an admin — stock isn't tracked for this listing.")
@@ -1704,7 +1708,12 @@
 				: itemUrl
 					? '<a href="'+esc(itemUrl)+'">'+esc(r.itemNameDisplay)+'</a>'
 					: esc(r.itemNameDisplay);
-			var typeCell = r.marketplace
+			var galleryIcon = r.mapartGallery
+				? '<span class="info-icon" tabindex="0">i<span class="tooltip">Not a live listing &mdash; this piece comes from the Mapart Gallery. Price and stock aren\'t tracked; the Position column shows where to buy it.</span></span>'
+				: '';
+			var typeCell = r.mapartGallery
+				? '<span class="badge mapart">Mapart gallery</span>'
+				: r.marketplace
 				? '<span class="badge marketplace">'+(r.marketplaceType === "lookingFor" ? "Wanted (Marketplace)" : "Marketplace")+'</span>'
 				: (r.bulk ? '<span class="badge bulk">Bulk</span>' : r.bundled ? '<span class="badge bundled">Bundled</span>' : '<span class="badge single">Single</span>')+
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '');
@@ -1712,11 +1721,13 @@
 				(r.mapart
 				? '<td class="item-icon mapart-icon"><span class="mapart-thumb" data-mapart-src="'+esc(mapartImgUrl(r.mapart))+'" title="Click to zoom"><img src="'+esc(mapartImgUrl(r.mapart))+'" alt="" loading="lazy"><span class="spy">&#128269;</span></span></td>'
 				: '<td class="item-icon"><img src="'+esc(iconFor(r))+'" alt="" loading="lazy" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';"></td>')+
-				'<td class="item-name">'+itemNameHtml+rareIcon+'</td>'+
+				'<td class="item-name">'+itemNameHtml+(r.mapartGallery ? galleryIcon : rareIcon)+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
 				'<td>'+typeCell+'</td>'+
-				'<td><span class="price-main">'+esc(r.priceLabel)+'</span>'+(r.marketplace ? '' : '<br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span>')+'</td>'+
-				'<td style="text-align:center;"><input type="checkbox" class="avg-toggle" data-key="'+esc(rowKey(r))+'" title="Include this listing in the average price above"'+(avgExcluded[rowKey(r)] ? '' : ' checked')+'></td>'+
+				'<td><span class="price-main">'+esc(r.priceLabel)+'</span>'+(r.marketplace || r.mapartGallery ? '' : '<br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span>')+'</td>'+
+				(r.mapartGallery
+					? '<td></td>'
+					: '<td style="text-align:center;"><input type="checkbox" class="avg-toggle" data-key="'+esc(rowKey(r))+'" title="Include this listing in the average price above"'+(avgExcluded[rowKey(r)] ? '' : ' checked')+'></td>')+
 				'<td>'+stockCell+'</td>'+
 				'<td class="seller">'+(sellerUrl(r.seller, r.world) ? '<a href="'+sellerUrl(r.seller, r.world)+'">'+esc(r.seller)+'</a>' : esc(r.seller))+infoIcon+'</td>'+
 				'<td>'+esc(r.world)+'</td>'+
@@ -1725,7 +1736,7 @@
 				'<td>'+availableSinceCell(r)+'</td>'+
 				'<td><div class="action-btns">'+
 					(r.id ? '<button class="share-btn" type="button" data-row-idx="'+idx+'">Share</button>' : '')+
-					(canRemoveListings()
+					(r.mapartGallery ? '' : canRemoveListings()
 						? '<button class="report-btn remove-btn" type="button" data-row-idx="'+idx+'">Remove</button>'
 						: '<button class="report-btn" type="button" data-row-idx="'+idx+'">Report</button>')+
 					'</div></td>'+

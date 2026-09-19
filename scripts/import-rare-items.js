@@ -437,8 +437,17 @@ function main() {
 		}
 		let id = slugify(e.name);
 		if (existingIds.has(id)) {
-			console.log(`  WARNING: id collision for "${e.name}" -> ${id}, skipping`);
-			continue;
+			// Same name already used — usually the same item name in a different
+			// category (e.g. a Useable and a Collectible), which is a genuinely
+			// separate entry. Qualify the id with the category; if THAT is taken
+			// too it is an exact duplicate row, so skip it.
+			const qualified = slugify(e.name + " " + e.category);
+			if (existingIds.has(qualified)) {
+				console.log(`  skip duplicate row: "${e.name}" (${e.category})`);
+				continue;
+			}
+			console.log(`  note: "${e.name}" (${e.category}) shares a name with another entry -> ${qualified}`);
+			id = qualified;
 		}
 
 		let texture = null;

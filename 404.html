@@ -620,7 +620,11 @@
 				}
 				document.title = m.title + " — Mapart — SC Trading Post";
 				var img = API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || "");
-				var artistUrl = m.artist ? "/s/" + (m.world === "Honeybee" ? "hb" : "ff") + "/" + encodeURIComponent(m.artist) : null;
+				// Two-artist pieces are stored as "A & B" — link each to their own shop page.
+				var worldSlug = m.world === "Honeybee" ? "hb" : "ff";
+				var artistsHtml = m.artist ? m.artist.split(" & ").map(function(a){
+					return '<a href="/s/' + worldSlug + '/' + encodeURIComponent(a) + '">' + esc(a) + '</a>';
+				}).join(" &amp; ") : "";
 				var buy = m.notForSale ? "Not for sale" : (m.whereToBuy || "");
 				app.innerHTML =
 					'<p style="margin:18px 0 0;"><a href="/mapart/">&larr; All mapart</a></p>' +
@@ -628,12 +632,12 @@
 						'<div class="mapart-frame" id="mapartFrame" title="Click to zoom"><img src="' + esc(img) + '" alt="' + esc(m.title) + '"><span class="mapart-spy">&#128269; click to zoom</span></div>' +
 						'<div class="mapart-detail">' +
 							'<h1>' + esc(m.title) + '</h1>' +
-							'<p class="by">' + (m.artist ? 'by ' + (artistUrl ? '<a href="' + artistUrl + '">' + esc(m.artist) + '</a>' : esc(m.artist)) : 'Unknown artist') + '</p>' +
+							'<p class="by">' + (m.artist ? 'by ' + artistsHtml : 'Unknown artist') + '</p>' +
 							'<div class="mapart-pills">' +
 								(m.category ? '<span class="mapart-pill cat">' + esc(m.category) + '</span>' : '<span class="mapart-pill">no category</span>') +
 								'<span class="mapart-pill">' + esc(m.world) + '</span>' +
 								(m.width * m.height > 1 ? '<span class="mapart-pill">' + m.width + '&times;' + m.height + ' maps</span>' : '') +
-								(m.claimed ? '<span class="mapart-pill ok">&#10003; verified by artist</span>' : '') +
+								(m.verified ? '<span class="mapart-pill ok">&#10003; verified by artist</span>' : '') +
 							'</div>' +
 							'<dl class="mapart-facts">' +
 								'<dt>Where to buy</dt><dd>' + (buy ? esc(buy) : '<span style="color:var(--muted);">Unknown</span>') + '</dd>' +

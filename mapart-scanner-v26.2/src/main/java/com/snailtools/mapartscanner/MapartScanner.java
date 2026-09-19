@@ -49,6 +49,8 @@ final class MapartScanner {
 	private static final double SCAN_RADIUS = 48.0;
 	private static final int MAX_GRID = 20; // matches the Worker's MAPART_MAX_GRID
 	private static final int BATCH_SIZE = 5;
+	// Keep each request comfortably under the Worker's memory/body limits even for huge murals.
+	private static final int BATCH_MAX_CHARS = 6_000_000;
 
 	private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 	private static final ExecutorService WORKER = Executors.newSingleThreadExecutor(r -> {
@@ -151,15 +153,22 @@ final class MapartScanner {
 
 		List<JsonObject> all = new ArrayList<>();
 		for (JsonElement el : pending) all.add(el.getAsJsonObject());
-		for (int i = 0; i < all.size(); i += BATCH_SIZE) {
-			JsonArray batch = new JsonArray();
-			List<String> batchKeys = new ArrayList<>();
-			for (JsonObject o : all.subList(i, Math.min(all.size(), i + BATCH_SIZE))) {
-				batch.add(o);
-				batchKeys.add(world + "|" + o.get("leadMapId").getAsInt());
+		JsonArray batch = new JsonArray();
+		List<String> batchKeys = new ArrayList<>();
+		int batchChars = 0;
+		for (JsonObject o : all) {
+			int chars = o.get("png").getAsString().length();
+			if (batch.size() > 0 && (batch.size() >= BATCH_SIZE || batchChars + chars > BATCH_MAX_CHARS)) {
+				upload(client, world, batch, batchKeys, pendingSignatures);
+				batch = new JsonArray();
+				batchKeys = new ArrayList<>();
+				batchChars = 0;
 			}
-			upload(client, world, batch, batchKeys, pendingSignatures);
+			batch.add(o);
+			batchKeys.add(world + "|" + o.get("leadMapId").getAsInt());
+			batchChars += chars;
 		}
+		if (batch.size() > 0) upload(client, world, batch, batchKeys, pendingSignatures);
 	}
 
 	// ---------------- grouping ----------------
@@ -232,6 +241,7 @@ final class MapartScanner {
 	private static String signature(Group g, FrameInfo lead) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(g.width()).append('x').append(g.height()).append('|').append(lead.mapId()).append('|').append(lead.name());
+		for (FrameInfo f : g.frames()) sb.append("|n:").append(f.name());
 		for (FrameInfo f : g.frames()) {
 			sb.append('|').append(f.mapId()).append(':').append(f.rotation()).append(':').append(Arrays.hashCode(f.colors()));
 		}
@@ -264,6 +274,12 @@ final class MapartScanner {
 		JsonObject o = new JsonObject();
 		o.addProperty("leadMapId", lead.mapId());
 		o.addProperty("rawName", lead.name() == null ? "" : lead.name());
+		// Title and artist are often on different maps of one piece, so send every name (row-major).
+		JsonArray allNames = new JsonArray();
+		java.util.Set<String> seenNames = new java.util.LinkedHashSet<>();
+		for (FrameInfo f : g.frames()) if (f.name() != null && !f.name().isBlank()) seenNames.add(f.name());
+		for (String n : seenNames) allNames.add(n);
+		o.add("allNames", allNames);
 		o.addProperty("width", g.width());
 		o.addProperty("height", g.height());
 		o.add("partMapIds", partIds);
@@ -310,7 +326,7 @@ final class MapartScanner {
 					return;
 				}
 				JsonArray results = JsonParser.parseString(response.body()).getAsJsonObject().getAsJsonArray("results");
-				int created = 0, updated = 0, merged = 0, skipped = 0;
+				int created = 0, updated = 0, merged = 0, unchanged = 0, skipped = 0;
 				for (JsonElement el : results) {
 					JsonObject r = el.getAsJsonObject();
 					String status = r.get("status").getAsString();
@@ -318,6 +334,7 @@ final class MapartScanner {
 						case "created" -> created++;
 						case "updated" -> updated++;
 						case "merged" -> merged++;
+						case "unchanged" -> unchanged++;
 						default -> skipped++;
 					}
 					if (!status.equals("error") && r.has("leadMapId") && !r.get("leadMapId").isJsonNull()) {
@@ -326,8 +343,8 @@ final class MapartScanner {
 						if (sig != null) uploaded.put(key, sig);
 					}
 				}
-				int c = created, u = updated, m = merged, s = skipped;
-				client.execute(() -> say(client, "Mapart: " + c + " new, " + u + " updated, " + m + " merged" + (s > 0 ? ", " + s + " skipped" : ""), ChatFormatting.AQUA));
+				int c = created, u = updated, m = merged, un = unchanged, s = skipped;
+				client.execute(() -> say(client, "Mapart: " + c + " new, " + u + " updated, " + m + " merged" + (un > 0 ? ", " + un + " unchanged" : "") + (s > 0 ? ", " + s + " skipped" : ""), ChatFormatting.AQUA));
 			} catch (Exception e) {
 				e.printStackTrace();
 				client.execute(() -> say(client, "Mapart upload error: " + e.getMessage(), ChatFormatting.RED));

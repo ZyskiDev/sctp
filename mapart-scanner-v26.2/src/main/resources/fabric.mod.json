@@ -3,7 +3,7 @@
 	"id": "mapartscanner",
 	"version": "${version}",
 	"name": "Mapart Scanner (temporary)",
-	"description": "Throwaway helper that scans item-frame maparts and uploads them to the SCTP mapart catalog. Off by default; toggle with the \\ key.",
+	"description": "Throwaway helper that scans item-frame maparts and uploads them to the SCTP mapart catalog. Off by default; toggle with the backslash key.",
 	"authors": ["SCTP"],
 	"contact": {},
 	"license": "MIT",

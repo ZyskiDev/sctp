@@ -16,6 +16,9 @@
 //
 // Public, unauthenticated, cached (CACHE_TTL_SECONDS at the edge):
 //   GET /listings          -> full listings array
+//     ?mapart=1 also appends one pseudo-listing per mapart gallery piece (mapartGallery: true,
+//     currency "display") — used only by the website's listings table. Filled-map shop
+//     scans are ignored on upload (maps live in the mapart gallery instead).
 //   GET /shared-shops      -> approved shared-shop entries
 //   GET /rare-items        -> {firefly: [...], honeybee: [...]}
 //   GET /faq               -> faq entries
@@ -82,6 +85,7 @@
 //   POST /mapart/claim | /mapart/abandon     (verified account) body: {id}
 //   POST /mapart/update                      (owner or head admin) body: {id, title?, artist?, whereToBuy?, notForSale?, category?}
 //   GET  /admin/mapart, POST /admin/mapart/delete {id}, POST /admin/mapart/assign {id, username}   (head admin only)
+//   POST /admin/mapart/rederive  (head admin only) re-runs artist/title detection on unclaimed, unedited pieces
 // Verification links — single-use, expiring, head-admin generated:
 //   POST /admin/verification-links/create {mcUsername, days?}, GET /admin/verification-links, POST /admin/verification-links/revoke {token}   (head admin only)
 //   GET  /verify-link/info?token=            (public) -> {mcUsername, expiresAt}
@@ -389,20 +393,18 @@ function buildListingUpsertStmt(env, key, r) {
 	// a listing that gets re-uploaded/updated keeps the same shareable id.
 	const availableSince = r.submittedAt || new Date().toISOString();
 	return env.DB.prepare(
-		`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen, availableSince, mapId, missingStreak)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+		`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen, availableSince, missingStreak)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 		 ON CONFLICT(rowKey) DO UPDATE SET
 		   itemName=excluded.itemName, baseItem=excluded.baseItem, bulk=excluded.bulk, bundled=excluded.bundled,
 		   mixedContents=excluded.mixedContents, price=excluded.price, priceLabel=excluded.priceLabel,
 		   stackSize=excluded.stackSize, amount=excluded.amount, stacksInStock=excluded.stacksInStock,
 		   currency=excluded.currency, seller=excluded.seller, world=excluded.world,
-		   position=excluded.position, lastSeen=excluded.lastSeen, missingStreak=0,
-		   mapId=COALESCE(excluded.mapId, listings.mapId)`
+		   position=excluded.position, lastSeen=excluded.lastSeen, missingStreak=0`
 	).bind(
 		key, newId(), r.itemName, r.baseItem, r.bulk ? 1 : 0, r.bundled ? 1 : 0, r.mixedContents ? 1 : 0,
 		r.price, r.priceLabel, r.stackSize, r.amount, r.stacksInStock,
-		r.currency, r.seller, r.world, r.position, r.lastSeen, availableSince,
-		Number.isInteger(r.mapId) ? r.mapId : null
+		r.currency, r.seller, r.world, r.position, r.lastSeen, availableSince
 	);
 }
 
@@ -1039,6 +1041,8 @@ async function handleUploadListings(request, env) {
 			if (!r.itemName || !r.seller || !r.world) { skipped++; continue; }
 			if (isBannedItem(r.baseItem, r.itemName)) { skipped++; continue; }
 			if (isPaymentItem(r.baseItem, r.currency)) { skipped++; continue; }
+			// Maps are catalogued in the mapart gallery instead (see handleGetListings).
+			if (String(r.baseItem || "").toLowerCase() === "minecraft:filled_map") { skipped++; continue; }
 			if (blockedSet.has(String(r.seller).toLowerCase())) { skipped++; continue; }
 			validRows.push({ ...r, _key: rowKey(r) });
 		}
@@ -1116,9 +1120,6 @@ async function handleUploadListings(request, env) {
 
 		if (stmts.length > 0) await env.DB.batch(stmts);
 
-		// No-op until the shop scanner starts sending mapId (see 0017_mapart.sql).
-		removed += await mergeMapartListings(env, validRows);
-
 		if (added === 0 && updated === 0 && removed === 0) {
 			return json({ added: 0, updated: 0, skipped, removed: 0, committed: false });
 		}
@@ -1137,10 +1138,7 @@ async function handleGetListings(request, env, ctx) {
 		const { results } = await env.DB.prepare(
 			"SELECT * FROM listings WHERE lower(seller) NOT IN (SELECT usernameKey FROM blockedSellers)"
 		).all();
-		const shopRows = await attachMapartToListings(
-			env,
-			results.map((r) => ({ ...r, bulk: !!r.bulk, bundled: !!r.bundled, mixedContents: !!r.mixedContents }))
-		);
+		const shopRows = results.map((r) => ({ ...r, bulk: !!r.bulk, bundled: !!r.bundled, mixedContents: !!r.mixedContents }));
 		// Active marketplace posts (selling AND lookingFor) are merged straight
 		// into the same array everything already reads — the site's listings
 		// table/search, item pages, and the mod's /search + watchlist check all
@@ -1150,7 +1148,13 @@ async function handleGetListings(request, env, ctx) {
 		// consumer that specifically shouldn't treat these as real purchasable
 		// shop stock (e.g. the /list build-planner) can filter them back out.
 		const marketplaceRows = await getActiveMarketplaceRows(env);
-		return shopRows.concat(marketplaceRows);
+		// ?mapart=1 (the website's listings table) also adds one row per
+		// catalogued mapart. The mod and every other consumer call plain
+		// /listings and never see them, so nothing mistakes a gallery piece
+		// for real shop stock.
+		const wantGallery = new URL(request.url).searchParams.get("mapart") === "1";
+		const galleryRows = wantGallery ? await getMapartGalleryRows(env) : [];
+		return shopRows.concat(marketplaceRows, galleryRows);
 	});
 }
 
@@ -1176,7 +1180,7 @@ async function notifyAccount(env, accountId, type, message, listingId) {
 // text (see /account/contact-info) and only shown if the account set them.
 function contactInfoText(admin) {
 	const parts = [`account username: ${admin.username}`];
-	if (admin.mcUsername) parts.push(`Minecraft: ${admin.mcUsername}${admin.mcVerified ? " (verified)" : ""}`);
+	if (admin.mcUsername) parts.push(`Minecraft: ${admin.mcUsername}`);
 	if (admin.contactDiscord) parts.push(`Discord: ${admin.contactDiscord}`);
 	if (admin.contactTimezone) parts.push(`Timezone: ${admin.contactTimezone}`);
 	return parts.join("\n");
@@ -1231,7 +1235,7 @@ async function getActiveMarketplaceRows(env) {
 async function handleGetMarketplaceListings(request, env, ctx) {
 	return cachedGet(request, ctx, CACHE_TTL_SECONDS, async () => {
 		const { results } = await env.DB.prepare(
-			`SELECT ml.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername, a.mcVerified AS accountMcVerified
+			`SELECT ml.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername
 			 FROM marketplaceListings ml JOIN admins a ON a.id = ml.accountId
 			 WHERE ml.status = 'active' AND ml.expiresAt > ?`
 		).bind(new Date().toISOString()).all();
@@ -1269,7 +1273,7 @@ async function handleGetMarketplaceListings(request, env, ctx) {
 				startingBid: m.startingBid, startingBidCurrency: m.startingBidCurrency,
 				budget: m.budget, budgetCurrency: m.budgetCurrency,
 				createdAt: m.createdAt, expiresAt: m.expiresAt,
-				seller: m.accountMcUsername || m.accountUsername, sellerVerified: !!m.accountMcVerified,
+				seller: m.accountMcUsername || m.accountUsername,
 				bidCount: pendingBids.length,
 				highestBid: highestBid ? { amount: highestBid.amount, currency: highestBid.currency } : null,
 				// Anonymized bid history for the public popup — amount/currency/
@@ -1380,7 +1384,7 @@ async function handleCreateMarketplaceJob(request, env) {
 async function handleGetMarketplaceJobs(request, env, ctx) {
 	return cachedGet(request, ctx, CACHE_TTL_SECONDS, async () => {
 		const { results } = await env.DB.prepare(
-			`SELECT mj.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername, a.mcVerified AS accountMcVerified
+			`SELECT mj.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername
 			 FROM marketplaceJobs mj JOIN admins a ON a.id = mj.accountId
 			 WHERE mj.status = 'active' AND mj.expiresAt > ?`
 		).bind(new Date().toISOString()).all();
@@ -1402,7 +1406,7 @@ async function handleGetMarketplaceJobs(request, env, ctx) {
 			rewardAmount: j.rewardAmount, rewardCurrency: j.rewardCurrency,
 			world: j.world, deadline: j.deadline,
 			createdAt: j.createdAt, expiresAt: j.expiresAt,
-			poster: j.accountMcUsername || j.accountUsername, posterVerified: !!j.accountMcVerified,
+			poster: j.accountMcUsername || j.accountUsername,
 			interestCount: interestCountByJob.get(j.id) || 0,
 		}));
 	});
@@ -1630,14 +1634,13 @@ async function handleGetMyMarketplace(request, env) {
 		for (const chunk of chunkArray(jobIds, MAX_QUERY_PARAMS_PER_CHUNK)) {
 			const placeholders = chunk.map(() => "?").join(",");
 			const { results } = await env.DB.prepare(
-				`SELECT ji.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername, a.mcVerified AS accountMcVerified, a.contactDiscord, a.contactTimezone
+				`SELECT ji.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername, a.contactDiscord, a.contactTimezone
 				 FROM marketplaceJobInterests ji JOIN admins a ON a.id = ji.interestedAccountId
 				 WHERE ji.jobId IN (${placeholders})`
 			).bind(...chunk).all();
 			jobInterestsReceived.push(...results.map((r) => ({
 				id: r.id, jobId: r.jobId, message: r.message, createdAt: r.createdAt,
 				interestedUsername: r.accountMcUsername || r.accountUsername,
-				interestedVerified: !!r.accountMcVerified,
 				contactInfo: contactInfoText(r),
 			})));
 		}
@@ -1672,21 +1675,26 @@ async function handleMarkNotificationsRead(request, env) {
 
 // Used by the MOD on join — no session token (the mod isn't a logged-in
 // website session), just the player's own MC username, same trust model the
-// rest of the mod's uploads already use. Only ever returns anything for an
-// account a head admin has actually marked mcVerified — an unverified or
-// unclaimed username gets nothing, on purpose. Marks whatever it returns as
-// delivered so it isn't repeated on the next join.
+// rest of the mod's uploads already use. Verification is now mapart-only, so
+// this delivers for EVERY account whose linked MC username matches (typed
+// usernames are taken on trust — same as registration). Marks whatever it
+// returns as delivered so it isn't repeated on the next join.
 async function handleGetNotificationsForMc(request, env) {
 	const url = new URL(request.url);
 	const mcUsername = (url.searchParams.get("mcUsername") || "").trim();
 	if (!mcUsername) return json({ error: "mcUsername is required" }, 400);
 
-	const account = await env.DB.prepare("SELECT id FROM admins WHERE lower(mcUsername) = ? AND mcVerified = 1").bind(mcUsername.toLowerCase()).first();
-	if (!account) return json([]);
+	const { results: accounts } = await env.DB.prepare("SELECT id FROM admins WHERE lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))").bind(mcUsername).all();
+	if (accounts.length === 0) return json([]);
 
-	const { results } = await env.DB.prepare(
-		"SELECT * FROM marketplaceNotifications WHERE accountId = ? AND deliveredInGameAt IS NULL ORDER BY createdAt"
-	).bind(account.id).all();
+	const results = [];
+	for (const account of accounts) {
+		const { results: rows } = await env.DB.prepare(
+			"SELECT * FROM marketplaceNotifications WHERE accountId = ? AND deliveredInGameAt IS NULL ORDER BY createdAt"
+		).bind(account.id).all();
+		results.push(...rows);
+	}
+	results.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 	if (results.length > 0) {
 		const now = new Date().toISOString();
 		for (const chunk of chunkArray(results.map((r) => r.id), MAX_QUERY_PARAMS_PER_CHUNK)) {
@@ -3093,11 +3101,67 @@ function mapartNormKey(s) {
 	return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+// Nicknames used in map names that stand for one or more real usernames.
+// `phrases` are matched as whole words ignoring case/punctuation ("Earth &
+// Charm", "earth-charm" and "EARTH CHARM" all match "earth charm") — but ONLY
+// in credit position (see aliasCreditIndex), since many are ordinary words.
+const MAPART_ALIASES = [
+	{ phrases: ["azi"], artists: ["AziPazi"] },
+	{ phrases: ["toto"], artists: ["totoric"] },
+	{ phrases: ["earth charm", "earthcharm"], artists: ["EarthHQ", "Charmolyqi"] },
+	{ phrases: ["mehoy"], artists: ["MehoyMinoy"] },
+	{ phrases: ["wis", "wisteria"], artists: ["Magical_Wisteria"] },
+	{ phrases: ["moldy"], artists: ["MoldyNug"] },
+	{ phrases: ["grace"], artists: ["GraceLuna"] },
+	{ phrases: ["peaches", "peachy", "peach"], artists: ["dr_peaches"] },
+	{ phrases: ["video"], artists: ["videoghost9"] },
+	{ phrases: ["mora"], artists: ["Moratenzis"] },
+	{ phrases: ["frigid"], artists: ["FrigidAmbiance"] },
+	{ phrases: ["zepp"], artists: ["TheZepptum"] },
+	{ phrases: ["kat"], artists: ["NamelessKat"] },
+	{ phrases: ["siren"], artists: ["DetectiveSiren"] },
+	{ phrases: ["trev"], artists: ["trevorcd"] },
+	{ phrases: ["lucky"], artists: ["Lucky_MoonXx"] },
+	{ phrases: ["god"], artists: ["God404"] },
+	{ phrases: ["cel"], artists: ["CelRxn"] },
+	{ phrases: ["deny"], artists: ["DenyIndex"] },
+	{ phrases: ["killz"], artists: ["KillzBob"] },
+	{ phrases: ["rvban"], artists: ["Rvban97"] },
+	{ phrases: ["lap"], artists: ["LapJi852"] },
+	{ phrases: ["carrot"], artists: ["Carrot__Cake"] },
+	{ phrases: ["ants"], artists: ["antsandpants"] },
+	{ phrases: ["ender"], artists: ["EnderThe16th"] },
+	{ phrases: ["aslan"], artists: ["AslanDev"] },
+	{ phrases: ["lumi"], artists: ["LuminousSheep"] },
+	{ phrases: ["moon"], artists: ["MoonNettle"] },
+	{ phrases: ["memelord"], artists: ["memelordmars"] },
+];
+// Real usernames that appear in map names but have no listings/account, so
+// nothing else would ever recognise them (and names taken at face value —
+// "if we only know the short name, treat it as the username").
+const MAPART_EXTRA_KNOWN_NAMES = [
+	"Saternine21", "Sm0ochie", "DigiverseDragon", "AKST4R", "Alex_Calibre", "bstar", "mars", "DrawingLivii", "YNMS",
+	"sukittyD", "Chlozer", "Edan0618", "Saigesky", "CFA", "Sample", "Jolt242", "LovieeAngel", "CloudNine22", "khaotikrypt",
+	"ErzaRose", "Horizon50k", "Keita", "Saige", "Hand_Samwitch", "DemonicStijn", "MermaidKatie", "GameYeti", "AtlasMage",
+	"dihsorder", "ariesmike", "To0ncez", "Aceramey", "MakiAi", "Nemesiszilla", "DetectivePeaches", "Mylilyaya1",
+	"SnailLaxing", "flapchick", "nottabbyy", "Gh0st", "Cityfanart", "xardx", "Mochi_King", "TheHive", "Omen", "DirkVogel",
+	"MartienVogel", "Jolt242",
+];
+const MAPART_MAX_ARTISTS = 3;
+
+// Lowercased, every run of non-alphanumerics (underscores included) becomes
+// one space, padded — so "Ariel_Saternine21", "Carrot__Cake" and
+// "Earth & Charm" all compare as plain space-separated words.
+function mapartMatchNorm(s) {
+	return " " + String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ") + " ";
+}
+
 // Usernames worth recognising inside a map's name: every seller that has
-// ever had a listing, plus every registered account's login/MC username.
+// ever had a listing, plus every registered account's login/MC username,
+// plus the alias targets and the hard-coded extras above.
 let mapartKnownNamesCache = { at: 0, names: [] };
-async function getMapartKnownNames(env) {
-	if (Date.now() - mapartKnownNamesCache.at < 5 * 60 * 1000 && mapartKnownNamesCache.names.length) return mapartKnownNamesCache.names;
+async function getMapartKnownNames(env, force) {
+	if (!force && Date.now() - mapartKnownNamesCache.at < 5 * 60 * 1000 && mapartKnownNamesCache.names.length) return mapartKnownNamesCache.names;
 	const names = new Map();
 	const add = (n) => {
 		const bare = String(n || "").replace(/^\./, "");
@@ -3107,44 +3171,167 @@ async function getMapartKnownNames(env) {
 	for (const r of sellers.results) add(r.seller);
 	const accounts = await env.DB.prepare("SELECT username, mcUsername FROM admins").all();
 	for (const r of accounts.results) { add(r.username); add(r.mcUsername); }
+	// Filled-map shop listings are gone, so sellers who only ever sold maps
+	// are no longer in `listings` — every artist already recorded on a
+	// mapart (however it got there) still counts as a known username.
+	const artists = await env.DB.prepare("SELECT DISTINCT artist FROM maparts WHERE artist IS NOT NULL").all();
+	for (const r of artists.results) for (const n of splitMapartArtists(r.artist)) add(n);
+	for (const n of MAPART_EXTRA_KNOWN_NAMES) add(n);
+	for (const a of MAPART_ALIASES) for (const n of a.artists) add(n);
 	mapartKnownNamesCache = { at: Date.now(), names: [...names.values()] };
 	return mapartKnownNamesCache.names;
 }
 
-// Finds a known username in the map's raw name as a whole token (case-
-// insensitive). Longest match wins; a name right after "by" beats a longer
-// one that isn't ("Sunset by Steve" shouldn't credit a user called "Sunset").
-function findMapartArtist(rawName, knownNames) {
-	const norm = " " + String(rawName || "").toLowerCase().replace(/[^a-z0-9_]+/g, " ") + " ";
-	let best = null, bestScore = -1;
-	for (const name of knownNames) {
-		const needle = " " + name.toLowerCase() + " ";
-		const idx = norm.indexOf(needle);
-		if (idx === -1) continue;
-		const afterBy = /\b(by|from)\s$/.test(norm.slice(0, idx + 1));
-		const score = name.length + (afterBy ? 100 : 0);
-		if (score > bestScore) { best = name; bestScore = score; }
-	}
-	return best;
+// A nickname only counts as a credit when it sits in credit position of ONE
+// name: after a separator (- ~ • | / & , + :) or "by"/"from"/"x", or as the
+// whole name — never as a word in the middle of a title ("God of War").
+// Returns the match offset in `rawName`, or -1.
+function aliasCreditIndex(rawName, phrase) {
+	const toks = phrase.split(" ").map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+	const re = new RegExp("(?<![A-Za-z0-9])" + toks.join("[^A-Za-z0-9]+") + "(?![A-Za-z0-9])", "i");
+	const m = re.exec(rawName);
+	if (!m) return -1;
+	const pre = rawName.slice(0, m.index).replace(/\s+$/, "");
+	const post = rawName.slice(m.index + m[0].length).replace(/^\s+/, "");
+	const sepBefore = /[-~\u2022|\/&,+:]$/.test(pre) || /\b(by|from|x)$/i.test(pre);
+	const endsHere = post === "" || /^[-~\u2022|\/&,+:(\[]/.test(post) || /^\d/.test(post) || /^(and|x)\b/i.test(post);
+	if (pre === "") return endsHere ? m.index : -1;
+	return sepBefore ? m.index : -1;
 }
 
-// Title = the leading map's name minus symbols and minus the artist/seller.
-function deriveMapartTitle(rawName, artist) {
-	let t = " " + String(rawName || "").replace(/[^\p{L}\p{N}_\s]+/gu, " ") + " ";
-	if (artist) {
-		const esc = artist.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-		t = t.replace(new RegExp("(\\s)" + esc + "(?=\\s)", "gi"), " ");
+// Looks for credited artists across ALL of a piece's map names (title and
+// artist are often on different maps of one merged piece). Returns
+// { artists: [...], phrases: [...] } — phrases are the normalized word
+// sequences that matched, so the title cleaner can remove them.
+//  - Anything right after "by"/"from", any alias in credit position, and
+//    "/shop <name>" is a strong signal: all such matches are credited (max
+//    MAPART_MAX_ARTISTS).
+//  - Otherwise only the single longest plain username match is used ("Sunset"
+//    the word shouldn't credit a user called Sunset when a real "by Steve" exists).
+//  - A word that's a slightly shortened known username (map names get cut off)
+//    counts too, e.g. "Emmythegamer45" -> Emmythegamer453.
+function findMapartArtists(names, knownNames) {
+	const list = (Array.isArray(names) ? names : [names]).filter(Boolean);
+	const raw = list.join(" \n ");
+	const norm = mapartMatchNorm(raw);
+	const matches = [];
+	const add = (phrase, artists, kind, idxOverride) => {
+		if (!phrase) return;
+		const idx = idxOverride !== undefined ? idxOverride : norm.indexOf(" " + phrase + " ");
+		if (idx === -1) return;
+		const afterBy = idxOverride !== undefined ? true : /\b(by|from)\s$/.test(norm.slice(0, idx + 1));
+		// A plain username written in credit position ("Title - A & B",
+		// "Title | A") is as good a credit as an alias.
+		const inCreditPosition = kind === "plain" && idxOverride === undefined && list.some((n) => aliasCreditIndex(n, phrase) !== -1);
+		matches.push({ phrase, artists, idx, kind, strong: kind !== "plain" || afterBy || inCreditPosition });
+	};
+
+	let offset = 0;
+	for (const name of list) {
+		for (const a of MAPART_ALIASES) {
+			for (const p of a.phrases) {
+				const phrase = mapartMatchNorm(p).trim();
+				const at = aliasCreditIndex(name, phrase);
+				if (at !== -1 && !matches.some((m) => m.kind === "alias" && m.phrase === phrase)) add(phrase, a.artists, "alias", offset + at);
+			}
+		}
+		offset += name.length + 3;
 	}
-	t = t.replace(/_+/g, " ").replace(/\s+/g, " ").trim();
-	t = t.replace(/\s+(made\s+by|created\s+by|art\s+by|by|from)$/i, "").trim();
-	return t.slice(0, 100) || "Untitled mapart";
+	const shop = /\/shop\s+([A-Za-z0-9_.]{3,16})/i.exec(raw);
+	if (shop) add(mapartMatchNorm(shop[1]).trim(), [shop[1].replace(/^\./, "")], "shop");
+
+	const tokens = new Set(norm.trim().split(" "));
+	const singleTokenNames = [];
+	for (const name of knownNames) {
+		const p = mapartMatchNorm(name).trim();
+		if (p.length < 3) continue;
+		add(p, [name], "plain");
+		if (!p.includes(" ")) singleTokenNames.push({ p, name });
+	}
+	for (const t of tokens) {
+		if (t.length < 7) continue;
+		const owner = singleTokenNames.find((n) => n.p.startsWith(t) && n.p !== t && n.p.length - t.length <= 3);
+		if (owner && !matches.some((m) => m.phrase === t)) add(t, [owner.name], "plain");
+	}
+	if (!matches.length) return { artists: [], phrases: [] };
+
+	let chosen = matches.filter((m) => m.strong);
+	if (chosen.length === 0) {
+		chosen = [matches.reduce((best, m) => (m.phrase.length > best.phrase.length ? m : best))];
+	}
+	chosen.sort((a, b) => a.idx - b.idx);
+	// Real usernames have a real casing in shop/account data — prefer it.
+	const canonical = new Map(knownNames.map((n) => [n.toLowerCase(), n]));
+	const artists = [];
+	for (const m of chosen) {
+		for (const a of m.artists) {
+			const name = canonical.get(a.toLowerCase()) || a;
+			if (!artists.some((x) => x.toLowerCase() === name.toLowerCase())) artists.push(name);
+		}
+	}
+	return { artists: artists.slice(0, MAPART_MAX_ARTISTS), phrases: chosen.map((m) => m.phrase) };
+}
+
+// "A & B" joined, trimmed to the 40-character artist field.
+function joinMapartArtists(artists) {
+	const kept = [];
+	for (const a of artists) {
+		if ([...kept, a].join(" & ").length <= 40) kept.push(a);
+	}
+	return kept.length ? kept.join(" & ") : null;
+}
+
+function splitMapartArtists(artist) {
+	return String(artist || "").split(" & ").map((s) => s.trim().replace(/^\./, "")).filter(Boolean);
+}
+
+// One name's title: symbols dropped, credited names removed, and every
+// number gone (part markers like 1x1 / 1/6 / 0_0, ordinals, and stray
+// digits inside words).
+function cleanMapartTitle(rawName, phrases) {
+	let t = String(rawName || "").replace(/§./g, "");
+	t = t.replace(/\/(shop|pw)\b/gi, " ");
+	t = t.replace(/['‘’´`]/g, "");
+	let tokens = t.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
+	for (const phrase of phrases) {
+		const want = phrase.split(" ");
+		for (let i = 0; i + want.length <= tokens.length; ) {
+			if (want.every((w, k) => mapartMatchNorm(tokens[i + k]).trim() === w)) tokens.splice(i, want.length);
+			else i++;
+		}
+	}
+	tokens = tokens.filter((tok) => !/^\d+$/.test(tok) && !/^\d+[x×]\d+$/i.test(tok) && !/^\d+(st|nd|rd|th)$/i.test(tok));
+	tokens = tokens.map((tok) => tok.replace(/\d+/g, "")).filter(Boolean);
+	let out = tokens.join(" ");
+	out = out.replace(/\s+(made\s+by|created\s+by|art\s+by|by|from)$/i, "").trim();
+	return out.slice(0, 100);
+}
+
+// Title = the most informative cleaned name among the piece's maps (the
+// longest one), so a map that only carries "Earth & Charm" doesn't blank it.
+function deriveMapartTitle(names, phrases) {
+	let best = "";
+	for (const n of Array.isArray(names) ? names : [names]) {
+		const c = cleanMapartTitle(n, phrases);
+		if (c.length > best.length) best = c;
+	}
+	return best || "Untitled mapart";
+}
+
+// Artist + title for a piece from all of its map names.
+function deriveMapartFields(names, knownNames) {
+	const { artists, phrases } = findMapartArtists(names, knownNames);
+	return { artist: joinMapartArtists(artists), title: deriveMapartTitle(names, phrases) };
 }
 
 function resolveMapartWhereToBuy(m) {
 	if (m.notForSale) return null;
 	if (m.whereToBuy) return m.whereToBuy;
-	return m.artist ? `/shop ${m.artist}` : null;
+	const names = splitMapartArtists(m.artist);
+	return names.length ? names.map((n) => `/shop ${n}`).join(" or ") : null;
 }
+
 
 function mapartPublic(m) {
 	return {
@@ -3152,6 +3339,12 @@ function mapartPublic(m) {
 		whereToBuy: resolveMapartWhereToBuy(m), notForSale: !!m.notForSale,
 		category: m.category || null, world: m.world, width: m.width, height: m.height,
 		imageHash: m.imageHash || null, claimed: !!m.claimedByAccountId,
+		// "Verified by artist" shows when the piece's owner is a currently
+		// verified account (claimantVerified, joined in by the list queries), or
+		// when the owner has really engaged with it: claimed it themselves (or an
+		// admin assigned it) or set something on it. A bare name-match auto-claim
+		// by an unverified account isn't enough.
+		verified: !!m.claimedByAccountId && !!(m.claimantVerified || m.claimedManually || m.ownerEdited || m.category || m.whereToBuy || m.notForSale),
 		updatedAt: m.updatedAt, lastSeen: m.lastSeen,
 	};
 }
@@ -3175,7 +3368,7 @@ async function deleteMapartRow(env, id) {
 async function mapartAutoClaimSweep(env, accountId, mcUsername) {
 	if (!mcUsername) return 0;
 	const res = await env.DB.prepare(
-		"UPDATE maparts SET claimedByAccountId = ?, claimedAt = ? WHERE claimedByAccountId IS NULL AND autoClaimBlocked = 0 AND artist IS NOT NULL AND lower(ltrim(artist, '.')) = lower(ltrim(?, '.'))"
+		"UPDATE maparts SET claimedByAccountId = ?, claimedAt = ? WHERE claimedByAccountId IS NULL AND autoClaimBlocked = 0 AND artist IS NOT NULL AND instr(' & ' || lower(artist) || ' & ', ' & ' || lower(ltrim(?, '.')) || ' & ') > 0"
 	).bind(accountId, new Date().toISOString(), mcUsername).run();
 	return res.meta.changes;
 }
@@ -3253,6 +3446,14 @@ async function processMapartGroup(env, world, g, knownNames) {
 	}
 	// Legacy section-sign colour/format codes can survive in a custom name.
 	const rawName = String(g.rawName || "").replace(/§./g, "").slice(0, 200);
+	// Every named map in the piece (title and artist can be on different ones).
+	const allNames = [];
+	for (const n of [rawName, ...(Array.isArray(g.allNames) ? g.allNames : [])]) {
+		const c = String(n || "").replace(/§./g, "").trim().slice(0, 200);
+		if (c && !allNames.includes(c)) allNames.push(c);
+		if (allNames.length >= 20) break;
+	}
+	const allNamesJson = JSON.stringify(allNames);
 
 	let pngBytes;
 	try { pngBytes = Uint8Array.from(atob(String(g.png || "")), (c) => c.charCodeAt(0)); } catch (e) {
@@ -3289,26 +3490,36 @@ async function processMapartGroup(env, world, g, knownNames) {
 	}
 
 	const imageHash = await sha256Hex16(pngBytes);
+
+	// Same picture, same names, same shape as what's stored (the scanner
+	// re-sends everything nearby each time it's launched): just note it was
+	// seen — no image rewrite, no parts rewrite, no re-derivation.
+	if (existingLead && merges.length === 0 && existingLead.imageHash === imageHash
+		&& existingLead.width === width && existingLead.height === height && existingLead.allNames === allNamesJson) {
+		await env.DB.prepare("UPDATE maparts SET lastSeen = ? WHERE id = ?").bind(now, existingLead.id).run();
+		return { leadMapId, status: "unchanged", id: existingLead.id, slug: existingLead.slug, mergedParts: 0 };
+	}
+
 	let id, status;
 	if (existingLead) {
 		id = existingLead.id;
 		status = "updated";
 		const freeToRederive = !existingLead.locked && !existingLead.claimedByAccountId;
-		const artist = freeToRederive ? findMapartArtist(rawName, knownNames) : existingLead.artist;
-		const title = freeToRederive ? deriveMapartTitle(rawName, artist) : existingLead.title;
+		const derived = freeToRederive ? deriveMapartFields(allNames, knownNames) : null;
+		const artist = derived ? derived.artist : existingLead.artist;
+		const title = derived ? derived.title : existingLead.title;
 		const slug = title !== existingLead.title ? await assignMapartSlug(env, id, title) : existingLead.slug;
 		await env.DB.prepare(
-			"UPDATE maparts SET rawName = ?, title = ?, artist = ?, slug = ?, width = ?, height = ?, imageHash = ?, updatedAt = ?, lastSeen = ? WHERE id = ?"
-		).bind(rawName, title, artist, slug, width, height, imageHash, now, now, id).run();
+			"UPDATE maparts SET rawName = ?, allNames = ?, title = ?, artist = ?, slug = ?, width = ?, height = ?, imageHash = ?, updatedAt = ?, lastSeen = ? WHERE id = ?"
+		).bind(rawName, allNamesJson, title, artist, slug, width, height, imageHash, now, now, id).run();
 	} else {
 		id = crypto.randomUUID();
 		status = "created";
-		const artist = findMapartArtist(rawName, knownNames);
-		const title = deriveMapartTitle(rawName, artist);
+		const { artist, title } = deriveMapartFields(allNames, knownNames);
 		const slug = await assignMapartSlug(env, id, title);
 		await env.DB.prepare(
-			"INSERT INTO maparts (id, slug, world, leadMapId, rawName, title, artist, width, height, imageHash, createdAt, updatedAt, lastSeen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-		).bind(id, slug, world, leadMapId, rawName, title, artist, width, height, imageHash, now, now, now).run();
+			"INSERT INTO maparts (id, slug, world, leadMapId, rawName, allNames, title, artist, width, height, imageHash, createdAt, updatedAt, lastSeen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		).bind(id, slug, world, leadMapId, rawName, allNamesJson, title, artist, width, height, imageHash, now, now, now).run();
 	}
 
 	// Earlier scans that caught only part of this piece get folded in — their
@@ -3337,17 +3548,24 @@ async function processMapartGroup(env, world, g, knownNames) {
 	// Auto-claim for a verified account whose MC username is the artist.
 	const fresh = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(id).first();
 	if (!fresh.claimedByAccountId && !fresh.autoClaimBlocked && fresh.artist) {
-		const acct = await env.DB.prepare(
-			"SELECT id FROM admins WHERE mcVerified = 1 AND lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))"
-		).bind(fresh.artist).first();
-		if (acct) await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ? WHERE id = ?").bind(acct.id, now, id).run();
+		for (const name of splitMapartArtists(fresh.artist)) {
+			const acct = await env.DB.prepare(
+				"SELECT id FROM admins WHERE mcVerified = 1 AND lower(ltrim(mcUsername, '.')) = lower(?)"
+			).bind(name).first();
+			if (acct) {
+				await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ? WHERE id = ?").bind(acct.id, now, id).run();
+				break;
+			}
+		}
 	}
 	return { leadMapId, status: merges.length ? "merged" : status, id, slug: fresh.slug, mergedParts: merges.length };
 }
 
 async function handleGetMapart(request, env, ctx) {
 	return cachedGet(request, ctx, CACHE_TTL_SECONDS, async () => {
-		const { results } = await env.DB.prepare("SELECT * FROM maparts ORDER BY title COLLATE NOCASE").all();
+		const { results } = await env.DB.prepare(
+			"SELECT m.*, a.mcVerified AS claimantVerified FROM maparts m LEFT JOIN admins a ON a.id = m.claimedByAccountId ORDER BY m.title COLLATE NOCASE"
+		).all();
 		return results.map(mapartPublic);
 	});
 }
@@ -3358,7 +3576,9 @@ async function handleGetMapartBySlug(request, env, ctx) {
 		const slug = (new URL(request.url).searchParams.get("slug") || "").toLowerCase();
 		const link = await env.DB.prepare("SELECT mapartId FROM mapartSlugs WHERE slug = ?").bind(slug).first();
 		if (!link) return { error: "Not found" };
-		const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(link.mapartId).first();
+		const m = await env.DB.prepare(
+			"SELECT m.*, a.mcVerified AS claimantVerified FROM maparts m LEFT JOIN admins a ON a.id = m.claimedByAccountId WHERE m.id = ?"
+		).bind(link.mapartId).first();
 		return m ? mapartPublic(m) : { error: "Not found" };
 	});
 }
@@ -3390,7 +3610,7 @@ async function handleClaimMapart(request, env) {
 	if (m.claimedByAccountId && m.claimedByAccountId !== auth.admin.id) {
 		return json({ error: "This mapart is already claimed by someone else — ask a head admin if that's wrong." }, 403);
 	}
-	await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ?, autoClaimBlocked = 0 WHERE id = ?")
+	await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ?, autoClaimBlocked = 0, claimedManually = 1 WHERE id = ?")
 		.bind(auth.admin.id, new Date().toISOString(), m.id).run();
 	return json({ ok: true });
 }
@@ -3401,7 +3621,7 @@ async function handleAbandonMapart(request, env) {
 	let body;
 	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
 	const res = await env.DB.prepare(
-		"UPDATE maparts SET claimedByAccountId = NULL, claimedAt = NULL, autoClaimBlocked = 1 WHERE id = ? AND claimedByAccountId = ?"
+		"UPDATE maparts SET claimedByAccountId = NULL, claimedAt = NULL, autoClaimBlocked = 1, claimedManually = 0, ownerEdited = 0 WHERE id = ? AND claimedByAccountId = ?"
 	).bind(String(body.id || ""), auth.admin.id).run();
 	if (res.meta.changes === 0) return json({ error: "You don't own that mapart" }, 404);
 	return json({ ok: true });
@@ -3446,6 +3666,7 @@ async function handleUpdateMapart(request, env) {
 	if (newTitle !== null && newTitle !== m.title) {
 		sets.push("slug = ?"); vals.push(await assignMapartSlug(env, m.id, newTitle));
 	}
+	if (owns) sets.push("ownerEdited = 1");
 	sets.push("updatedAt = ?"); vals.push(new Date().toISOString());
 	await env.DB.prepare(`UPDATE maparts SET ${sets.join(", ")} WHERE id = ?`).bind(...vals, m.id).run();
 	const fresh = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(m.id).first();
@@ -3485,57 +3706,92 @@ async function handleAdminAssignMapart(request, env) {
 	if (!m) return json({ error: "Mapart not found" }, 404);
 	const username = String(body.username || "").trim();
 	if (!username) {
-		await env.DB.prepare("UPDATE maparts SET claimedByAccountId = NULL, claimedAt = NULL WHERE id = ?").bind(m.id).run();
+		await env.DB.prepare("UPDATE maparts SET claimedByAccountId = NULL, claimedAt = NULL, claimedManually = 0, ownerEdited = 0 WHERE id = ?").bind(m.id).run();
 		return json({ ok: true });
 	}
 	const acct = await env.DB.prepare("SELECT id FROM admins WHERE lower(username) = lower(?)").bind(username).first();
 	if (!acct) return json({ error: "No account with that username" }, 404);
-	await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ?, autoClaimBlocked = 0 WHERE id = ?")
+	await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ?, autoClaimBlocked = 0, claimedManually = 1 WHERE id = ?")
 		.bind(acct.id, new Date().toISOString(), m.id).run();
 	return json({ ok: true });
 }
 
-// Shop-chest listings for a filled map: attach the stitched picture when the
-// map id (once the scanner records it) or, today, the map's exact custom name
-// matches a scanned mapart in the same world.
-async function attachMapartToListings(env, rows) {
-	const { results } = await env.DB.prepare("SELECT id, slug, world, leadMapId, rawName, title, width, height, imageHash FROM maparts").all();
-	if (results.length === 0) return rows;
-	const byLead = new Map(), byName = new Map();
-	for (const m of results) {
-		byLead.set(`${m.world}|${m.leadMapId}`, m);
-		const key = mapartNormKey(m.rawName);
-		if (key) byName.set(`${m.world}|${key}`, m);
-	}
-	for (const r of rows) {
-		if (r.baseItem !== "minecraft:filled_map") continue;
-		let m = Number.isInteger(r.mapId) ? byLead.get(`${r.world}|${r.mapId}`) : null;
-		if (!m) {
-			const key = mapartNormKey(r.itemName);
-			if (key) m = byName.get(`${r.world}|${key}`);
+// Re-runs artist/title detection over every mapart nobody has claimed or
+// hand-edited — used after the alias list or known usernames change. Uses
+// the stored per-piece names, so no rescan is needed. In-memory slug
+// assignment + batched writes keep it well under the subrequest limit.
+async function handleAdminRederiveMapart(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	const knownNames = await getMapartKnownNames(env, true);
+	const { results: rows } = await env.DB.prepare("SELECT * FROM maparts WHERE locked = 0 AND claimedByAccountId IS NULL").all();
+	const { results: slugRows } = await env.DB.prepare("SELECT slug, mapartId FROM mapartSlugs").all();
+	const slugOwner = new Map(slugRows.map((r) => [r.slug, r.mapartId]));
+	const { results: verified } = await env.DB.prepare("SELECT id, mcUsername FROM admins WHERE mcVerified = 1 AND mcUsername IS NOT NULL").all();
+	const accountByName = new Map(verified.map((a) => [String(a.mcUsername).replace(/^\./, "").toLowerCase(), a.id]));
+
+	const now = new Date().toISOString();
+	const stmts = [];
+	let changed = 0, claimed = 0;
+	for (const m of rows) {
+		let names = [];
+		try { names = JSON.parse(m.allNames || "[]"); } catch (e) { /* fall through */ }
+		if (!names.length && m.rawName) names = [m.rawName];
+		if (!names.length) continue;
+		const { artist, title } = deriveMapartFields(names, knownNames);
+
+		let slug = m.slug;
+		if (title !== m.title) {
+			const base = mapartSlugify(title);
+			slug = null;
+			for (let i = 1; i < 500 && !slug; i++) {
+				const cand = i === 1 ? base : base + "-" + i;
+				const owner = slugOwner.get(cand);
+				if (!owner || owner === m.id) slug = cand;
+			}
+			if (!slug) slug = base + "-" + m.id.slice(0, 8);
+			slugOwner.set(slug, m.id);
+			stmts.push(env.DB.prepare("INSERT OR IGNORE INTO mapartSlugs (slug, mapartId) VALUES (?, ?)").bind(slug, m.id));
 		}
-		if (m) r.mapart = { id: m.id, slug: m.slug, title: m.title, width: m.width, height: m.height, imageHash: m.imageHash };
+		if (title !== m.title || artist !== m.artist) {
+			changed++;
+			stmts.push(env.DB.prepare("UPDATE maparts SET title = ?, artist = ?, slug = ?, updatedAt = ? WHERE id = ?").bind(title, artist, slug, now, m.id));
+		}
+		if (artist && !m.autoClaimBlocked) {
+			for (const name of splitMapartArtists(artist)) {
+				const accountId = accountByName.get(name.toLowerCase());
+				if (accountId) {
+					stmts.push(env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ? WHERE id = ? AND claimedByAccountId IS NULL").bind(accountId, now, m.id));
+					claimed++;
+					break;
+				}
+			}
+		}
 	}
-	return rows;
+	for (const chunk of chunkArray(stmts, 40)) await env.DB.batch(chunk);
+	return json({ ok: true, examined: rows.length, changed, autoClaimed: claimed });
 }
 
-// A shop listing for a non-leading part of a scanned mapart is redundant —
-// the leading map's listing shows the whole piece — so it's deleted. Only
-// does anything once the shop scanner records mapId.
-async function mergeMapartListings(env, rows) {
-	const withMap = rows.filter((r) => Number.isInteger(r.mapId));
-	if (withMap.length === 0) return 0;
-	let deleted = 0;
-	for (const r of withMap) {
-		const part = await env.DB.prepare(
-			"SELECT m.leadMapId FROM mapartParts p JOIN maparts m ON m.id = p.mapartId WHERE p.world = ? AND p.mapId = ?"
-		).bind(r.world, r.mapId).first();
-		if (part && part.leadMapId !== r.mapId) {
-			const res = await env.DB.prepare("DELETE FROM listings WHERE rowKey = ?").bind(r._key).run();
-			deleted += res.meta.changes;
-		}
-	}
-	return deleted;
+// One pseudo-listing per catalogued mapart, for the website's listings
+// table. currency "display" = no real price (the site already sorts those
+// last and keeps them out of averages); mapartGallery tells the site to show
+// the "not a live listing" info icon and hide Report/Remove.
+async function getMapartGalleryRows(env) {
+	const { results } = await env.DB.prepare("SELECT * FROM maparts").all();
+	return results.map((m) => {
+		const artists = splitMapartArtists(m.artist);
+		const buy = resolveMapartWhereToBuy(m);
+		return {
+			id: m.id, itemName: m.title, baseItem: "minecraft:filled_map",
+			bulk: false, bundled: false, mixedContents: false,
+			price: 0, priceLabel: "Gallery", stackSize: 1, amount: 1, stacksInStock: 1, currency: "display",
+			seller: artists[0] || "Unknown artist", world: m.world,
+			position: m.notForSale ? "Not for sale" : (buy || "Mapart gallery"),
+			lastSeen: m.lastSeen, availableSince: m.createdAt,
+			mapartGallery: true, mapartArtist: m.artist || null,
+			mapart: { id: m.id, slug: m.slug, title: m.title, width: m.width, height: m.height, imageHash: m.imageHash },
+		};
+	});
 }
 
 // ---------------- verification links ----------------
@@ -3733,6 +3989,7 @@ const ROUTES = [
 	["GET", "/admin/mapart", handleAdminListMapart],
 	["POST", "/admin/mapart/delete", handleAdminDeleteMapart],
 	["POST", "/admin/mapart/assign", handleAdminAssignMapart],
+	["POST", "/admin/mapart/rederive", handleAdminRederiveMapart],
 	["POST", "/admin/verification-links/create", handleAdminCreateVerificationLink],
 	["GET", "/admin/verification-links", handleAdminListVerificationLinks],
 	["POST", "/admin/verification-links/revoke", handleAdminRevokeVerificationLink],

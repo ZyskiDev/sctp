@@ -383,6 +383,9 @@
 		<summary>Mapart <span class="count-badge" id="mapartCountBadge"></span></summary>
 		<div class="meta" style="margin-bottom:8px;">Every scanned mapart. Edit anything, assign it to an account (or clear the claim), or delete it &mdash; deleting also stops scans from re-adding it.</div>
 		<div class="card">
+			<button id="mapartRederiveBtn" type="button" style="margin-bottom:8px;">Re-run artist detection</button>
+			<span class="meta" id="mapartRederiveStatus" style="margin-left:8px;"></span>
+			<div class="meta" style="margin-bottom:6px;">Re-derives title and artist for every piece nobody has claimed or hand-edited (after the alias list or known usernames change), then auto-claims for verified artists.</div>
 			<input type="text" id="mapartAdminSearch" placeholder="Filter by title, artist, or claimed-by…" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
 		</div>
 		<div id="mapartAdminList"></div>
@@ -1243,6 +1246,17 @@
 		}
 	});
 
+	document.getElementById("mapartRederiveBtn").addEventListener("click", async function(){
+		var st = document.getElementById("mapartRederiveStatus");
+		st.textContent = "Working…";
+		try {
+			var r = await api("/admin/mapart/rederive", { method:"POST" });
+			st.textContent = "Checked " + r.examined + ", changed " + r.changed + ", auto-claimed " + r.autoClaimed + ".";
+			await refreshMapartAdmin();
+		} catch(err){
+			st.textContent = "Failed: " + err.message;
+		}
+	});
 	document.getElementById("vlCreateBtn").addEventListener("click", createVerifLink);
 	document.getElementById("mapartAdminSearch").addEventListener("input", renderMapartAdmin);
 
