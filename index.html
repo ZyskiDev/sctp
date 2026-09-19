@@ -1160,7 +1160,9 @@
 	// up. No cache-busting query param needed either: the Worker's cache TTL
 	// is now the only thing controlling freshness.
 	// ?mapart=1 adds one pseudo-listing per mapart gallery piece (see worker.js getMapartGalleryRows).
-	var DATA_URL = API_BASE + "/listings?mapart=1";
+	// Flip to true at launch to bring the mapart gallery rows (and their links into /mapart/) back.
+	var MAPART_LAUNCHED = false;
+	var DATA_URL = API_BASE + "/listings" + (MAPART_LAUNCHED ? "?mapart=1" : "");
 	var SHARED_SHOPS_URL = API_BASE + "/shared-shops";
 	var RARE_ITEMS_URL = API_BASE + "/rare-items";
 	var ITEM_LANG_URL = "data/item-lang-table.json";
