@@ -16,3 +16,7 @@ mapart-scanner-*/.gradle/
 
 verification-links.txt
 verification-links.csv
+
+# Wrangler caches (contain the Cloudflare account email)
+.wrangler/
+**/.wrangler/
