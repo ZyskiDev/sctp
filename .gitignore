@@ -13,3 +13,6 @@ trading-post-api/**/.wrangler/
 /tips/
 mapart-scanner-*/build/
 mapart-scanner-*/.gradle/
+
+verification-links.txt
+verification-links.csv

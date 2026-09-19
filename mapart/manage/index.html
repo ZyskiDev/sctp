@@ -18,7 +18,7 @@
 	*{box-sizing:border-box;}
 	body{margin:0;background:radial-gradient(1200px 500px at 15% -10%, rgba(183,226,61,0.07), transparent 60%), var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.5;}
 	a{color:var(--accent);}
-	.wrap{max-width:1000px;margin:0 auto;padding:0 24px;}
+	.wrap{max-width:1240px;margin:0 auto;padding:0 24px;}
 	header.site{border-bottom:1px solid var(--line);padding:28px 0 22px;}
 	.header-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:14px;}
 	.brand-row{display:flex;align-items:center;gap:14px;min-width:0;}
@@ -31,9 +31,14 @@
 	.notice.warn{border-color:var(--warn);color:var(--warn);background:rgba(226,163,61,0.1);}
 	.notice strong{color:var(--text);}
 
-	.mine-card{display:grid;grid-template-columns:200px 1fr;gap:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;}
-	@media (max-width:640px){.mine-card{grid-template-columns:1fr;}}
+	.mine-search{width:100%;max-width:380px;margin-bottom:6px;}
+	.mine-count{color:var(--muted);font-size:13px;margin:0 0 14px;}
+	.mine-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+	@media (max-width:900px){.mine-grid{grid-template-columns:1fr;}}
+	.mine-card{display:grid;grid-template-columns:150px 1fr;gap:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0;}
+	@media (max-width:520px){.mine-card{grid-template-columns:1fr;}}
 	.thumb{background:#0C140F;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;height:200px;padding:8px;}
+	.mine-card .thumb{height:150px;}
 	.thumb img{max-width:100%;max-height:100%;image-rendering:pixelated;display:block;}
 	.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
 	@media (max-width:640px){.form-grid{grid-template-columns:1fr;}}
@@ -90,7 +95,9 @@
 
 	<div id="content" hidden>
 		<h2 class="section" style="margin-top:0;">Your mapart</h2>
-		<div id="mineList"></div>
+		<input type="text" class="mine-search" id="mineSearch" placeholder="Search your mapart by title, artist or category…" hidden>
+			<p class="mine-count" id="mineCount" hidden></p>
+			<div id="mineList"></div>
 
 		<h2 class="section">Claim a mapart</h2>
 		<p class="notice" style="margin-bottom:14px;">Found a piece of yours that's listed under the wrong name, or with no artist? Claim it to fix it. Pieces already claimed by someone else can't be taken &mdash; ask a head admin if that's wrong.</p>
@@ -134,14 +141,37 @@
 		document.getElementById("content").hidden = true;
 	}
 
+	function mineSearchText(m){
+		return [m.title, m.artist, m.category, m.world].join(" ").toLowerCase();
+	}
+	// Filters by toggling cards (not re-rendering) so unsaved edits in other cards survive typing.
+	function filterMine(){
+		var q = document.getElementById("mineSearch").value.trim().toLowerCase();
+		var cards = document.querySelectorAll("#mineList .mine-card");
+		var shown = 0;
+		cards.forEach(function(c){
+			var ok = !q || (c.getAttribute("data-search") || "").indexOf(q) !== -1;
+			c.hidden = !ok;
+			if(ok) shown++;
+		});
+		var count = document.getElementById("mineCount");
+		count.hidden = !cards.length;
+		count.textContent = q ? "Showing " + shown + " of " + cards.length : cards.length + " mapart" + (cards.length === 1 ? "" : "s");
+		var nm = document.getElementById("mineNoMatch");
+		if(nm) nm.hidden = shown > 0;
+	}
+
 	function renderMine(){
 		var host = document.getElementById("mineList");
 		if(!mine.length){
+			document.getElementById("mineSearch").hidden = true;
+			document.getElementById("mineCount").hidden = true;
 			host.innerHTML = '<p class="empty">You don\'t own any mapart yet. Pieces where you\'re the artist are claimed for you automatically once your account is verified &mdash; or claim one below.</p>';
 			return;
 		}
-		host.innerHTML = mine.map(function(m){
-			return '<div class="mine-card" data-id="' + esc(m.id) + '">' +
+		document.getElementById("mineSearch").hidden = false;
+		host.innerHTML = '<div class="mine-grid">' + mine.map(function(m){
+			return '<div class="mine-card" data-id="' + esc(m.id) + '" data-search="' + esc(mineSearchText(m)) + '">' +
 				'<div class="thumb"><img src="' + esc(imageUrl(m)) + '" alt=""></div>' +
 				'<div>' +
 					'<div class="card-title">' + esc(m.title) + ' <span style="color:var(--muted);font-size:12px;font-weight:400;">(' + esc(m.world) + ', ' + m.width + '&times;' + m.height + ')</span></div>' +
@@ -161,7 +191,8 @@
 					'</div>' +
 				'</div>' +
 			'</div>';
-		}).join("");
+		}).join("") + '</div><p class="empty" id="mineNoMatch" hidden>None of your mapart matches that search.</p>';
+		filterMine();
 
 		host.querySelectorAll(".mine-card").forEach(function(card){
 			var id = card.getAttribute("data-id");
@@ -182,6 +213,7 @@
 					setStatus("Saved!", false);
 					var i = mine.findIndex(function(x){ return x.id === id; });
 					if(i !== -1) mine[i] = res.data.mapart;
+					card.setAttribute("data-search", mineSearchText(res.data.mapart));
 					var card2 = card.querySelector(".card-title");
 					if(card2) card2.firstChild.textContent = res.data.mapart.title + " ";
 				});
@@ -257,6 +289,7 @@
 	}
 
 	document.getElementById("claimSearch").addEventListener("input", renderClaimable);
+	document.getElementById("mineSearch").addEventListener("input", filterMine);
 
 	function start(){
 		if(!session()){

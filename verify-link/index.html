@@ -74,7 +74,7 @@
 
 	<div class="card" id="form" hidden>
 		<h2>Verify <span class="mc-name" id="mcName"></span></h2>
-		<p class="lede">An admin generated this link for that Minecraft username. Use it to either create a new account or verify one you already have &mdash; it only works once.</p>
+		<p class="lede">An admin generated this link for that Minecraft username. Use it to either create a new account or verify one you already have.</p>
 
 		<div class="mode-toggle">
 			<button type="button" class="active" data-mode="register">Create a new account</button>
@@ -82,7 +82,7 @@
 		</div>
 
 		<div class="field">
-			<label id="userLabel">Login username <span class="hint">(defaults to your Minecraft name &mdash; pick something else if it's taken)</span></label>
+			<label id="userLabel">Login username <span class="hint">(your MC name)</span></label>
 			<input type="text" id="usernameInput" maxlength="16" autocomplete="username">
 		</div>
 		<div class="field"><label>Password</label><input type="password" id="passwordInput" autocomplete="current-password"></div>
@@ -98,7 +98,7 @@
 	</div>
 </main>
 
-<footer class="site"><div class="wrap">Links are single-use and expire &mdash; don't share yours.</div></footer>
+<footer class="site"><div class="wrap">Links are single-use and private, don't share yours.</div></footer>
 
 <script src="/account-widget.js" defer></script>
 <script>
@@ -141,7 +141,7 @@
 			document.getElementById("confirmField").hidden = !reg;
 			document.getElementById("submitBtn").textContent = reg ? "Create verified account" : "Log in & verify";
 			document.getElementById("userLabel").innerHTML = reg
-				? 'Login username <span class="hint">(defaults to your Minecraft name &mdash; pick something else if it\'s taken)</span>'
+				? 'Login username <span class="hint">(your MC name)</span>'
 				: 'Your existing login username';
 			document.getElementById("passwordInput").autocomplete = reg ? "new-password" : "current-password";
 			document.getElementById("formErr").hidden = true;
