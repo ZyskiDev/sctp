@@ -62,6 +62,22 @@
 	.status.err{color:var(--bad);}
 	.card-title{font-family:var(--font-display);font-size:17px;font-weight:600;margin:0 0 10px;}
 
+	input[type=number]{width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;}
+	input[type=number]:focus{outline:none;border-color:var(--accent-dim);}
+	.top-links{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px;}
+	.upload-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;}
+	.upload-card .help{color:var(--muted);font-size:13px;margin:0 0 14px;}
+	.upload-layout{display:grid;grid-template-columns:minmax(0,440px) 1fr;gap:20px;align-items:start;}
+	@media (max-width:860px){.upload-layout{grid-template-columns:1fr;}}
+	.crop-box{background:#0C140F;border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+	.crop-box canvas{max-width:100%;border-radius:4px;cursor:grab;touch-action:none;background:#000;}
+	.crop-box canvas.dragging{cursor:grabbing;}
+	.crop-hint{color:var(--muted);font-size:12px;text-align:center;}
+	.zoom-row{display:flex;align-items:center;gap:10px;width:100%;color:var(--muted);font-size:12px;}
+	.zoom-row input[type=range]{flex:1;accent-color:var(--accent);}
+	.size-row{display:flex;align-items:center;gap:8px;}
+	.size-row input{width:80px;}
+	.disclaimer{background:rgba(226,163,61,0.1);border:1px solid var(--warn);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13.5px;font-weight:600;margin-top:12px;}
 	.claim-search{width:100%;max-width:380px;margin-bottom:12px;}
 	.claim-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
 	.claim-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;}
@@ -94,10 +110,46 @@
 	<div id="gate" class="notice" hidden></div>
 
 	<div id="content" hidden>
+		<div class="top-links">
+			<a class="btn-ghost" href="/store/manage/">Manage my store &rarr;</a>
+		</div>
 		<h2 class="section" style="margin-top:0;">Your mapart</h2>
 		<input type="text" class="mine-search" id="mineSearch" placeholder="Search your mapart by title, artist or category…" hidden>
 			<p class="mine-count" id="mineCount" hidden></p>
 			<div id="mineList"></div>
+
+		<h2 class="section">Upload a missing mapart</h2>
+		<div class="upload-card">
+			<p class="help">Can't find a piece in the catalog? Upload it yourself: pick a picture, say how many maps wide and tall it is, and drag/zoom the window to choose what gets cropped. It goes live straight away and is listed under your name. Exact duplicates of pieces already in the gallery are rejected.</p>
+			<div class="upload-layout">
+				<div>
+					<div class="field"><label>Picture</label><input type="file" id="upFile" accept="image/*"></div>
+					<div class="crop-box" id="cropBox" hidden style="margin-top:12px;">
+						<canvas id="cropCanvas"></canvas>
+						<div class="zoom-row"><span>Zoom</span><input type="range" id="upZoom" min="1" max="6" step="0.01" value="1"><span id="upZoomVal">1.0&times;</span></div>
+						<div class="crop-hint">Drag the picture to move it, scroll or use the slider to zoom. What you see is exactly what gets uploaded.</div>
+					</div>
+				</div>
+				<div>
+					<div class="form-grid">
+						<div class="field full"><label>Size (in maps)</label>
+							<div class="size-row"><input type="number" id="upW" min="1" max="10" value="1"> <span>wide &times;</span> <input type="number" id="upH" min="1" max="10" value="1"> <span>tall</span></div>
+						</div>
+						<div class="field full"><label>Title</label><input type="text" id="upTitle" maxlength="100" placeholder="Name of the mapart"></div>
+						<div class="field"><label>Artist</label><input type="text" id="upArtist" maxlength="40" placeholder="Leave blank for yourself"></div>
+						<div class="field"><label>World</label><select id="upWorld"><option value="Firefly">Firefly</option><option value="Honeybee">Honeybee</option></select></div>
+						<div class="field"><label>Category</label><select id="upCategory"></select></div>
+						<div class="field"><label>Where to buy</label><input type="text" id="upWhere" maxlength="200" placeholder="Blank = /shop artist"></div>
+						<div class="field full"><label class="check"><input type="checkbox" id="upNotForSale"> Not for sale (hides where-to-buy)</label></div>
+						<div class="field full"><label class="check"><input type="checkbox" id="upSmooth" checked> Smooth resize (turn off for pixel art so edges stay sharp)</label></div>
+					</div>
+					<div class="actions">
+						<button type="button" class="btn" id="upSubmit" disabled>Upload mapart</button>
+						<span class="status" id="upStatus"></span>
+					</div>
+				</div>
+			</div>
+		</div>
 
 		<h2 class="section">Claim a mapart</h2>
 		<p class="notice" style="margin-bottom:14px;">Found a piece of yours that's listed under the wrong name, or with no artist? Claim it to fix it. Pieces already claimed by someone else can't be taken &mdash; ask a head admin if that's wrong.</p>
@@ -116,6 +168,7 @@
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var CATEGORIES = ["Pets","Anime","Art","Memes","Photography","Letters","Fandom","Misc","Flags"];
+	var VERIFY_DISCLAIMER = "If you would like to verify your account, please dm maxolotled on discord! (@ectf)";
 	var catalog = [];
 	var mine = [];
 
@@ -186,7 +239,9 @@
 					'<div class="actions">' +
 						'<button type="button" class="btn" data-act="save">Save changes</button>' +
 						'<a class="btn-ghost" href="/mapart/' + encodeURIComponent(m.slug) + '" target="_blank" rel="noopener">View page</a>' +
-						'<button type="button" class="btn-danger" data-act="abandon">Abandon</button>' +
+						(m.uploaded
+							? '<button type="button" class="btn-danger" data-act="delete">Delete</button>'
+							: '<button type="button" class="btn-danger" data-act="abandon">Abandon</button>') +
 						'<span class="status" data-role="status"></span>' +
 					'</div>' +
 				'</div>' +
@@ -218,10 +273,19 @@
 					if(card2) card2.firstChild.textContent = res.data.mapart.title + " ";
 				});
 			});
-			card.querySelector('[data-act="abandon"]').addEventListener("click", function(){
+			var abandonBtn = card.querySelector('[data-act="abandon"]');
+			if(abandonBtn) abandonBtn.addEventListener("click", function(){
 				if(!confirm("Abandon this mapart? You'll lose the ability to edit it, and it won't be auto-claimed for you again.")) return;
 				authFetch("/mapart/abandon", { method: "POST", body: JSON.stringify({ id: id }) }).then(function(res){
 					if(!res.ok){ setStatus(res.data.error || "Couldn't abandon.", true); return; }
+					loadAll();
+				});
+			});
+			var deleteBtn = card.querySelector('[data-act="delete"]');
+			if(deleteBtn) deleteBtn.addEventListener("click", function(){
+				if(!confirm("Delete this uploaded mapart for good? This can't be undone.")) return;
+				authFetch("/mapart/delete-own", { method: "POST", body: JSON.stringify({ id: id }) }).then(function(res){
+					if(!res.ok){ setStatus(res.data.error || "Couldn't delete.", true); return; }
 					loadAll();
 				});
 			});
@@ -271,7 +335,7 @@
 		]).then(function(results){
 			var res = results[0];
 			if(res.status === 403){
-				gate('<strong>Your account isn\'t verified yet.</strong> Mapart management is only available to accounts with a verified Minecraft username. Ask a head admin to send you a verification link.', true);
+				gate('<strong>Your account isn\'t verified yet.</strong> Mapart management is only available to accounts with a verified Minecraft username.<div class="disclaimer">' + esc(VERIFY_DISCLAIMER) + '</div>', true);
 				return;
 			}
 			if(res.status === 401){
@@ -288,12 +352,160 @@
 		});
 	}
 
+	// ---------------- upload a missing mapart ----------------
+	// The picture is cropped/scaled here to exactly width*128 x height*128 (one
+	// Minecraft map = 128x128), so the server only ever receives a PNG that
+	// already fits the grid.
+	var upImg = null, upCx = 0, upCy = 0, upZoom = 1;
+	var upCanvas = document.getElementById("cropCanvas");
+	var upCtx = upCanvas.getContext("2d");
+	var upCatSel = document.getElementById("upCategory");
+	upCatSel.innerHTML = '<option value="">No category</option>' + CATEGORIES.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join("");
+
+	function upGrid(){
+		var w = Math.max(1, Math.min(10, parseInt(document.getElementById("upW").value, 10) || 1));
+		var h = Math.max(1, Math.min(10, parseInt(document.getElementById("upH").value, 10) || 1));
+		return { w: w, h: h };
+	}
+	// Source rectangle (in image pixels) currently inside the crop window.
+	function upRegion(){
+		var g = upGrid(), A = g.w / g.h;
+		var rw, rh;
+		if(upImg.width / upImg.height > A){ rh = upImg.height; rw = rh * A; } else { rw = upImg.width; rh = rw / A; }
+		rw /= upZoom; rh /= upZoom;
+		var cx = Math.min(Math.max(upCx, rw / 2), upImg.width - rw / 2);
+		var cy = Math.min(Math.max(upCy, rh / 2), upImg.height - rh / 2);
+		upCx = cx; upCy = cy;
+		return { sx: cx - rw / 2, sy: cy - rh / 2, sw: rw, sh: rh };
+	}
+	function upResetCrop(){
+		if(!upImg) return;
+		upZoom = 1;
+		document.getElementById("upZoom").value = 1;
+		upCx = upImg.width / 2; upCy = upImg.height / 2;
+		upDraw();
+	}
+	function upDraw(){
+		if(!upImg) return;
+		var g = upGrid(), A = g.w / g.h;
+		var maxW = Math.min(420, upCanvas.parentNode.clientWidth - 20 || 420), maxH = 420;
+		var cw = maxW, ch = cw / A;
+		if(ch > maxH){ ch = maxH; cw = ch * A; }
+		upCanvas.width = Math.max(1, Math.round(cw)); upCanvas.height = Math.max(1, Math.round(ch));
+		var r = upRegion();
+		upCtx.imageSmoothingEnabled = document.getElementById("upSmooth").checked;
+		upCtx.imageSmoothingQuality = "high";
+		upCtx.clearRect(0, 0, upCanvas.width, upCanvas.height);
+		upCtx.drawImage(upImg, r.sx, r.sy, r.sw, r.sh, 0, 0, upCanvas.width, upCanvas.height);
+		document.getElementById("upZoomVal").textContent = upZoom.toFixed(1) + "\u00d7";
+	}
+	function upSetStatus(t, err){
+		var s = document.getElementById("upStatus");
+		s.textContent = t; s.className = "status" + (err ? " err" : "");
+	}
+
+	document.getElementById("upFile").addEventListener("change", function(){
+		var f = this.files && this.files[0];
+		if(!f) return;
+		var url = URL.createObjectURL(f);
+		var img = new Image();
+		img.onload = function(){
+			upImg = img;
+			// Guess the grid from the picture's size (128px per map), then let them adjust.
+			document.getElementById("upW").value = Math.max(1, Math.min(10, Math.round(img.width / 128)));
+			document.getElementById("upH").value = Math.max(1, Math.min(10, Math.round(img.height / 128)));
+			document.getElementById("cropBox").hidden = false;
+			document.getElementById("upSubmit").disabled = false;
+			upSetStatus("", false);
+			if(!document.getElementById("upTitle").value) document.getElementById("upTitle").value = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 100);
+			upResetCrop();
+		};
+		img.onerror = function(){ upSetStatus("Couldn't read that image.", true); URL.revokeObjectURL(url); };
+		img.src = url;
+	});
+	["upW", "upH"].forEach(function(id){ document.getElementById(id).addEventListener("input", upResetCrop); });
+	document.getElementById("upSmooth").addEventListener("change", upDraw);
+	document.getElementById("upZoom").addEventListener("input", function(){ upZoom = parseFloat(this.value) || 1; upDraw(); });
+	upCanvas.addEventListener("wheel", function(e){
+		if(!upImg) return;
+		e.preventDefault();
+		upZoom = Math.min(6, Math.max(1, upZoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+		document.getElementById("upZoom").value = upZoom;
+		upDraw();
+	}, { passive: false });
+	var upDrag = null;
+	upCanvas.addEventListener("pointerdown", function(e){
+		if(!upImg) return;
+		upDrag = { x: e.clientX, y: e.clientY };
+		upCanvas.setPointerCapture(e.pointerId);
+		upCanvas.classList.add("dragging");
+	});
+	upCanvas.addEventListener("pointermove", function(e){
+		if(!upDrag || !upImg) return;
+		var r = upRegion();
+		var rect = upCanvas.getBoundingClientRect();
+		upCx -= (e.clientX - upDrag.x) * (r.sw / rect.width);
+		upCy -= (e.clientY - upDrag.y) * (r.sh / rect.height);
+		upDrag = { x: e.clientX, y: e.clientY };
+		upDraw();
+	});
+	["pointerup", "pointercancel"].forEach(function(t){
+		upCanvas.addEventListener(t, function(){ upDrag = null; upCanvas.classList.remove("dragging"); });
+	});
+	window.addEventListener("resize", function(){ if(upImg) upDraw(); });
+
+	document.getElementById("upSubmit").addEventListener("click", function(){
+		if(!upImg) return;
+		var title = document.getElementById("upTitle").value.trim();
+		if(!title){ upSetStatus("Give it a title first.", true); return; }
+		var g = upGrid();
+		var out = document.createElement("canvas");
+		out.width = g.w * 128; out.height = g.h * 128;
+		var octx = out.getContext("2d");
+		octx.imageSmoothingEnabled = document.getElementById("upSmooth").checked;
+		octx.imageSmoothingQuality = "high";
+		var r = upRegion();
+		octx.drawImage(upImg, r.sx, r.sy, r.sw, r.sh, 0, 0, out.width, out.height);
+		var btn = this;
+		btn.disabled = true;
+		upSetStatus("Uploading…", false);
+		out.toBlob(function(blob){
+			if(!blob){ upSetStatus("Couldn't prepare the image.", true); btn.disabled = false; return; }
+			if(blob.size > 4 * 1024 * 1024){ upSetStatus("That's over 4 MB as a PNG — pick a smaller size.", true); btn.disabled = false; return; }
+			var fr = new FileReader();
+			fr.onload = function(){
+				var b64 = String(fr.result).split(",")[1] || "";
+				authFetch("/mapart/submit", { method: "POST", body: JSON.stringify({
+					title: title,
+					artist: document.getElementById("upArtist").value.trim(),
+					world: document.getElementById("upWorld").value,
+					category: upCatSel.value || null,
+					whereToBuy: document.getElementById("upWhere").value.trim(),
+					notForSale: document.getElementById("upNotForSale").checked,
+					width: g.w, height: g.h, png: b64
+				}) }).then(function(res){
+					btn.disabled = false;
+					if(!res.ok){ upSetStatus(res.data.error || "Couldn't upload.", true); return; }
+					upSetStatus("Uploaded! It's live in the catalog.", false);
+					upImg = null;
+					document.getElementById("cropBox").hidden = true;
+					document.getElementById("upFile").value = "";
+					["upTitle", "upArtist", "upWhere"].forEach(function(id){ document.getElementById(id).value = ""; });
+					document.getElementById("upNotForSale").checked = false;
+					btn.disabled = true;
+					loadAll();
+				}).catch(function(){ btn.disabled = false; upSetStatus("Network problem — try again.", true); });
+			};
+			fr.readAsDataURL(blob);
+		}, "image/png");
+	});
+
 	document.getElementById("claimSearch").addEventListener("input", renderClaimable);
 	document.getElementById("mineSearch").addEventListener("input", filterMine);
 
 	function start(){
 		if(!session()){
-			gate('<strong>Log in first.</strong> Use the account button up top, then come back here. Mapart management is available to accounts with a verified Minecraft username.', false);
+			gate('<strong>Log in first.</strong> Use the account button up top, then come back here. Mapart management is available to accounts with a verified Minecraft username.<div class="disclaimer">' + esc(VERIFY_DISCLAIMER) + '</div>', false);
 			return;
 		}
 		loadAll();

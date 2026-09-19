@@ -84,6 +84,10 @@
 //   GET  /mapart/mine                        (verified account) -> its claimed maparts
 //   POST /mapart/claim | /mapart/abandon     (verified account) body: {id}
 //   POST /mapart/update                      (owner or head admin) body: {id, title?, artist?, whereToBuy?, notForSale?, category?}
+//   POST /mapart/submit                      (verified account) body: {title, world, width, height, png(base64, exactly width*128 x height*128), artist?, category?, whereToBuy?, notForSale?}
+//   POST /mapart/delete-own                  (verified account) body: {id} — only pieces the account uploaded itself
+//   GET  /store/listings                     (verified account) -> {seller, manual[], scanned[] (read-only), scannedTotal, manualCap}
+//   POST /store/listings/add | /update | /delete   (verified account; manual listings of its own MC username only, max 100)
 //   GET  /admin/mapart, POST /admin/mapart/delete {id}, POST /admin/mapart/assign {id, username}   (head admin only)
 //   POST /admin/mapart/rederive  (head admin only) re-runs artist/title detection on unclaimed, unedited pieces
 // Verification links — single-use, expiring, head-admin generated:
@@ -2542,6 +2546,25 @@ async function nextManualIds(env, count) {
 	return ids;
 }
 
+// Validates one manual-listing entry — shared by the admin endpoint and the
+// seller's own "Manage my store". Returns { entry } or { error }.
+function parseManualListingEntry(e) {
+	const itemName = String((e && e.itemName) || "").trim().slice(0, 100);
+	const price = Number(e && e.price);
+	const currency = String((e && e.currency) || "").trim().toLowerCase().slice(0, 40);
+	const position = String((e && e.position) || "").trim().slice(0, 200);
+	if (!itemName || !currency || !position || !Number.isFinite(price) || price < 0) {
+		return { error: `Invalid entry: ${JSON.stringify(e)}` };
+	}
+	if (isBannedItem("manual", itemName)) return { error: `"${itemName}" isn't allowed` };
+	const priceLabel = String((e && e.priceLabel) || "").trim().slice(0, 60) || `${price} ${currency}`;
+	return { entry: { itemName, price, currency, position, priceLabel } };
+}
+
+function manualListingRowKey(world, seller, itemName) {
+	return `${world}|${seller}|manual|${itemName}`.toLowerCase();
+}
+
 async function handleAdminAddManualListings(request, env) {
 	const auth = await requireAdminAuth(request, env, "manualListings");
 	if (!auth.ok) return auth.response;
@@ -2565,24 +2588,15 @@ async function handleAdminAddManualListings(request, env) {
 
 	const parsed = [];
 	for (const e of entries) {
-		const itemName = String((e && e.itemName) || "").trim().slice(0, 100);
-		const price = Number(e && e.price);
-		const currency = String((e && e.currency) || "").trim().toLowerCase().slice(0, 40);
-		const position = String((e && e.position) || "").trim().slice(0, 200);
-		if (!itemName || !currency || !position || !Number.isFinite(price) || price < 0) {
-			return json({ error: `Invalid entry: ${JSON.stringify(e)}` }, 400);
-		}
-		if (isBannedItem("manual", itemName)) {
-			return json({ error: `"${itemName}" isn't allowed` }, 400);
-		}
-		const priceLabel = String((e && e.priceLabel) || "").trim().slice(0, 60) || `${price} ${currency}`;
-		parsed.push({ itemName, price, currency, position, priceLabel });
+		const r = parseManualListingEntry(e);
+		if (r.error) return json({ error: r.error }, 400);
+		parsed.push(r.entry);
 	}
 
 	try {
 		const ids = await nextManualIds(env, parsed.length);
 		const stmts = parsed.map((e, i) => {
-			const rowKeyVal = `${world}|${seller}|manual|${e.itemName}`.toLowerCase();
+			const rowKeyVal = manualListingRowKey(world, seller, e.itemName);
 			return env.DB.prepare(
 				`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen)
 				 VALUES (?, ?, ?, 'manual', 0, 0, 0, ?, ?, 1, 1, 1, ?, ?, ?, ?, ?)
@@ -3350,7 +3364,7 @@ function mapartPublic(m) {
 }
 
 function mapartForOwner(m) {
-	return { ...mapartPublic(m), whereToBuyCustom: m.whereToBuy || "", claimedAt: m.claimedAt || null };
+	return { ...mapartPublic(m), whereToBuyCustom: m.whereToBuy || "", claimedAt: m.claimedAt || null, uploaded: !!m.uploadedByAccountId };
 }
 
 async function deleteMapartRow(env, id) {
@@ -3373,11 +3387,14 @@ async function mapartAutoClaimSweep(env, accountId, mcUsername) {
 	return res.meta.changes;
 }
 
+// Shown wherever an unverified account hits something verified-only.
+const VERIFY_DISCLAIMER = "If you would like to verify your account, please dm maxolotled on discord! (@ectf)";
+
 async function requireVerifiedAccount(request, env) {
 	const base = await requireAnyAdmin(request, env);
 	if (!base.ok) return base;
 	if (!base.admin.mcVerified || !base.admin.mcUsername) {
-		return { ok: false, response: json({ error: "Your account isn't verified yet — ask a head admin for a verification link." }, 403) };
+		return { ok: false, response: json({ error: VERIFY_DISCLAIMER }, 403) };
 	}
 	return base;
 }
@@ -3776,6 +3793,222 @@ async function handleAdminRederiveMapart(request, env) {
 // table. currency "display" = no real price (the site already sorts those
 // last and keeps them out of averages); mapartGallery tells the site to show
 // the "not a live listing" info icon and hide Report/Remove.
+// ---------------- seller store management (verified accounts) ----------------
+// A verified account manages the listings of its own MC username: manual
+// listings can be added, edited and deleted; scanned ones are read-only here
+// (the mod owns them and rewrites them on every scan).
+const MAX_STORE_MANUAL_LISTINGS = 100;
+const MAX_STORE_ENTRIES_PER_BATCH = 25;
+
+async function requireStoreOwner(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth;
+	const seller = String(auth.admin.mcUsername || "").replace(/^\./, "");
+	if (!isValidUsername(seller)) {
+		return { ok: false, response: json({ error: "Your linked Minecraft username can't be used for shop listings." }, 400) };
+	}
+	const blocked = await env.DB.prepare("SELECT 1 AS x FROM blockedSellers WHERE usernameKey = ?").bind(seller.toLowerCase()).first();
+	if (blocked) return { ok: false, response: json({ error: "This seller can't manage listings." }, 403) };
+	return { ok: true, admin: auth.admin, seller };
+}
+
+const STORE_OWNER_SQL = "lower(ltrim(seller, '.')) = ?";
+
+async function handleStoreListings(request, env) {
+	const auth = await requireStoreOwner(request, env);
+	if (!auth.ok) return auth.response;
+	const key = auth.seller.toLowerCase();
+	const manual = await env.DB.prepare(`SELECT * FROM listings WHERE lastSeen LIKE 'M%' AND ${STORE_OWNER_SQL} ORDER BY world, itemName COLLATE NOCASE`).bind(key).all();
+	const scanned = await env.DB.prepare(
+		`SELECT itemName, baseItem, bulk, bundled, price, priceLabel, stackSize, amount, stacksInStock, currency, world, position, lastSeen FROM listings WHERE lastSeen NOT LIKE 'M%' AND ${STORE_OWNER_SQL} ORDER BY world, itemName COLLATE NOCASE LIMIT 500`
+	).bind(key).all();
+	const total = await env.DB.prepare(`SELECT COUNT(*) AS c FROM listings WHERE lastSeen NOT LIKE 'M%' AND ${STORE_OWNER_SQL}`).bind(key).first();
+	return json({
+		seller: auth.seller,
+		manualCap: MAX_STORE_MANUAL_LISTINGS,
+		manual: manual.results.map((r) => ({ id: r.lastSeen, itemName: r.itemName, price: r.price, priceLabel: r.priceLabel, currency: r.currency, world: r.world, position: r.position })),
+		scanned: scanned.results.map((r) => ({ ...r, bulk: !!r.bulk, bundled: !!r.bundled })),
+		scannedTotal: total.c,
+	});
+}
+
+// body: {world, entries: [{itemName, price, currency, position, priceLabel?}]}
+async function handleStoreAddListings(request, env) {
+	const auth = await requireStoreOwner(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const worldRaw = String(body.world || "").trim().toLowerCase();
+	const world = worldRaw === "firefly" ? "Firefly" : worldRaw === "honeybee" ? "Honeybee" : null;
+	const entries = Array.isArray(body.entries) ? body.entries : [];
+	if (!world) return json({ error: "World must be Firefly or Honeybee" }, 400);
+	if (entries.length === 0) return json({ error: "No entries given" }, 400);
+	if (entries.length > MAX_STORE_ENTRIES_PER_BATCH) return json({ error: `Add at most ${MAX_STORE_ENTRIES_PER_BATCH} listings at a time` }, 400);
+
+	const parsed = [];
+	const seen = new Set();
+	for (const e of entries) {
+		const r = parseManualListingEntry(e);
+		if (r.error) return json({ error: r.error }, 400);
+		const k = manualListingRowKey(world, auth.seller, r.entry.itemName);
+		if (seen.has(k)) return json({ error: `"${r.entry.itemName}" is in the list twice` }, 400);
+		seen.add(k);
+		parsed.push({ ...r.entry, rowKey: k });
+	}
+
+	const count = await env.DB.prepare(`SELECT COUNT(*) AS c FROM listings WHERE lastSeen LIKE 'M%' AND ${STORE_OWNER_SQL}`).bind(auth.seller.toLowerCase()).first();
+	if (count.c + parsed.length > MAX_STORE_MANUAL_LISTINGS) {
+		return json({ error: `You can have at most ${MAX_STORE_MANUAL_LISTINGS} manual listings (you have ${count.c}).` }, 400);
+	}
+	for (const e of parsed) {
+		const exists = await env.DB.prepare("SELECT 1 AS x FROM listings WHERE rowKey = ?").bind(e.rowKey).first();
+		if (exists) return json({ error: `You already have a manual listing for "${e.itemName}" in ${world} — edit that one instead.` }, 409);
+	}
+
+	const ids = await nextManualIds(env, parsed.length);
+	await env.DB.batch(parsed.map((e, i) => env.DB.prepare(
+		`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen)
+		 VALUES (?, ?, ?, 'manual', 0, 0, 0, ?, ?, 1, 1, 1, ?, ?, ?, ?, ?)`
+	).bind(e.rowKey, newId(), e.itemName, e.price, e.priceLabel, e.currency, auth.seller, world, e.position, ids[i])));
+	return json({ ok: true, added: parsed.map((e, i) => ({ itemName: e.itemName, id: ids[i] })) });
+}
+
+// body: {id, itemName?, price?, priceLabel?, currency?, position?}
+async function handleStoreUpdateListing(request, env) {
+	const auth = await requireStoreOwner(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const id = String(body.id || "").trim();
+	if (!MANUAL_ID_PATTERN.test(id)) return json({ error: "Invalid id" }, 400);
+	const row = await env.DB.prepare(`SELECT * FROM listings WHERE lastSeen = ? AND ${STORE_OWNER_SQL}`).bind(id, auth.seller.toLowerCase()).first();
+	if (!row) return json({ error: "Listing not found" }, 404);
+
+	const merged = {
+		itemName: body.itemName !== undefined ? body.itemName : row.itemName,
+		price: body.price !== undefined ? body.price : row.price,
+		currency: body.currency !== undefined ? body.currency : row.currency,
+		position: body.position !== undefined ? body.position : row.position,
+		// Keep a hand-written label; refresh an auto-generated one when price/currency change.
+		priceLabel: body.priceLabel !== undefined ? body.priceLabel
+			: (row.priceLabel === `${row.price} ${row.currency}` ? "" : row.priceLabel),
+	};
+	const r = parseManualListingEntry(merged);
+	if (r.error) return json({ error: r.error }, 400);
+	const e = r.entry;
+	const newKey = manualListingRowKey(row.world, row.seller, e.itemName);
+	if (newKey !== row.rowKey) {
+		const clash = await env.DB.prepare("SELECT 1 AS x FROM listings WHERE rowKey = ?").bind(newKey).first();
+		if (clash) return json({ error: `You already have a manual listing for "${e.itemName}" in ${row.world}.` }, 409);
+	}
+	await env.DB.prepare("UPDATE listings SET rowKey = ?, itemName = ?, price = ?, priceLabel = ?, currency = ?, position = ? WHERE lastSeen = ?")
+		.bind(newKey, e.itemName, e.price, e.priceLabel, e.currency, e.position, id).run();
+	return json({ ok: true, listing: { id, itemName: e.itemName, price: e.price, priceLabel: e.priceLabel, currency: e.currency, world: row.world, position: e.position } });
+}
+
+async function handleStoreDeleteListing(request, env) {
+	const auth = await requireStoreOwner(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const id = String(body.id || "").trim();
+	if (!MANUAL_ID_PATTERN.test(id)) return json({ error: "Invalid id" }, 400);
+	const res = await env.DB.prepare(`DELETE FROM listings WHERE lastSeen = ? AND ${STORE_OWNER_SQL}`).bind(id, auth.seller.toLowerCase()).run();
+	if (res.meta.changes === 0) return json({ error: "Listing not found" }, 404);
+	return json({ ok: true });
+}
+
+// ---------------- hand-uploaded mapart (verified accounts) ----------------
+const MAPART_UPLOAD_MAX_GRID = 10;
+const MAPART_MAX_UPLOADS_PER_ACCOUNT = 100;
+
+// POST /mapart/submit — body: {title, world, width, height, png (base64),
+// artist?, category?, whereToBuy?, notForSale?}. The page crops/scales the
+// picture to exactly width*128 x height*128 before sending. The piece goes
+// live at once, claimed by the uploader; it has no in-game map ids, so scans
+// never touch it (synthetic negative leadMapId, no mapartParts rows).
+async function handleSubmitMapart(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+
+	const world = String(body.world || "");
+	if (!MAPART_WORLDS.includes(world)) return json({ error: "world must be Firefly or Honeybee" }, 400);
+	const width = body.width, height = body.height;
+	if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1
+		|| width > MAPART_UPLOAD_MAX_GRID || height > MAPART_UPLOAD_MAX_GRID) {
+		return json({ error: `Size must be 1-${MAPART_UPLOAD_MAX_GRID} maps in each direction` }, 400);
+	}
+	const title = String(body.title || "").trim();
+	if (!title || title.length > 100) return json({ error: "title must be 1-100 characters" }, 400);
+	const mc = String(auth.admin.mcUsername || "").replace(/^\./, "");
+	let artist = body.artist === undefined ? mc : String(body.artist || "").trim();
+	if (!artist) artist = mc;
+	if (artist.length > 40) return json({ error: "artist must be at most 40 characters" }, 400);
+	const whereToBuy = String(body.whereToBuy || "").trim();
+	if (whereToBuy.length > 200) return json({ error: "whereToBuy must be at most 200 characters" }, 400);
+	const category = body.category ? String(body.category) : null;
+	if (category !== null && !MAPART_CATEGORIES.includes(category)) return json({ error: "Unknown category" }, 400);
+
+	let pngBytes;
+	try { pngBytes = Uint8Array.from(atob(String(body.png || "")), (c) => c.charCodeAt(0)); } catch (e) {
+		return json({ error: "png isn't valid base64" }, 400);
+	}
+	if (pngBytes.length > MAPART_MAX_PNG_BYTES) return json({ error: "That image is too large (over 4 MB) — try a smaller size." }, 400);
+	const size = readPngSize(pngBytes);
+	if (!size || size.width !== width * 128 || size.height !== height * 128) {
+		return json({ error: "The image must be a PNG exactly " + width * 128 + "x" + height * 128 + " pixels." }, 400);
+	}
+
+	const mine = await env.DB.prepare("SELECT COUNT(*) AS c FROM maparts WHERE uploadedByAccountId = ?").bind(auth.admin.id).first();
+	if (mine.c >= MAPART_MAX_UPLOADS_PER_ACCOUNT) {
+		return json({ error: `You've reached the limit of ${MAPART_MAX_UPLOADS_PER_ACCOUNT} uploaded mapart — delete one first.` }, 400);
+	}
+	const imageHash = await sha256Hex16(pngBytes);
+	const dup = await env.DB.prepare("SELECT title, slug FROM maparts WHERE imageHash = ? LIMIT 1").bind(imageHash).first();
+	if (dup) return json({ error: `That exact picture is already in the gallery as "${dup.title}".`, slug: dup.slug }, 409);
+
+	const id = crypto.randomUUID();
+	let leadMapId = null;
+	for (let i = 0; i < 8 && leadMapId === null; i++) {
+		const cand = -(1 + Math.floor(Math.random() * 2000000000));
+		const taken = await env.DB.prepare("SELECT 1 AS x FROM maparts WHERE world = ? AND leadMapId = ?").bind(world, cand).first();
+		if (!taken) leadMapId = cand;
+	}
+	if (leadMapId === null) return json({ error: "Couldn't allocate an id — please try again." }, 502);
+
+	const slug = await assignMapartSlug(env, id, title);
+	const now = new Date().toISOString();
+	await env.DB.prepare(
+		`INSERT INTO maparts (id, slug, world, leadMapId, rawName, allNames, title, artist, whereToBuy, notForSale, category, width, height, imageHash,
+			claimedByAccountId, claimedAt, autoClaimBlocked, locked, claimedManually, ownerEdited, uploadedByAccountId, createdAt, updatedAt, lastSeen)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 1, 1, ?, ?, ?, ?)`
+	).bind(id, slug, world, leadMapId, title, JSON.stringify([title]), title, artist, whereToBuy || null, body.notForSale ? 1 : 0, category, width, height, imageHash,
+		auth.admin.id, now, auth.admin.id, now, now, now).run();
+	try {
+		await env.SNAPSHOTS.put(`mapart/${id}.png`, pngBytes, { httpMetadata: { contentType: "image/png" } });
+	} catch (e) {
+		await deleteMapartRow(env, id);
+		return json({ error: "Couldn't store the image — please try again." }, 502);
+	}
+	const fresh = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(id).first();
+	return json({ ok: true, mapart: mapartForOwner(fresh) });
+}
+
+// Uploaders can delete what they uploaded (mistakes happen); scanned pieces
+// can only be abandoned, and any piece can still be removed by a head admin.
+async function handleDeleteOwnMapart(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const m = await env.DB.prepare("SELECT id FROM maparts WHERE id = ? AND uploadedByAccountId = ?").bind(String(body.id || ""), auth.admin.id).first();
+	if (!m) return json({ error: "You can only delete mapart you uploaded yourself." }, 404);
+	await deleteMapartRow(env, m.id);
+	return json({ ok: true });
+}
+
 async function getMapartGalleryRows(env) {
 	const { results } = await env.DB.prepare("SELECT * FROM maparts").all();
 	return results.map((m) => {
@@ -3985,6 +4218,12 @@ const ROUTES = [
 	["GET", "/mapart/mine", handleGetMyMapart],
 	["POST", "/mapart/claim", handleClaimMapart],
 	["POST", "/mapart/abandon", handleAbandonMapart],
+	["POST", "/mapart/submit", handleSubmitMapart],
+	["POST", "/mapart/delete-own", handleDeleteOwnMapart],
+	["GET", "/store/listings", handleStoreListings],
+	["POST", "/store/listings/add", handleStoreAddListings],
+	["POST", "/store/listings/update", handleStoreUpdateListing],
+	["POST", "/store/listings/delete", handleStoreDeleteListing],
 	["POST", "/mapart/update", handleUpdateMapart],
 	["GET", "/admin/mapart", handleAdminListMapart],
 	["POST", "/admin/mapart/delete", handleAdminDeleteMapart],

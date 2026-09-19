@@ -1,5 +1,6 @@
 package com.snailtools.shoplogger.gui.widget;
 
+import com.snailtools.shoplogger.ShopReporter;
 import com.snailtools.shoplogger.TeleportHighlight;
 import com.snailtools.shoplogger.gui.data.Listing;
 import net.minecraft.client.Minecraft;
@@ -50,18 +51,34 @@ public class ListingListWidget extends AbstractSelectionList<ListingListWidget.L
 		// price/stock text is right-aligned to the left of it instead of the
 		// row's true edge, so nothing overlaps.
 		private static final int TELEPORT_BUTTON_WIDTH = 18;
+		// Red one-click report button, sits just left of the TP button (or at the
+		// row's edge when there's no TP). Marketplace rows have no shop to report.
+		private static final int REPORT_BUTTON_WIDTH = 18;
 		private static final Pattern POSITION_PATTERN = Pattern.compile("^\\(?(-?\\d+),\\s*(-?\\d+),\\s*(-?\\d+)\\)?$");
 
 		private final Listing listing;
 		private final boolean showItemName;
 		private final java.util.function.Consumer<String> onClickSeller;
 		private final BlockPos teleportTarget; // null if listing.position isn't parseable coordinates
+		private final boolean canReport;
+		private boolean reported;
 
 		private ListingEntry(Listing listing, boolean showItemName, java.util.function.Consumer<String> onClickSeller) {
 			this.listing = listing;
 			this.showItemName = showItemName;
 			this.onClickSeller = onClickSeller;
 			this.teleportTarget = parsePosition(listing.position);
+			this.canReport = !listing.marketplace;
+			this.reported = canReport && ShopReporter.alreadyReported(ShopReporter.fromListing(listing));
+		}
+
+		private int buttonsWidth() {
+			return (teleportTarget != null ? TELEPORT_BUTTON_WIDTH : 0) + (canReport ? REPORT_BUTTON_WIDTH : 0);
+		}
+
+		/** Left edge of the report button — it sits directly left of the TP button, if any. */
+		private int reportButtonX() {
+			return getX() + getWidth() - (teleportTarget != null ? TELEPORT_BUTTON_WIDTH : 0) - REPORT_BUTTON_WIDTH;
 		}
 
 		/**
@@ -89,7 +106,7 @@ public class ListingListWidget extends AbstractSelectionList<ListingListWidget.L
 			var font = Minecraft.getInstance().font;
 			int x = getX() + 4;
 			int y = getY();
-			int textRightEdge = getX() + getWidth() - (teleportTarget != null ? TELEPORT_BUTTON_WIDTH + 4 : 0);
+			int textRightEdge = getX() + getWidth() - (buttonsWidth() > 0 ? buttonsWidth() + 4 : 0);
 
 			if (hovered) {
 				context.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0x22FFFFFF);
@@ -117,10 +134,26 @@ public class ListingListWidget extends AbstractSelectionList<ListingListWidget.L
 				context.fill(btnX, getY(), getX() + getWidth(), getY() + getHeight(), 0xFF2E6B45);
 				context.centeredText(font, "TP", btnX + TELEPORT_BUTTON_WIDTH / 2, getY() + getHeight() / 2 - 4, 0xFFFFFFFF);
 			}
+
+			if (canReport) {
+				int rx = reportButtonX();
+				context.fill(rx, getY(), rx + REPORT_BUTTON_WIDTH, getY() + getHeight(), reported ? 0xFF4A4A4A : 0xFFB53A3A);
+				context.centeredText(font, reported ? "\u2713" : "!", rx + REPORT_BUTTON_WIDTH / 2, getY() + getHeight() / 2 - 4, 0xFFFFFFFF);
+			}
 		}
 
 		@Override
 		public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+			if (canReport) {
+				int rx = reportButtonX();
+				if (event.x() >= rx && event.x() < rx + REPORT_BUTTON_WIDTH
+						&& event.y() >= getY() && event.y() < getY() + getHeight()) {
+					if (!reported) {
+						reported = ShopReporter.report(Minecraft.getInstance(), ShopReporter.fromListing(listing)) || ShopReporter.alreadyReported(ShopReporter.fromListing(listing));
+					}
+					return true;
+				}
+			}
 			if (teleportTarget != null) {
 				int btnX = getX() + getWidth() - TELEPORT_BUTTON_WIDTH;
 				if (event.x() >= btnX && event.x() < getX() + getWidth()

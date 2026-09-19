@@ -78,6 +78,7 @@
 	"use strict";
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
+	var VERIFY_DISCLAIMER = "If you would like to verify your account, please dm maxolotled on discord! (@ectf)";
 
 	function esc(s){
 		return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
@@ -119,6 +120,7 @@
 				'<div class="readonly-row"><span>' + esc(data.mcUsername || "Not linked yet") + '</span>' +
 					(data.mcVerified ? '<span class="verified">&#10003; Verified</span>' : '<span class="v">Not verified</span>') +
 				'</div>' +
+				(data.mcVerified ? '' : '<div class="warn-note">' + esc(VERIFY_DISCLAIMER) + '</div>') +
 			'</section>' +
 			'<section>' +
 				'<h2>Contact info</h2>' +

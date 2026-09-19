@@ -182,6 +182,11 @@ public class ShopLoggerClient implements ClientModInitializer {
 					.then(ClientCommands.argument("item", StringArgumentType.greedyString())
 							.executes(ShopLoggerClient::watchOptions)));
 
+			// Click target of the red [Report] button in watchlist alerts (see ShopReporter).
+			dispatcher.register(ClientCommands.literal("watchreport")
+					.then(ClientCommands.argument("id", IntegerArgumentType.integer())
+							.executes(ShopLoggerClient::watchReport)));
+
 			dispatcher.register(ClientCommands.literal("watchbeam")
 					.then(ClientCommands.argument("world", StringArgumentType.word())
 							.then(ClientCommands.argument("x", IntegerArgumentType.integer())
@@ -317,6 +322,11 @@ public class ShopLoggerClient implements ClientModInitializer {
 
 	private static int watchOptions(CommandContext<FabricClientCommandSource> ctx) {
 		pendingWatchOptionsItem = StringArgumentType.getString(ctx, "item");
+		return 1;
+	}
+
+	private static int watchReport(CommandContext<FabricClientCommandSource> ctx) {
+		ShopReporter.reportPending(Minecraft.getInstance(), IntegerArgumentType.getInteger(ctx, "id"));
 		return 1;
 	}
 

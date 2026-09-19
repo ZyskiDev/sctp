@@ -1,5 +1,6 @@
 package com.snailtools.shoplogger.gui;
 
+import com.snailtools.shoplogger.RareRentalHighlighter;
 import com.snailtools.shoplogger.ScanChatLogger;
 import com.snailtools.shoplogger.SearchPreferences;
 import com.snailtools.shoplogger.ShopAutoScanner;
@@ -20,7 +21,7 @@ import net.minecraft.network.chat.Component;
  */
 public class AdvancedSettingsScreen extends Screen {
 
-	private static final int ROW_COUNT = 6; // chat log format, cooldown field, beam style, /search opens, shop info on visit, Back
+	private static final int ROW_COUNT = 7; // chat log format, cooldown field, beam style, /search opens, shop info on visit, rare highlights in shulkers, Back
 	private static final int NATURAL_GAP = 24;
 	private static final int MIN_GAP = 16; // never shrink spacing below this — rows start overlapping past this point
 	private static final int TOP_Y = 50;
@@ -44,9 +45,9 @@ public class AdvancedSettingsScreen extends Screen {
 			// Extra room after rows 0 and 1 (the cooldown field's own label is
 			// drawn 10px above it, so both it and the row before it need a
 			// bigger gap than usual to avoid overlapping that label) and after
-			// row 4, before Back, for the same visual grouping the screen had
+			// row 5, before Back, for the same visual grouping the screen had
 			// before this became data-driven.
-			y += (i == 0 || i == 1 || i == 4) ? gap + 12 : gap;
+			y += (i == 0 || i == 1 || i == 5) ? gap + 12 : gap;
 		}
 		return rowY;
 	}
@@ -90,8 +91,12 @@ public class AdvancedSettingsScreen extends Screen {
 				.create(x, rowY[4], COL_W, 20, Component.literal("Shop info on visit"),
 						(btn, value) -> ShopVisitAlert.setShopInfoOnVisitEnabled(value)));
 
+		addRenderableWidget(CycleButton.onOffBuilder(RareRentalHighlighter.isInShulkersEnabled())
+				.create(x, rowY[5], COL_W, 20, Component.literal("Rare highlights in shulkers"),
+						(btn, value) -> RareRentalHighlighter.setInShulkersEnabled(value)));
+
 		addRenderableWidget(Button.builder(Component.literal("Back"), btn -> onClose())
-				.bounds(x, rowY[5], COL_W, 20).build());
+				.bounds(x, rowY[6], COL_W, 20).build());
 	}
 
 	@Override

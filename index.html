@@ -200,6 +200,17 @@
 	}
 	.search-scope-menu input[type=checkbox]{accent-color:var(--accent);cursor:pointer;}
 	.search-scope-divider{height:1px;background:var(--line);margin:2px 0;}
+	/* recent / saved searches dropdown */
+	.saved-menu{min-width:280px;max-width:min(360px,86vw);max-height:340px;overflow-y:auto;gap:2px;}
+	.saved-menu .saved-head{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:6px 4px 2px;display:flex;justify-content:space-between;align-items:center;}
+	.saved-menu .saved-empty{font-size:13px;color:var(--muted);padding:6px 4px;white-space:normal;}
+	.saved-row{display:flex;align-items:center;gap:2px;}
+	.search-box .saved-menu button{background:transparent;border:none;border-radius:6px;padding:6px 8px;color:var(--text);font-family:var(--font-body);font-size:13.5px;font-weight:500;cursor:pointer;}
+	.search-box .saved-menu button:hover{background:rgba(183,226,61,0.10);border:none;}
+	.search-box .saved-menu .saved-q{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+	.search-box .saved-menu .saved-pin,.search-box .saved-menu .saved-x{flex:0 0 auto;padding:6px 7px;color:var(--muted);}
+	.search-box .saved-menu .saved-pin.on{color:var(--accent);}
+	.search-box .saved-menu .saved-clear{padding:0 4px;font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:500;}
 
 	.rare-notice{
 		margin-top:10px;padding:9px 14px;border-radius:10px;
@@ -223,10 +234,8 @@
 
 	.filters{
 		background:var(--panel);border:1px solid var(--line);border-radius:14px;
-		padding:18px 16px;position:sticky;top:16px;
-		max-height:calc(100vh - 32px);overflow-y:auto;
+		padding:18px 16px;
 	}
-	@media (max-width:860px){.filters{position:static;max-height:none;overflow-y:visible;}}
 	.filters h2{
 		font-family:var(--font-display);font-size:15px;font-weight:600;margin:0 0 14px;
 		color:var(--shell);text-transform:uppercase;letter-spacing:.06em;
@@ -319,6 +328,7 @@
 		background:var(--panel-alt);cursor:pointer;white-space:nowrap;
 	}
 	thead th:hover{color:var(--accent);}
+	thead th .sort-arrow{color:var(--accent);font-size:10px;}
 	tbody tr{border-bottom:1px solid var(--line);}
 	tbody tr:hover{background:rgba(183,226,61,0.045);}
 	tbody td{padding:10px 12px;vertical-align:top;white-space:nowrap;}
@@ -582,6 +592,10 @@
 		<div class="search-box">
 			<input id="searchInput" type="text" placeholder="Search an item, base item, or seller — e.g. diamond, netherite, Steve…" autocomplete="off">
 			<div class="search-scope">
+				<button id="savedSearchBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Recent and saved searches">Recent ▾</button>
+				<div class="search-scope-menu saved-menu" id="savedSearchMenu"></div>
+			</div>
+			<div class="search-scope">
 				<button id="searchScopeBtn" type="button" aria-haspopup="true" aria-expanded="false">Search in ▾</button>
 				<div class="search-scope-menu" id="searchScopeMenu">
 					<label><input type="checkbox" id="scopeItemName" checked> Item name</label>
@@ -664,7 +678,8 @@
 				<div class="f-dropdown">
 					<button type="button" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false" class="f-dropdown-btn">Most recently updated ▾</button>
 					<div class="f-dropdown-menu" id="sortDropdownMenu">
-						<label><input type="checkbox" data-sort="recent" checked><span class="sort-rank" data-sort-rank="recent"></span> Most recently updated</label>
+							<label><input type="checkbox" data-sort="recent" checked><span class="sort-rank" data-sort-rank="recent"></span> Most recently updated</label>
+						<label><input type="checkbox" data-sort="recent-asc"><span class="sort-rank" data-sort-rank="recent-asc"></span> Least recently updated</label>
 						<div class="search-scope-divider"></div>
 						<label><input type="checkbox" data-sort="price-asc"><span class="sort-rank" data-sort-rank="price-asc"></span> Price ↑ (cheapest per item first)</label>
 						<label><input type="checkbox" data-sort="price-desc"><span class="sort-rank" data-sort-rank="price-desc"></span> Price ↓ (priciest per item first)</label>
@@ -672,8 +687,10 @@
 						<label><input type="checkbox" data-sort="stock-asc"><span class="sort-rank" data-sort-rank="stock-asc"></span> Stock ↑ (lowest first)</label>
 						<label><input type="checkbox" data-sort="stock-desc"><span class="sort-rank" data-sort-rank="stock-desc"></span> Stock ↓ (highest first)</label>
 						<div class="search-scope-divider"></div>
-						<label><input type="checkbox" data-sort="item-az"><span class="sort-rank" data-sort-rank="item-az"></span> Item name A→Z</label>
+							<label><input type="checkbox" data-sort="item-az"><span class="sort-rank" data-sort-rank="item-az"></span> Item name A→Z</label>
+						<label><input type="checkbox" data-sort="item-za"><span class="sort-rank" data-sort-rank="item-za"></span> Item name Z→A</label>
 						<label><input type="checkbox" data-sort="seller-az"><span class="sort-rank" data-sort-rank="seller-az"></span> Seller A→Z</label>
+						<label><input type="checkbox" data-sort="seller-za"><span class="sort-rank" data-sort-rank="seller-za"></span> Seller Z→A</label>
 						<div class="search-scope-divider"></div>
 						<div class="avg-threshold-row">
 							<span class="avg-threshold-label">Exclude from average price:</span>
@@ -894,10 +911,23 @@
 		{ key: "price-desc", label: "Price ↓ (priciest per item first)" },
 		{ key: "stock-asc", label: "Stock ↑ (lowest first)" },
 		{ key: "stock-desc", label: "Stock ↓ (highest first)" },
+		{ key: "recent-asc", label: "Least recently updated" },
 		{ key: "item-az", label: "Item name A→Z" },
+		{ key: "item-za", label: "Item name Z→A" },
 		{ key: "seller-az", label: "Seller A→Z" },
+		{ key: "seller-za", label: "Seller Z→A" },
 	];
-	var SORT_EXCLUSIVE_PAIRS = [["price-asc", "price-desc"], ["stock-asc", "stock-desc"]];
+	var SORT_EXCLUSIVE_PAIRS = [["price-asc", "price-desc"], ["stock-asc", "stock-desc"], ["recent", "recent-asc"], ["item-az", "item-za"], ["seller-az", "seller-za"]];
+	// Clickable table headers: first click sorts by [0], clicking the same
+	// header again flips to [1], and so on back and forth.
+	var HEADER_SORTS = {
+		item: ["item-az", "item-za"],
+		price: ["price-desc", "price-asc"],
+		stock: ["stock-desc", "stock-asc"],
+		seller: ["seller-az", "seller-za"],
+		recent: ["recent", "recent-asc"]
+	};
+	var SORT_ASCENDING = { "item-az": 1, "price-asc": 1, "stock-asc": 1, "seller-az": 1, "recent-asc": 1 };
 	var activeSorts = ["recent"];
 
 	// ---------------- helpers ----------------
@@ -1331,17 +1361,27 @@
 	}
 
 	// ---------------- data loading ----------------
+	// Raw text of the last successful response — a background refresh whose data
+	// hasn't changed (or that failed) must not re-render the table under the
+	// user, or wipe what they're looking at.
+	var lastListingsRaw = null;
 	async function loadListings(){
+		var isRefresh = lastListingsRaw !== null;
+		var next = null, raw = null;
 		try {
 			var res = await fetch(DATA_URL);
 			if(res.ok){
-				allListings = await res.json();
-			} else {
-				allListings = [];
+				raw = await res.text();
+				next = JSON.parse(raw);
+				if(!Array.isArray(next)) next = null;
 			}
 		} catch(e){
-			allListings = [];
+			next = null;
 		}
+		if(isRefresh && (next === null || raw === lastListingsRaw)) return; // failed or unchanged: leave the page exactly as it is
+		if(next === null) next = [];
+		else lastListingsRaw = raw;
+		allListings = next;
 
 		// Client-side safety net only — the Worker already refuses to commit these.
 		allListings = allListings.filter(function(r){ return !isBannedItem(r.baseItem, r.itemName); });
@@ -1366,6 +1406,7 @@
 
 		populateCurrencyOptions();
 		applyFilters(true);
+		if(isRefresh) return;
 
 		// Landing here via a Share link (see openShare) — jump straight to
 		// that listing's popup instead of making the recipient search for it.
@@ -1463,6 +1504,19 @@
 		applyFilters();
 	}
 
+	// Header click: same column again flips direction, a different column
+	// starts at that column's default direction.
+	function toggleHeaderSort(headerKey){
+		var pair = HEADER_SORTS[headerKey];
+		if(!pair) return;
+		setSortOnly(activeSorts[0] === pair[0] ? pair[1] : pair[0]);
+	}
+	function headerSortMark(headerKey){
+		var pair = HEADER_SORTS[headerKey];
+		if(!pair || pair.indexOf(activeSorts[0]) === -1) return "";
+		return ' <span class="sort-arrow">' + (SORT_ASCENDING[activeSorts[0]] ? "&#9650;" : "&#9660;") + '</span>';
+	}
+
 	// Manual upload goes through the same Worker the mod uses. Note: API_KEY
 	// lives in this page's source, so it's a spam deterrent, not real
 	// security — the Worker's GitHub token is what's actually protected.
@@ -1534,8 +1588,11 @@
 			case "stock-asc": return a.amount - b.amount;
 			case "stock-desc": return b.amount - a.amount;
 			case "item-az": return a.itemNameDisplay.localeCompare(b.itemNameDisplay);
+			case "item-za": return b.itemNameDisplay.localeCompare(a.itemNameDisplay);
 			case "seller-az": return a.seller.localeCompare(b.seller);
+			case "seller-za": return b.seller.localeCompare(a.seller);
 			case "recent": return rowTimestamp(b) - rowTimestamp(a);
+			case "recent-asc": return rowTimestamp(a) - rowTimestamp(b);
 			default: return 0;
 		}
 	}
@@ -1668,16 +1725,16 @@
 
 		var html = '<div class="table-scroll"><table><thead><tr>'+
 			'<th></th>'+
-			'<th data-k="item-az">Item</th>'+
-			'<th data-k="item-az">Base item</th>'+
+			'<th data-k="item">Item'+headerSortMark("item")+'</th>'+
+			'<th data-k="item">Base item'+headerSortMark("item")+'</th>'+
 			'<th>Type</th>'+
-			'<th data-k="price-desc">Price</th>'+
+			'<th data-k="price">Price'+headerSortMark("price")+'</th>'+
 			'<th>Avg?</th>'+
-			'<th data-k="stock-desc">In stock</th>'+
-			'<th data-k="seller-az">Seller</th>'+
+			'<th data-k="stock">In stock'+headerSortMark("stock")+'</th>'+
+			'<th data-k="seller">Seller'+headerSortMark("seller")+'</th>'+
 			'<th>World</th>'+
 			'<th>Position</th>'+
-			'<th data-k="recent">Last seen</th>'+
+			'<th data-k="recent">Last seen'+headerSortMark("recent")+'</th>'+
 			'<th>Available since</th>'+
 			'<th></th>'+
 			'</tr></thead><tbody>';
@@ -1752,7 +1809,7 @@
 
 		area.querySelectorAll("thead th[data-k]").forEach(function(th){
 			th.addEventListener("click", function(){
-				setSortOnly(th.getAttribute("data-k"));
+				toggleHeaderSort(th.getAttribute("data-k"));
 			});
 		});
 
@@ -2301,7 +2358,104 @@
 		if(f) handleFile(f);
 	});
 
-	document.getElementById("searchInput").addEventListener("input", applyFilters);
+	document.getElementById("searchInput").addEventListener("input", function(){ applyFilters(); scheduleRecordSearch(); });
+	document.getElementById("searchInput").addEventListener("keydown", function(e){ if(e.key === "Enter") recordSearch(this.value); });
+	document.getElementById("searchInput").addEventListener("blur", function(){ recordSearch(this.value); });
+
+	// ---------------- recent / saved searches ----------------
+	// Searches are remembered in this browser only. Anything typed and left for
+	// a moment (or confirmed with Enter / leaving the box) lands in "Recent";
+	// the star pins it into "Saved" where it stays until removed.
+	var SAVED_SEARCH_KEY = "sctp_saved_searches";
+	var MAX_RECENT_SEARCHES = 10, MAX_SAVED_SEARCHES = 30;
+	var savedSearches = { recent: [], pinned: [] };
+	try {
+		var storedSearches = JSON.parse(localStorage.getItem(SAVED_SEARCH_KEY) || "null");
+		if(storedSearches && Array.isArray(storedSearches.recent) && Array.isArray(storedSearches.pinned)) savedSearches = storedSearches;
+	} catch(e){}
+	function persistSearches(){
+		try { localStorage.setItem(SAVED_SEARCH_KEY, JSON.stringify(savedSearches)); } catch(e){}
+	}
+	function sameSearch(a, b){ return String(a).toLowerCase() === String(b).toLowerCase(); }
+	function withoutSearch(list, q){ return list.filter(function(x){ return !sameSearch(x, q); }); }
+	function recordSearch(raw){
+		var q = String(raw || "").trim();
+		if(q.length < 2) return;
+		if(savedSearches.pinned.some(function(x){ return sameSearch(x, q); })) return;
+		if(savedSearches.recent.length && sameSearch(savedSearches.recent[0], q) && savedSearches.recent[0] === q) return;
+		savedSearches.recent = [q].concat(withoutSearch(savedSearches.recent, q)).slice(0, MAX_RECENT_SEARCHES);
+		persistSearches();
+		renderSavedSearchMenu();
+	}
+	var recordTimer = null;
+	function scheduleRecordSearch(){
+		clearTimeout(recordTimer);
+		recordTimer = setTimeout(function(){ recordSearch(document.getElementById("searchInput").value); }, 1500);
+	}
+	function renderSavedSearchMenu(){
+		var menu = document.getElementById("savedSearchMenu");
+		function rows(list, pinned){
+			return list.map(function(q){
+				return '<div class="saved-row">' +
+					'<button type="button" class="saved-q" data-q="' + esc(q) + '" title="Search for &quot;' + esc(q) + '&quot;">' + esc(q) + '</button>' +
+					'<button type="button" class="saved-pin' + (pinned ? ' on' : '') + '" data-pin="' + esc(q) + '" title="' + (pinned ? 'Remove from saved' : 'Save this search') + '">' + (pinned ? '&#9733;' : '&#9734;') + '</button>' +
+					(pinned ? '' : '<button type="button" class="saved-x" data-del="' + esc(q) + '" title="Remove">&times;</button>') +
+				'</div>';
+			}).join("");
+		}
+		var html = "";
+		if(savedSearches.pinned.length) html += '<div class="saved-head">Saved</div>' + rows(savedSearches.pinned, true);
+		if(savedSearches.recent.length) html += '<div class="saved-head">Recent <button type="button" class="saved-clear" data-clear="1">clear</button></div>' + rows(savedSearches.recent, false);
+		if(!html) html = '<div class="saved-empty">Searches you run show up here. Star one to keep it.</div>';
+		menu.innerHTML = html;
+	}
+	function closeSavedMenu(){
+		document.getElementById("savedSearchMenu").classList.remove("open");
+		document.getElementById("savedSearchBtn").setAttribute("aria-expanded", "false");
+	}
+	renderSavedSearchMenu();
+	document.getElementById("savedSearchBtn").addEventListener("click", function(e){
+		e.stopPropagation();
+		var menu = document.getElementById("savedSearchMenu");
+		var open = menu.classList.toggle("open");
+		this.setAttribute("aria-expanded", open ? "true" : "false");
+	});
+	document.getElementById("savedSearchMenu").addEventListener("click", function(e){
+		var t = e.target.closest("button");
+		if(!t) return;
+		e.stopPropagation();
+		if(t.hasAttribute("data-q")){
+			var q = t.getAttribute("data-q");
+			document.getElementById("searchInput").value = q;
+			closeSavedMenu();
+			applyFilters();
+			recordSearch(q);
+			return;
+		}
+		if(t.hasAttribute("data-pin")){
+			var pq = t.getAttribute("data-pin");
+			if(savedSearches.pinned.some(function(x){ return sameSearch(x, pq); })){
+				savedSearches.pinned = withoutSearch(savedSearches.pinned, pq);
+				savedSearches.recent = [pq].concat(withoutSearch(savedSearches.recent, pq)).slice(0, MAX_RECENT_SEARCHES);
+			} else {
+				savedSearches.recent = withoutSearch(savedSearches.recent, pq);
+				savedSearches.pinned = [pq].concat(savedSearches.pinned).slice(0, MAX_SAVED_SEARCHES);
+			}
+		} else if(t.hasAttribute("data-del")){
+			savedSearches.recent = withoutSearch(savedSearches.recent, t.getAttribute("data-del"));
+		} else if(t.hasAttribute("data-clear")){
+			savedSearches.recent = [];
+		}
+		persistSearches();
+		renderSavedSearchMenu();
+	});
+	document.addEventListener("click", function(e){
+		var menu = document.getElementById("savedSearchMenu");
+		if(!menu.classList.contains("open")) return;
+		if(e.target === document.getElementById("savedSearchBtn") || menu.contains(e.target)) return;
+		closeSavedMenu();
+	});
+	document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeSavedMenu(); });
 	document.getElementById("clearSearch").addEventListener("click", function(){
 		document.getElementById("searchInput").value = "";
 		applyFilters();
@@ -2321,12 +2475,12 @@
 		searchScopeBtn.setAttribute("aria-expanded", "false");
 	});
 	["scopeItemName","scopeBaseItem","scopeSeller","scopeExactOnly"].forEach(function(id){
-		document.getElementById(id).addEventListener("change", applyFilters);
+		document.getElementById(id).addEventListener("change", function(){ applyFilters(); });
 	});
 	["fWorld","fBulk","fHideDisplay",
 		"fPriceMin","fPriceMax","fMinStock","fExcludeItems","fExcludeSellers"].forEach(function(id){
-		document.getElementById(id).addEventListener("change", applyFilters);
-		document.getElementById(id).addEventListener("input", applyFilters);
+		document.getElementById(id).addEventListener("change", function(){ applyFilters(); });
+		document.getElementById(id).addEventListener("input", function(){ applyFilters(); });
 	});
 	// These only change what counts toward the average price summary, not
 	// which rows are in `filtered` — re-render just that panel, not the table.

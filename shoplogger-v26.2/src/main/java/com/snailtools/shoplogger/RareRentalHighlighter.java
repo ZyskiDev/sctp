@@ -5,6 +5,7 @@ import com.snailtools.shoplogger.gui.data.MatchUtil;
 import com.snailtools.shoplogger.gui.data.RareRentals;
 import com.snailtools.shoplogger.gui.data.WebDataClient;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -32,6 +33,7 @@ public final class RareRentalHighlighter {
 	public static RareRentalHighlighter getInstance() { return INSTANCE; }
 
 	private static final String CONFIG_ENABLED = "rareRentalHighlight/enabled";
+	private static final String CONFIG_IN_SHULKERS = "rareRentalHighlight/inShulkers";
 	private static final long REFRESH_INTERVAL_MS = 10 * 60 * 1000L; // 10 minutes
 	private static final int HIGHLIGHT_COLOR = 0x55FFD700;
 	private static final int BORDER_COLOR = 0xFFFFD700;
@@ -51,10 +53,23 @@ public final class RareRentalHighlighter {
 		Config.update(CONFIG_ENABLED, value);
 	}
 
+	/** Advanced setting, off by default: also highlight rentable rares inside a shulker box the player has opened. */
+	public static boolean isInShulkersEnabled() {
+		return Config.getOrCreate(CONFIG_IN_SHULKERS, Boolean.class, false);
+	}
+
+	public static void setInShulkersEnabled(boolean value) {
+		Config.update(CONFIG_IN_SHULKERS, value);
+	}
+
 	public void onScreenRender(Screen screen, GuiGraphicsExtractor gui, int mouseX, int mouseY, float delta) {
 		if (!isEnabled()) return;
 		if (!(screen instanceof AbstractContainerScreen<?> containerScreen)) return;
-		if (!ShopScanner.isCurrentShopScreen(containerScreen.getMenu())) return;
+		boolean shopScreen = ShopScanner.isCurrentShopScreen(containerScreen.getMenu());
+		// Advanced setting (off by default): an opened shulker box gets the same
+		// highlights, since rentable rares are often carried around in them.
+		boolean shulkerScreen = containerScreen.getMenu() instanceof ShulkerBoxMenu && isInShulkersEnabled();
+		if (!shopScreen && !shulkerScreen) return;
 
 		maybeRefresh();
 		ShopWorld world = WorldSelection.get();

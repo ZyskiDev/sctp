@@ -68,6 +68,8 @@ public final class WatchlistAlert {
 				.append(Component.literal(entry.itemName() + " (" + entry.priceLabel() + ") at " + entry.seller() + "'s shop  ").withStyle(ChatFormat.RESULT))
 				.append(buildTpButton(entry.world(), entry.containerPos(), entry.seller()))
 				.append(Component.literal("  "))
+				.append(ShopReporter.buildChatButton(ShopReporter.fromEntry(entry)))
+				.append(Component.literal("  "))
 				.append(buildOptionsButton(entry.itemName()))
 				.append(Component.literal("  "))
 				.append(buildRemoveButton(entry.itemName()));

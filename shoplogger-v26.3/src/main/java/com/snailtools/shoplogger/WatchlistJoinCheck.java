@@ -181,6 +181,7 @@ public final class WatchlistJoinCheck {
 		if (pos != null) {
 			msg.append(WatchlistAlert.buildTpButton(best.world, pos, best.seller)).append(Component.literal("  "));
 		}
+		msg.append(ShopReporter.buildChatButton(ShopReporter.fromListing(best))).append(Component.literal("  "));
 		msg.append(WatchlistAlert.buildOptionsButton(watchedName)).append(Component.literal("  "));
 		msg.append(WatchlistAlert.buildRemoveButton(watchedName));
 
