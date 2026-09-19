@@ -154,6 +154,7 @@
 		<h2 class="section">Claim a mapart</h2>
 		<p class="notice" style="margin-bottom:14px;">Found a piece of yours that's listed under the wrong name, or with no artist? Claim it to fix it. Pieces already claimed by someone else can't be taken &mdash; ask a head admin if that's wrong.</p>
 		<input type="text" class="claim-search" id="claimSearch" placeholder="Search unclaimed mapart by title or artist…">
+		<p class="help" id="claimCount" style="color:var(--muted);font-size:13px;margin:0 0 12px;"></p>
 		<div class="claim-list" id="claimList"></div>
 	</div>
 </main>
@@ -300,8 +301,9 @@
 			if(m.claimed || mineIds[m.id]) return false;
 			if(!q) return true;
 			return (m.title || "").toLowerCase().indexOf(q) !== -1 || (m.artist || "").toLowerCase().indexOf(q) !== -1;
-		}).slice(0, 60);
+		});
 		var host = document.getElementById("claimList");
+		document.getElementById("claimCount").textContent = rows.length + " unclaimed mapart" + (rows.length === 1 ? "" : "s");
 		if(!rows.length){ host.innerHTML = '<p class="empty">No unclaimed mapart matches.</p>'; return; }
 		host.innerHTML = rows.map(function(m){
 			return '<div class="claim-card">' +
