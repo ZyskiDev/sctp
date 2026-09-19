@@ -64,6 +64,7 @@
 
 	input[type=number]{width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;}
 	input[type=number]:focus{outline:none;border-color:var(--accent-dim);}
+	.takedown-note{margin-top:10px;background:rgba(226,163,61,0.1);border:1px solid var(--warn);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;}
 	.top-links{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px;}
 	.upload-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;}
 	.upload-card .help{color:var(--muted);font-size:13px;margin:0 0 14px;}
@@ -243,8 +244,12 @@
 						(m.uploaded
 							? '<button type="button" class="btn-danger" data-act="delete">Delete</button>'
 							: '<button type="button" class="btn-danger" data-act="abandon">Abandon</button>') +
+						(m.takedownPending
+							? '<button type="button" class="btn-ghost" data-act="cancel-takedown">Cancel takedown request</button>'
+							: '<button type="button" class="btn-ghost" data-act="takedown" title="Ask for this mapart to be removed from SCTP for good">Request takedown</button>') +
 						'<span class="status" data-role="status"></span>' +
 					'</div>' +
+					(m.takedownPending ? '<div class="takedown-note">Takedown requested &mdash; waiting for a head admin to approve it. Until then the piece stays up.</div>' : '') +
 				'</div>' +
 			'</div>';
 		}).join("") + '</div><p class="empty" id="mineNoMatch" hidden>None of your mapart matches that search.</p>';
@@ -279,6 +284,23 @@
 				if(!confirm("Abandon this mapart? You'll lose the ability to edit it, and it won't be auto-claimed for you again.")) return;
 				authFetch("/mapart/abandon", { method: "POST", body: JSON.stringify({ id: id }) }).then(function(res){
 					if(!res.ok){ setStatus(res.data.error || "Couldn't abandon.", true); return; }
+					loadAll();
+				});
+			});
+			var takedownBtn = card.querySelector('[data-act="takedown"]');
+			if(takedownBtn) takedownBtn.addEventListener("click", function(){
+				if(!confirm("Request a permanent takedown of this mapart?\n\nIf a head admin approves it, the piece is deleted from SCTP and can never be uploaded again (no scan and no upload of the same picture). Until then it stays up.")) return;
+				var reason = prompt("Optional: why do you want it removed? (helps the admin decide)", "");
+				if(reason === null) return;
+				authFetch("/mapart/takedown", { method: "POST", body: JSON.stringify({ id: id, reason: reason }) }).then(function(res){
+					if(!res.ok){ setStatus(res.data.error || "Couldn't send the request.", true); return; }
+					loadAll();
+				});
+			});
+			var cancelTakedownBtn = card.querySelector('[data-act="cancel-takedown"]');
+			if(cancelTakedownBtn) cancelTakedownBtn.addEventListener("click", function(){
+				authFetch("/mapart/takedown/cancel", { method: "POST", body: JSON.stringify({ id: id }) }).then(function(res){
+					if(!res.ok){ setStatus(res.data.error || "Couldn't cancel.", true); return; }
 					loadAll();
 				});
 			});

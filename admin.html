@@ -380,6 +380,14 @@
 
 		<section data-perm="__headAdminOnly__">
 		<details class="section-toggle" open>
+		<summary>Mapart takedown requests <span class="count-badge" id="takedownCountBadge"></span></summary>
+		<div class="meta" style="margin-bottom:8px;">Owners can ask for a mapart they claimed to be removed from SCTP for good. <strong>Approving</strong> deletes it and blocks it from coming back (its map ids and its exact picture). <strong>Denying</strong> leaves it up. The requester is notified either way.</div>
+		<div id="takedownList"></div>
+		</details>
+		</section>
+
+		<section data-perm="__headAdminOnly__">
+		<details class="section-toggle" open>
 		<summary>Mapart <span class="count-badge" id="mapartCountBadge"></span></summary>
 		<div class="meta" style="margin-bottom:8px;">Every scanned mapart. Edit anything, assign it to an account (or clear the claim), or delete it &mdash; deleting also stops scans from re-adding it.</div>
 		<div class="card">
@@ -539,7 +547,7 @@
 		if(hasPerm("suggestions")) suggestions = await api("/admin/suggestions");
 		if(hasPerm("bugReports")) bugReports = await api("/admin/bug-reports");
 		if(hasPerm("playerReports")) playerReports = await api("/admin/player-reports");
-		if(hasPerm("__headAdminOnly__")){ await refreshMapartAdmin(); await refreshVerifLinks(); }
+		if(hasPerm("__headAdminOnly__")){ await refreshMapartAdmin(); await refreshVerifLinks(); await refreshTakedowns(); }
 		render();
 	}
 
@@ -1201,6 +1209,55 @@
 				'</div></div>';
 		}).join("") + (rows.length > 40 ? '<div class="meta">Showing the first 40 of ' + rows.length + ' — narrow the filter to see others.</div>' : '');
 	}
+
+	// ---------------- mapart takedown requests ----------------
+	var takedowns = [];
+
+	function renderTakedowns(){
+		var el = document.getElementById("takedownList");
+		if(!el) return;
+		var pending = takedowns.filter(function(t){ return t.status === "pending"; });
+		document.getElementById("takedownCountBadge").textContent = pending.length ? String(pending.length) : "";
+		if(!takedowns.length){ el.innerHTML = '<div class="empty">No takedown requests.</div>'; return; }
+		el.innerHTML = takedowns.map(function(t){
+			var isPending = t.status === "pending";
+			var badge = isPending ? '<span class="badge">pending</span>' : t.status === "approved" ? '<span class="badge approved">approved</span>' : '<span class="badge">' + esc(t.status) + '</span>';
+			return '<div class="card takedown-card" data-id="' + esc(t.id) + '">' +
+				'<div><strong>' + esc(t.title) + '</strong> ' + badge + '</div>' +
+				'<div class="meta">' + esc(t.world) + (t.artist ? ' &middot; by ' + esc(t.artist) : '') + ' &middot; requested by <strong>' + esc(t.requestedBy || "?") + '</strong>' + (t.requestedByMc ? ' (MC ' + esc(t.requestedByMc) + ')' : '') + ' &middot; ' + esc(new Date(t.createdAt).toLocaleString()) + '</div>' +
+				(t.reason ? '<div style="margin-top:6px;">&ldquo;' + esc(t.reason) + '&rdquo;</div>' : '<div class="meta" style="margin-top:6px;">No reason given.</div>') +
+				(isPending
+					? '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">' +
+						'<button type="button" class="td-approve" style="color:var(--danger);border-color:var(--danger);">Approve &amp; delete forever</button>' +
+						'<button type="button" class="td-deny">Deny</button>' +
+						'<span class="td-status meta"></span></div>'
+					: '<div class="meta" style="margin-top:6px;">' + (t.resolvedAt ? 'resolved ' + esc(new Date(t.resolvedAt).toLocaleString()) : '') + (t.resolvedBy ? ' by ' + esc(t.resolvedBy) : '') + '</div>') +
+			'</div>';
+		}).join("");
+	}
+
+	async function refreshTakedowns(){
+		takedowns = await api("/admin/mapart/takedowns");
+		renderTakedowns();
+	}
+
+	document.addEventListener("click", async function(e){
+		var t = e.target;
+		var isApprove = t.classList && t.classList.contains("td-approve");
+		var isDeny = t.classList && t.classList.contains("td-deny");
+		if(!isApprove && !isDeny) return;
+		var card = t.closest(".takedown-card");
+		var status = card.querySelector(".td-status");
+		if(isApprove && !confirm("Approve this takedown? The mapart is deleted permanently and blocked from ever being uploaded again.")) return;
+		try {
+			status.textContent = "Working…";
+			await api("/admin/mapart/takedowns/resolve", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id: card.getAttribute("data-id"), action: isApprove ? "approve" : "deny" }) });
+			await refreshTakedowns();
+			if(isApprove) await refreshMapartAdmin();
+		} catch(err){
+			status.textContent = "Failed: " + err.message;
+		}
+	});
 
 	async function refreshMapartAdmin(){
 		adminMapart = await api("/admin/mapart");

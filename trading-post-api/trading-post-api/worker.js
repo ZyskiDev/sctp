@@ -86,6 +86,8 @@
 //   POST /mapart/update                      (owner or head admin) body: {id, title?, artist?, whereToBuy?, notForSale?, category?}
 //   POST /mapart/submit                      (verified account) body: {title, world, width, height, png(base64, exactly width*128 x height*128), artist?, category?, whereToBuy?, notForSale?}
 //   POST /mapart/delete-own                  (verified account) body: {id} — only pieces the account uploaded itself
+//   POST /mapart/takedown | /mapart/takedown/cancel   (verified owner) body: {id, reason?} — asks a head admin to delete the piece for good and block re-uploads
+//   GET  /admin/mapart/takedowns, POST /admin/mapart/takedowns/resolve {id, action: approve|deny}   (head admin only)
 //   GET  /store/listings                     (verified account) -> {seller, manual[], scanned[] (read-only), scannedTotal, manualCap}
 //   POST /store/listings/add | /update | /delete   (verified account; manual listings of its own MC username only, max 100)
 //   GET  /admin/mapart, POST /admin/mapart/delete {id}, POST /admin/mapart/assign {id, username}   (head admin only)
@@ -3484,6 +3486,7 @@ async function processMapartGroup(env, world, g, knownNames) {
 
 	const blocked = await env.DB.prepare("SELECT 1 AS x FROM mapartBlocked WHERE world = ? AND leadMapId = ?").bind(world, leadMapId).first();
 	if (blocked) return { leadMapId, status: "skipped", reason: "blocked by an admin" };
+	if (await mapartAnyPartBlocked(env, world, partIds)) return { leadMapId, status: "skipped", reason: "removed at its owner's request" };
 
 	const now = new Date().toISOString();
 	const partSet = new Set(partIds);
@@ -3507,6 +3510,9 @@ async function processMapartGroup(env, world, g, knownNames) {
 	}
 
 	const imageHash = await sha256Hex16(pngBytes);
+	if (await env.DB.prepare("SELECT 1 AS x FROM mapartBlockedImages WHERE imageHash = ?").bind(imageHash).first()) {
+		return { leadMapId, status: "skipped", reason: "removed at its owner's request" };
+	}
 
 	// Same picture, same names, same shape as what's stored (the scanner
 	// re-sends everything nearby each time it's launched): just note it was
@@ -3614,7 +3620,9 @@ async function handleGetMyMapart(request, env) {
 	const auth = await requireVerifiedAccount(request, env);
 	if (!auth.ok) return auth.response;
 	const { results } = await env.DB.prepare("SELECT * FROM maparts WHERE claimedByAccountId = ? ORDER BY title COLLATE NOCASE").bind(auth.admin.id).all();
-	return json(results.map(mapartForOwner));
+	const pending = await env.DB.prepare("SELECT mapartId FROM mapartTakedowns WHERE accountId = ? AND status = 'pending'").bind(auth.admin.id).all();
+	const pendingIds = new Set(pending.results.map((r) => r.mapartId));
+	return json(results.map((m) => ({ ...mapartForOwner(m), takedownPending: pendingIds.has(m.id) })));
 }
 
 async function handleClaimMapart(request, env) {
@@ -3918,6 +3926,93 @@ async function handleStoreDeleteListing(request, env) {
 	return json({ ok: true });
 }
 
+// ---------------- takedown requests ----------------
+// A verified owner can ask for a piece they claimed to be removed from SCTP for
+// good. A head admin has to approve it; on approval the piece is deleted and
+// every way it could come back is blocked: its lead map, all of its map ids,
+// and its exact picture (so a re-scan under other ids or a portal upload of
+// the same image is refused too).
+async function mapartAnyPartBlocked(env, world, partIds) {
+	for (const chunk of chunkArray(partIds, MAX_QUERY_PARAMS_PER_CHUNK - 1)) {
+		const placeholders = chunk.map(() => "?").join(",");
+		const row = await env.DB.prepare(`SELECT 1 AS x FROM mapartBlockedParts WHERE world = ? AND mapId IN (${placeholders}) LIMIT 1`).bind(world, ...chunk).first();
+		if (row) return true;
+	}
+	return false;
+}
+
+// body: {id (mapart id), reason?}
+async function handleRequestMapartTakedown(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(String(body.id || "")).first();
+	if (!m || m.claimedByAccountId !== auth.admin.id) return json({ error: "You can only request a takedown of mapart you've claimed." }, 403);
+	const existing = await env.DB.prepare("SELECT 1 AS x FROM mapartTakedowns WHERE mapartId = ? AND status = 'pending'").bind(m.id).first();
+	if (existing) return json({ error: "A takedown request for this mapart is already waiting for approval." }, 409);
+	const reason = String(body.reason || "").trim().slice(0, 500);
+	await env.DB.prepare(
+		"INSERT INTO mapartTakedowns (id, mapartId, accountId, title, artist, world, leadMapId, imageHash, reason, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)"
+	).bind(newId(), m.id, auth.admin.id, m.title, m.artist || null, m.world, m.leadMapId, m.imageHash || null, reason || null, new Date().toISOString()).run();
+	return json({ ok: true });
+}
+
+// body: {id (mapart id)}
+async function handleCancelMapartTakedown(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const res = await env.DB.prepare(
+		"UPDATE mapartTakedowns SET status = 'cancelled', resolvedAt = ? WHERE mapartId = ? AND accountId = ? AND status = 'pending'"
+	).bind(new Date().toISOString(), String(body.id || ""), auth.admin.id).run();
+	if (res.meta.changes === 0) return json({ error: "No pending request to cancel." }, 404);
+	return json({ ok: true });
+}
+
+async function handleAdminListTakedowns(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	const { results } = await env.DB.prepare(
+		`SELECT t.*, a.username AS requestedBy, a.mcUsername AS requestedByMc FROM mapartTakedowns t LEFT JOIN admins a ON a.id = t.accountId
+		 ORDER BY (t.status = 'pending') DESC, COALESCE(t.resolvedAt, t.createdAt) DESC LIMIT 150`
+	).all();
+	return json(results);
+}
+
+// body: {id (takedown id), action: "approve" | "deny"}
+async function handleAdminResolveTakedown(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const action = String(body.action || "");
+	if (action !== "approve" && action !== "deny") return json({ error: "action must be approve or deny" }, 400);
+	const t = await env.DB.prepare("SELECT * FROM mapartTakedowns WHERE id = ?").bind(String(body.id || "")).first();
+	if (!t) return json({ error: "Request not found" }, 404);
+	if (t.status !== "pending") return json({ error: "That request was already resolved." }, 409);
+	const now = new Date().toISOString();
+	const who = auth.admin ? auth.admin.username : "master";
+
+	if (action === "approve") {
+		const stmts = [];
+		if (t.leadMapId > 0) stmts.push(env.DB.prepare("INSERT OR REPLACE INTO mapartBlocked (world, leadMapId, blockedAt) VALUES (?, ?, ?)").bind(t.world, t.leadMapId, now));
+		const { results: parts } = await env.DB.prepare("SELECT mapId FROM mapartParts WHERE mapartId = ?").bind(t.mapartId).all();
+		for (const r of parts) stmts.push(env.DB.prepare("INSERT OR IGNORE INTO mapartBlockedParts (world, mapId) VALUES (?, ?)").bind(t.world, r.mapId));
+		if (t.imageHash) stmts.push(env.DB.prepare("INSERT OR IGNORE INTO mapartBlockedImages (imageHash, blockedAt) VALUES (?, ?)").bind(t.imageHash, now));
+		for (const chunk of chunkArray(stmts, 90)) await env.DB.batch(chunk);
+		const m = await env.DB.prepare("SELECT id FROM maparts WHERE id = ?").bind(t.mapartId).first();
+		if (m) await deleteMapartRow(env, m.id);
+	}
+	await env.DB.prepare("UPDATE mapartTakedowns SET status = ?, resolvedAt = ?, resolvedBy = ? WHERE id = ?")
+		.bind(action === "approve" ? "approved" : "denied", now, who, t.id).run();
+	await notifyAccount(env, t.accountId, "mapartTakedown", action === "approve"
+		? `Your takedown request for "${t.title}" was approved — it has been removed and can't be uploaded to SCTP again.`
+		: `Your takedown request for "${t.title}" was denied — the mapart stays up.`, null);
+	return json({ ok: true, status: action === "approve" ? "approved" : "denied" });
+}
+
 // ---------------- hand-uploaded mapart (verified accounts) ----------------
 const MAPART_UPLOAD_MAX_GRID = 10;
 const MAPART_MAX_UPLOADS_PER_ACCOUNT = 100;
@@ -3966,6 +4061,9 @@ async function handleSubmitMapart(request, env) {
 		return json({ error: `You've reached the limit of ${MAPART_MAX_UPLOADS_PER_ACCOUNT} uploaded mapart — delete one first.` }, 400);
 	}
 	const imageHash = await sha256Hex16(pngBytes);
+	if (await env.DB.prepare("SELECT 1 AS x FROM mapartBlockedImages WHERE imageHash = ?").bind(imageHash).first()) {
+		return json({ error: "That picture was removed from SCTP at its owner's request and can't be uploaded again." }, 403);
+	}
 	const dup = await env.DB.prepare("SELECT title, slug FROM maparts WHERE imageHash = ? LIMIT 1").bind(imageHash).first();
 	if (dup) return json({ error: `That exact picture is already in the gallery as "${dup.title}".`, slug: dup.slug }, 409);
 
@@ -4220,6 +4318,10 @@ const ROUTES = [
 	["POST", "/mapart/abandon", handleAbandonMapart],
 	["POST", "/mapart/submit", handleSubmitMapart],
 	["POST", "/mapart/delete-own", handleDeleteOwnMapart],
+	["POST", "/mapart/takedown", handleRequestMapartTakedown],
+	["POST", "/mapart/takedown/cancel", handleCancelMapartTakedown],
+	["GET", "/admin/mapart/takedowns", handleAdminListTakedowns],
+	["POST", "/admin/mapart/takedowns/resolve", handleAdminResolveTakedown],
 	["GET", "/store/listings", handleStoreListings],
 	["POST", "/store/listings/add", handleStoreAddListings],
 	["POST", "/store/listings/update", handleStoreUpdateListing],
