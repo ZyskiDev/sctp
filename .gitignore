@@ -11,3 +11,5 @@ shoplogger-neoforge-*/*.log
 trading-post-api/**/.wrangler/
 .vscode/
 /tips/
+mapart-scanner-*/build/
+mapart-scanner-*/.gradle/

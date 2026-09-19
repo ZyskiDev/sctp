@@ -59,6 +59,7 @@
 	}
 	.item-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 	.item-tab:hover{color:var(--text);}
+	a.item-tab{text-decoration:none;display:inline-block;}
 
 	.item-search{
 		width:100%;max-width:360px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
@@ -121,6 +122,7 @@
 	<div class="item-tabs">
 		<button type="button" class="item-tab active" id="tabVanilla">Vanilla Items</button>
 		<button type="button" class="item-tab" id="tabRare">Rare Items</button>
+		<a class="item-tab" href="/mapart/">Mapart</a>
 	</div>
 
 	<div id="vanillaPane">
@@ -305,6 +307,7 @@
 	}
 	document.getElementById("tabVanilla").addEventListener("click", function(){ switchTab("vanilla"); });
 	document.getElementById("tabRare").addEventListener("click", function(){ switchTab("rare"); });
+	if(location.hash === "#rare") switchTab("rare");
 
 	loadVanillaItems();
 })();

@@ -1,0 +1,22 @@
+{
+	"schemaVersion": 1,
+	"id": "mapartscanner",
+	"version": "${version}",
+	"name": "Mapart Scanner (temporary)",
+	"description": "Throwaway helper that scans item-frame maparts and uploads them to the SCTP mapart catalog. Off by default; toggle with the \\ key.",
+	"authors": ["SCTP"],
+	"contact": {},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.snailtools.mapartscanner.MapartScannerClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"fabric-api": "*",
+		"minecraft": ">=26.2",
+		"java": ">=25"
+	}
+}

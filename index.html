@@ -325,6 +325,14 @@
 	td.item-name{font-weight:600;color:var(--text);white-space:normal;}
 	td.item-icon{padding-right:0;}
 	td.item-icon img{width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;display:block;}
+	/* Scanned mapart: the whole stitched picture in place of the item icon;
+	   click to zoom (see openMapartZoom). */
+	td.item-icon.mapart-icon{padding-right:8px;}
+	.mapart-thumb{position:relative;display:inline-block;cursor:zoom-in;line-height:0;}
+	td.item-icon .mapart-thumb img{width:auto;height:auto;max-width:110px;max-height:76px;border-radius:4px;border:1px solid var(--line);background:#0C140F;}
+	.mapart-thumb .spy{position:absolute;right:2px;bottom:2px;font-size:11px;line-height:1;background:rgba(16,27,20,0.85);border:1px solid var(--line);border-radius:999px;padding:2px 4px;}
+	.mapart-zoom{position:fixed;inset:0;background:rgba(6,10,7,0.92);z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;}
+	.mapart-zoom img{max-width:96vw;max-height:94vh;image-rendering:pixelated;display:block;}
 	td.base-item, td.position{font-family:var(--font-mono);color:var(--muted);font-size:12.5px;}
 	td.seller{color:var(--shell);}
 	.badge{
@@ -1691,15 +1699,19 @@
 				? 'None ('+esc(r.lastSeen)+')'+manualIcon("Added manually by an admin — there's no real scan time for this listing.")
 				: relTime(r.lastSeen);
 			var itemUrl = itemLibraryUrlFor(r);
-			var itemNameHtml = itemUrl
-				? '<a href="'+esc(itemUrl)+'">'+esc(r.itemNameDisplay)+'</a>'
-				: esc(r.itemNameDisplay);
+			var itemNameHtml = r.mapart
+				? '<a href="/mapart/'+encodeURIComponent(r.mapart.slug)+'">'+esc(r.itemNameDisplay)+'</a>'
+				: itemUrl
+					? '<a href="'+esc(itemUrl)+'">'+esc(r.itemNameDisplay)+'</a>'
+					: esc(r.itemNameDisplay);
 			var typeCell = r.marketplace
 				? '<span class="badge marketplace">'+(r.marketplaceType === "lookingFor" ? "Wanted (Marketplace)" : "Marketplace")+'</span>'
 				: (r.bulk ? '<span class="badge bulk">Bulk</span>' : r.bundled ? '<span class="badge bundled">Bundled</span>' : '<span class="badge single">Single</span>')+
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '');
 			html += '<tr'+(r.marketplace ? ' class="marketplace-row"' : '')+'>'+
-				'<td class="item-icon"><img src="'+esc(iconFor(r))+'" alt="" loading="lazy" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';"></td>'+
+				(r.mapart
+				? '<td class="item-icon mapart-icon"><span class="mapart-thumb" data-mapart-src="'+esc(mapartImgUrl(r.mapart))+'" title="Click to zoom"><img src="'+esc(mapartImgUrl(r.mapart))+'" alt="" loading="lazy"><span class="spy">&#128269;</span></span></td>'
+				: '<td class="item-icon"><img src="'+esc(iconFor(r))+'" alt="" loading="lazy" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';"></td>')+
 				'<td class="item-name">'+itemNameHtml+rareIcon+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
 				'<td>'+typeCell+'</td>'+
@@ -1827,6 +1839,24 @@
 
 	// ---------------- toast ----------------
 	var toastTimer = null;
+	function mapartImgUrl(m){
+		return API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || "");
+	}
+	function openMapartZoom(src){
+		var ov = document.createElement("div");
+		ov.className = "mapart-zoom";
+		ov.innerHTML = '<img src="' + esc(src) + '" alt="">';
+		ov.addEventListener("click", function(){ ov.remove(); });
+		document.body.appendChild(ov);
+	}
+	document.addEventListener("click", function(e){
+		var t = e.target.closest ? e.target.closest(".mapart-thumb") : null;
+		if(t) openMapartZoom(t.getAttribute("data-mapart-src"));
+	});
+	document.addEventListener("keydown", function(e){
+		if(e.key === "Escape"){ var z = document.querySelector(".mapart-zoom"); if(z) z.remove(); }
+	});
+
 	function showToast(msg){
 		var t = document.getElementById("toast");
 		t.textContent = msg;
@@ -2035,7 +2065,7 @@
 		var itemHtml = itemUrl ? '<a href="'+esc(itemUrl)+'">'+esc(row.itemNameDisplay)+'</a>' : esc(row.itemNameDisplay);
 		var priceSubHtml = row.marketplace ? '' : '<div class="share-hero-price-sub">per '+esc(row.bulk ? 'shulk' : row.stackSize)+'</div>';
 		document.getElementById("shareHero").innerHTML =
-			'<img src="'+esc(iconFor(row))+'" alt="" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';">'+
+			'<img src="'+esc(row.mapart ? mapartImgUrl(row.mapart) : iconFor(row))+'" alt="" onerror="this.onerror=null;this.src=\''+PLACEHOLDER_ICON_JS+'\';">'+
 			'<div class="share-hero-info">'+
 				'<div class="share-hero-name">'+itemHtml+'</div>'+
 				'<div class="share-hero-price">'+esc(row.priceLabel)+'</div>'+

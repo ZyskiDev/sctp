@@ -71,6 +71,22 @@
 //     currently wired up to the frontend (see /account/register/direct), but left
 //     intact so it's a frontend swap, not a rebuild, to turn verification back on.
 //
+// Mapart catalog (see 0017_mapart.sql). Scanned item-frame maparts come from the
+// temporary mapart-scanner mod; owners (verified accounts that have claimed a piece)
+// and head admins manage them.
+//   GET  /mapart                             (public, cached) -> every mapart
+//   GET  /mapart/by-slug?slug=               (public, resolves old slugs too) -> one mapart
+//   GET  /mapart/image?id=                   (public) -> the stitched PNG from R2
+//   POST /mapart/upload                      (API_KEY) body: {world, maps:[{leadMapId, rawName, width, height, partMapIds, png(base64)}]}
+//   GET  /mapart/mine                        (verified account) -> its claimed maparts
+//   POST /mapart/claim | /mapart/abandon     (verified account) body: {id}
+//   POST /mapart/update                      (owner or head admin) body: {id, title?, artist?, whereToBuy?, notForSale?, category?}
+//   GET  /admin/mapart, POST /admin/mapart/delete {id}, POST /admin/mapart/assign {id, username}   (head admin only)
+// Verification links — single-use, expiring, head-admin generated:
+//   POST /admin/verification-links/create {mcUsername, days?}, GET /admin/verification-links, POST /admin/verification-links/revoke {token}   (head admin only)
+//   GET  /verify-link/info?token=            (public) -> {mcUsername, expiresAt}
+//   POST /verify-link/redeem                 (public) body: {token, mode: "register"|"link", username?, password} -> session
+//
 // Permission bucket "reports":
 //   GET  /admin/reports
 //   POST /admin/reports/resolve              body: {id, action: "approve"|"deny"|"edit", field?, value?}
@@ -373,18 +389,20 @@ function buildListingUpsertStmt(env, key, r) {
 	// a listing that gets re-uploaded/updated keeps the same shareable id.
 	const availableSince = r.submittedAt || new Date().toISOString();
 	return env.DB.prepare(
-		`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen, availableSince, missingStreak)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+		`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen, availableSince, mapId, missingStreak)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 		 ON CONFLICT(rowKey) DO UPDATE SET
 		   itemName=excluded.itemName, baseItem=excluded.baseItem, bulk=excluded.bulk, bundled=excluded.bundled,
 		   mixedContents=excluded.mixedContents, price=excluded.price, priceLabel=excluded.priceLabel,
 		   stackSize=excluded.stackSize, amount=excluded.amount, stacksInStock=excluded.stacksInStock,
 		   currency=excluded.currency, seller=excluded.seller, world=excluded.world,
-		   position=excluded.position, lastSeen=excluded.lastSeen, missingStreak=0`
+		   position=excluded.position, lastSeen=excluded.lastSeen, missingStreak=0,
+		   mapId=COALESCE(excluded.mapId, listings.mapId)`
 	).bind(
 		key, newId(), r.itemName, r.baseItem, r.bulk ? 1 : 0, r.bundled ? 1 : 0, r.mixedContents ? 1 : 0,
 		r.price, r.priceLabel, r.stackSize, r.amount, r.stacksInStock,
-		r.currency, r.seller, r.world, r.position, r.lastSeen, availableSince
+		r.currency, r.seller, r.world, r.position, r.lastSeen, availableSince,
+		Number.isInteger(r.mapId) ? r.mapId : null
 	);
 }
 
@@ -589,9 +607,17 @@ async function handleAdminSetMc(request, env) {
 	const mcUsername = body.mcUsername ? String(body.mcUsername).trim() : null;
 	const mcVerified = body.mcVerified === true;
 
+	if (mcVerified && mcUsername) {
+		const holder = await env.DB.prepare(
+			"SELECT id FROM admins WHERE mcVerified = 1 AND id != ? AND lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))"
+		).bind(id, mcUsername).first();
+		if (holder) return json({ error: "Another account is already verified as that Minecraft username." }, 409);
+	}
+
 	const res = await env.DB.prepare("UPDATE admins SET mcUsername = ?, mcVerified = ? WHERE id = ?")
 		.bind(mcUsername, mcVerified ? 1 : 0, id).run();
 	if (res.meta.changes === 0) return json({ error: "Account not found" }, 404);
+	if (mcVerified && mcUsername) await mapartAutoClaimSweep(env, id, mcUsername);
 	return json({ ok: true });
 }
 
@@ -1090,6 +1116,9 @@ async function handleUploadListings(request, env) {
 
 		if (stmts.length > 0) await env.DB.batch(stmts);
 
+		// No-op until the shop scanner starts sending mapId (see 0017_mapart.sql).
+		removed += await mergeMapartListings(env, validRows);
+
 		if (added === 0 && updated === 0 && removed === 0) {
 			return json({ added: 0, updated: 0, skipped, removed: 0, committed: false });
 		}
@@ -1108,7 +1137,10 @@ async function handleGetListings(request, env, ctx) {
 		const { results } = await env.DB.prepare(
 			"SELECT * FROM listings WHERE lower(seller) NOT IN (SELECT usernameKey FROM blockedSellers)"
 		).all();
-		const shopRows = results.map((r) => ({ ...r, bulk: !!r.bulk, bundled: !!r.bundled, mixedContents: !!r.mixedContents }));
+		const shopRows = await attachMapartToListings(
+			env,
+			results.map((r) => ({ ...r, bulk: !!r.bulk, bundled: !!r.bundled, mixedContents: !!r.mixedContents }))
+		);
 		// Active marketplace posts (selling AND lookingFor) are merged straight
 		// into the same array everything already reads — the site's listings
 		// table/search, item pages, and the mod's /search + watchlist check all
@@ -3022,6 +3054,619 @@ async function handleAdminSnapshots(request, env) {
 	return json({ dates });
 }
 
+// ---------------- mapart ----------------
+
+const MAPART_CATEGORIES = ["Pets", "Anime", "Art", "Memes", "Photography", "Letters", "Fandom", "Misc", "Flags"];
+const MAPART_WORLDS = ["Firefly", "Honeybee"];
+const MAPART_MAX_PNG_BYTES = 4 * 1024 * 1024;
+const MAPART_MAX_GROUPS_PER_UPLOAD = 40;
+const MAPART_MAX_GRID = 20;
+// /mapart/<slug> is served by 404.html's router unless a real folder exists
+// there — these slugs would collide with real static paths.
+const MAPART_RESERVED_SLUGS = new Set(["manage", "index", "image"]);
+const VERIFICATION_LINK_BASE_URL = "https://sctp.nl/verify-link/?t=";
+
+function mapartSlugify(title) {
+	let s = String(title || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
+		.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60).replace(/-+$/, "");
+	if (!s) s = "mapart";
+	if (MAPART_RESERVED_SLUGS.has(s)) s += "-art";
+	return s;
+}
+
+// Picks a slug nobody else owns (own old slugs count as free) and records it
+// in mapartSlugs — old slugs are never removed so old links keep resolving.
+async function assignMapartSlug(env, mapartId, title) {
+	const base = mapartSlugify(title);
+	let slug = null;
+	for (let i = 1; i < 200 && !slug; i++) {
+		const cand = i === 1 ? base : `${base}-${i}`;
+		const row = await env.DB.prepare("SELECT mapartId FROM mapartSlugs WHERE slug = ?").bind(cand).first();
+		if (!row || row.mapartId === mapartId) slug = cand;
+	}
+	if (!slug) slug = `${base}-${mapartId.slice(0, 8)}`;
+	await env.DB.prepare("INSERT OR IGNORE INTO mapartSlugs (slug, mapartId) VALUES (?, ?)").bind(slug, mapartId).run();
+	return slug;
+}
+
+function mapartNormKey(s) {
+	return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Usernames worth recognising inside a map's name: every seller that has
+// ever had a listing, plus every registered account's login/MC username.
+let mapartKnownNamesCache = { at: 0, names: [] };
+async function getMapartKnownNames(env) {
+	if (Date.now() - mapartKnownNamesCache.at < 5 * 60 * 1000 && mapartKnownNamesCache.names.length) return mapartKnownNamesCache.names;
+	const names = new Map();
+	const add = (n) => {
+		const bare = String(n || "").replace(/^\./, "");
+		if (bare.length >= 3 && isValidUsername(bare)) names.set(bare.toLowerCase(), bare);
+	};
+	const sellers = await env.DB.prepare("SELECT DISTINCT seller FROM listings").all();
+	for (const r of sellers.results) add(r.seller);
+	const accounts = await env.DB.prepare("SELECT username, mcUsername FROM admins").all();
+	for (const r of accounts.results) { add(r.username); add(r.mcUsername); }
+	mapartKnownNamesCache = { at: Date.now(), names: [...names.values()] };
+	return mapartKnownNamesCache.names;
+}
+
+// Finds a known username in the map's raw name as a whole token (case-
+// insensitive). Longest match wins; a name right after "by" beats a longer
+// one that isn't ("Sunset by Steve" shouldn't credit a user called "Sunset").
+function findMapartArtist(rawName, knownNames) {
+	const norm = " " + String(rawName || "").toLowerCase().replace(/[^a-z0-9_]+/g, " ") + " ";
+	let best = null, bestScore = -1;
+	for (const name of knownNames) {
+		const needle = " " + name.toLowerCase() + " ";
+		const idx = norm.indexOf(needle);
+		if (idx === -1) continue;
+		const afterBy = /\b(by|from)\s$/.test(norm.slice(0, idx + 1));
+		const score = name.length + (afterBy ? 100 : 0);
+		if (score > bestScore) { best = name; bestScore = score; }
+	}
+	return best;
+}
+
+// Title = the leading map's name minus symbols and minus the artist/seller.
+function deriveMapartTitle(rawName, artist) {
+	let t = " " + String(rawName || "").replace(/[^\p{L}\p{N}_\s]+/gu, " ") + " ";
+	if (artist) {
+		const esc = artist.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		t = t.replace(new RegExp("(\\s)" + esc + "(?=\\s)", "gi"), " ");
+	}
+	t = t.replace(/_+/g, " ").replace(/\s+/g, " ").trim();
+	t = t.replace(/\s+(made\s+by|created\s+by|art\s+by|by|from)$/i, "").trim();
+	return t.slice(0, 100) || "Untitled mapart";
+}
+
+function resolveMapartWhereToBuy(m) {
+	if (m.notForSale) return null;
+	if (m.whereToBuy) return m.whereToBuy;
+	return m.artist ? `/shop ${m.artist}` : null;
+}
+
+function mapartPublic(m) {
+	return {
+		id: m.id, slug: m.slug, title: m.title, artist: m.artist || null,
+		whereToBuy: resolveMapartWhereToBuy(m), notForSale: !!m.notForSale,
+		category: m.category || null, world: m.world, width: m.width, height: m.height,
+		imageHash: m.imageHash || null, claimed: !!m.claimedByAccountId,
+		updatedAt: m.updatedAt, lastSeen: m.lastSeen,
+	};
+}
+
+function mapartForOwner(m) {
+	return { ...mapartPublic(m), whereToBuyCustom: m.whereToBuy || "", claimedAt: m.claimedAt || null };
+}
+
+async function deleteMapartRow(env, id) {
+	await env.DB.batch([
+		env.DB.prepare("DELETE FROM mapartParts WHERE mapartId = ?").bind(id),
+		env.DB.prepare("DELETE FROM mapartSlugs WHERE mapartId = ?").bind(id),
+		env.DB.prepare("DELETE FROM maparts WHERE id = ?").bind(id),
+	]);
+	try { await env.SNAPSHOTS.delete(`mapart/${id}.png`); } catch (e) { /* image already gone */ }
+}
+
+// A verified account owns every not-yet-claimed mapart whose decoded
+// artist is its MC username (unless the previous owner explicitly abandoned
+// it — autoClaimBlocked). Only ever runs for verified accounts.
+async function mapartAutoClaimSweep(env, accountId, mcUsername) {
+	if (!mcUsername) return 0;
+	const res = await env.DB.prepare(
+		"UPDATE maparts SET claimedByAccountId = ?, claimedAt = ? WHERE claimedByAccountId IS NULL AND autoClaimBlocked = 0 AND artist IS NOT NULL AND lower(ltrim(artist, '.')) = lower(ltrim(?, '.'))"
+	).bind(accountId, new Date().toISOString(), mcUsername).run();
+	return res.meta.changes;
+}
+
+async function requireVerifiedAccount(request, env) {
+	const base = await requireAnyAdmin(request, env);
+	if (!base.ok) return base;
+	if (!base.admin.mcVerified || !base.admin.mcUsername) {
+		return { ok: false, response: json({ error: "Your account isn't verified yet — ask a head admin for a verification link." }, 403) };
+	}
+	return base;
+}
+
+async function findMapartOverlaps(env, world, partIds) {
+	const ids = new Set();
+	for (const chunk of chunkArray(partIds, MAX_QUERY_PARAMS_PER_CHUNK - 1)) {
+		const placeholders = chunk.map(() => "?").join(",");
+		const { results } = await env.DB.prepare(
+			`SELECT DISTINCT mapartId FROM mapartParts WHERE world = ? AND mapId IN (${placeholders})`
+		).bind(world, ...chunk).all();
+		for (const r of results) ids.add(r.mapartId);
+	}
+	return [...ids];
+}
+
+function readPngSize(bytes) {
+	const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+	if (bytes.length < 24) return null;
+	for (let i = 0; i < 8; i++) if (bytes[i] !== sig[i]) return null;
+	const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	return { width: dv.getUint32(16), height: dv.getUint32(20) };
+}
+
+async function sha256Hex16(bytes) {
+	const digest = await crypto.subtle.digest("SHA-256", bytes);
+	return bufToHex(digest).slice(0, 16);
+}
+
+// POST /mapart/upload — from the (temporary) mapart scanner mod; gated by
+// the same shared API_KEY every other mod upload uses. Each entry is one
+// complete rectangle of item frames, already stitched into one PNG.
+async function handleUploadMapart(request, env) {
+	if (!isAuthorized(request, env.API_KEY)) return json({ error: "Unauthorized" }, 401);
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const world = String(body.world || "");
+	if (!MAPART_WORLDS.includes(world)) return json({ error: "world must be Firefly or Honeybee" }, 400);
+	const maps = Array.isArray(body.maps) ? body.maps : [];
+	if (maps.length === 0 || maps.length > MAPART_MAX_GROUPS_PER_UPLOAD) {
+		return json({ error: `maps must contain 1-${MAPART_MAX_GROUPS_PER_UPLOAD} entries` }, 400);
+	}
+
+	const knownNames = await getMapartKnownNames(env);
+	const results = [];
+	for (const g of maps) {
+		try {
+			results.push(await processMapartGroup(env, world, g, knownNames));
+		} catch (e) {
+			results.push({ leadMapId: g && g.leadMapId, status: "error", error: String(e) });
+		}
+	}
+	return json({ ok: true, results });
+}
+
+async function processMapartGroup(env, world, g, knownNames) {
+	const leadMapId = g.leadMapId;
+	const width = g.width, height = g.height;
+	if (!Number.isInteger(leadMapId) || !Number.isInteger(width) || !Number.isInteger(height)
+		|| width < 1 || height < 1 || width > MAPART_MAX_GRID || height > MAPART_MAX_GRID) {
+		return { leadMapId, status: "skipped", reason: "bad dimensions" };
+	}
+	const partIds = [...new Set((Array.isArray(g.partMapIds) ? g.partMapIds : []).filter(Number.isInteger))];
+	if (partIds.length !== width * height || !partIds.includes(leadMapId)) {
+		return { leadMapId, status: "skipped", reason: "partMapIds must cover the full rectangle and include the lead map" };
+	}
+	// Legacy section-sign colour/format codes can survive in a custom name.
+	const rawName = String(g.rawName || "").replace(/§./g, "").slice(0, 200);
+
+	let pngBytes;
+	try { pngBytes = Uint8Array.from(atob(String(g.png || "")), (c) => c.charCodeAt(0)); } catch (e) {
+		return { leadMapId, status: "skipped", reason: "png isn't valid base64" };
+	}
+	if (pngBytes.length > MAPART_MAX_PNG_BYTES) return { leadMapId, status: "skipped", reason: "png too large" };
+	const size = readPngSize(pngBytes);
+	if (!size || size.width !== width * 128 || size.height !== height * 128) {
+		return { leadMapId, status: "skipped", reason: "png missing or wrong size for the grid" };
+	}
+
+	const blocked = await env.DB.prepare("SELECT 1 AS x FROM mapartBlocked WHERE world = ? AND leadMapId = ?").bind(world, leadMapId).first();
+	if (blocked) return { leadMapId, status: "skipped", reason: "blocked by an admin" };
+
+	const now = new Date().toISOString();
+	const partSet = new Set(partIds);
+	const existingLead = await env.DB.prepare("SELECT * FROM maparts WHERE world = ? AND leadMapId = ?").bind(world, leadMapId).first();
+
+	// Work out how this rectangle relates to whatever's already stored.
+	const merges = [];
+	for (const otherId of await findMapartOverlaps(env, world, partIds)) {
+		if (existingLead && otherId === existingLead.id) continue;
+		const other = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(otherId).first();
+		if (!other) continue;
+		const { results: otherParts } = await env.DB.prepare("SELECT mapId FROM mapartParts WHERE mapartId = ?").bind(otherId).all();
+		if (otherParts.every((p) => partSet.has(p.mapId))) merges.push(other);
+		else return { leadMapId, status: "skipped", reason: "overlaps a different, larger mapart" };
+	}
+	if (existingLead) {
+		const { results: oldParts } = await env.DB.prepare("SELECT mapId FROM mapartParts WHERE mapartId = ?").bind(existingLead.id).all();
+		if (!oldParts.every((p) => partSet.has(p.mapId))) {
+			return { leadMapId, status: "skipped", reason: "already stored as a larger mapart" };
+		}
+	}
+
+	const imageHash = await sha256Hex16(pngBytes);
+	let id, status;
+	if (existingLead) {
+		id = existingLead.id;
+		status = "updated";
+		const freeToRederive = !existingLead.locked && !existingLead.claimedByAccountId;
+		const artist = freeToRederive ? findMapartArtist(rawName, knownNames) : existingLead.artist;
+		const title = freeToRederive ? deriveMapartTitle(rawName, artist) : existingLead.title;
+		const slug = title !== existingLead.title ? await assignMapartSlug(env, id, title) : existingLead.slug;
+		await env.DB.prepare(
+			"UPDATE maparts SET rawName = ?, title = ?, artist = ?, slug = ?, width = ?, height = ?, imageHash = ?, updatedAt = ?, lastSeen = ? WHERE id = ?"
+		).bind(rawName, title, artist, slug, width, height, imageHash, now, now, id).run();
+	} else {
+		id = crypto.randomUUID();
+		status = "created";
+		const artist = findMapartArtist(rawName, knownNames);
+		const title = deriveMapartTitle(rawName, artist);
+		const slug = await assignMapartSlug(env, id, title);
+		await env.DB.prepare(
+			"INSERT INTO maparts (id, slug, world, leadMapId, rawName, title, artist, width, height, imageHash, createdAt, updatedAt, lastSeen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		).bind(id, slug, world, leadMapId, rawName, title, artist, width, height, imageHash, now, now, now).run();
+	}
+
+	// Earlier scans that caught only part of this piece get folded in — their
+	// claim/edits carry over to the (still unclaimed / unedited) leading entry.
+	for (const other of merges) {
+		const cur = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(id).first();
+		if (!cur.claimedByAccountId && other.claimedByAccountId) {
+			await env.DB.prepare(
+				"UPDATE maparts SET claimedByAccountId = ?, claimedAt = ?, category = COALESCE(category, ?), whereToBuy = COALESCE(whereToBuy, ?), notForSale = MAX(notForSale, ?), autoClaimBlocked = ? WHERE id = ?"
+			).bind(other.claimedByAccountId, other.claimedAt, other.category, other.whereToBuy, other.notForSale, other.autoClaimBlocked, id).run();
+			if (other.locked) {
+				const slug = other.title !== cur.title ? await assignMapartSlug(env, id, other.title) : cur.slug;
+				await env.DB.prepare("UPDATE maparts SET title = ?, artist = ?, slug = ?, locked = 1 WHERE id = ?").bind(other.title, other.artist, slug, id).run();
+			}
+		}
+		await env.DB.prepare("UPDATE mapartSlugs SET mapartId = ? WHERE mapartId = ?").bind(id, other.id).run();
+		await deleteMapartRow(env, other.id);
+	}
+
+	await env.DB.batch([
+		env.DB.prepare("DELETE FROM mapartParts WHERE mapartId = ?").bind(id),
+		...partIds.map((mapId) => env.DB.prepare("INSERT OR REPLACE INTO mapartParts (world, mapId, mapartId) VALUES (?, ?, ?)").bind(world, mapId, id)),
+	]);
+	await env.SNAPSHOTS.put(`mapart/${id}.png`, pngBytes, { httpMetadata: { contentType: "image/png" } });
+
+	// Auto-claim for a verified account whose MC username is the artist.
+	const fresh = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(id).first();
+	if (!fresh.claimedByAccountId && !fresh.autoClaimBlocked && fresh.artist) {
+		const acct = await env.DB.prepare(
+			"SELECT id FROM admins WHERE mcVerified = 1 AND lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))"
+		).bind(fresh.artist).first();
+		if (acct) await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ? WHERE id = ?").bind(acct.id, now, id).run();
+	}
+	return { leadMapId, status: merges.length ? "merged" : status, id, slug: fresh.slug, mergedParts: merges.length };
+}
+
+async function handleGetMapart(request, env, ctx) {
+	return cachedGet(request, ctx, CACHE_TTL_SECONDS, async () => {
+		const { results } = await env.DB.prepare("SELECT * FROM maparts ORDER BY title COLLATE NOCASE").all();
+		return results.map(mapartPublic);
+	});
+}
+
+// Resolves either a current or an old slug.
+async function handleGetMapartBySlug(request, env, ctx) {
+	return cachedGet(request, ctx, 60, async () => {
+		const slug = (new URL(request.url).searchParams.get("slug") || "").toLowerCase();
+		const link = await env.DB.prepare("SELECT mapartId FROM mapartSlugs WHERE slug = ?").bind(slug).first();
+		if (!link) return { error: "Not found" };
+		const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(link.mapartId).first();
+		return m ? mapartPublic(m) : { error: "Not found" };
+	});
+}
+
+async function handleGetMapartImage(request, env) {
+	const id = new URL(request.url).searchParams.get("id") || "";
+	if (!/^[0-9a-f-]{36}$/.test(id)) return json({ error: "Bad id" }, 400);
+	const obj = await env.SNAPSHOTS.get(`mapart/${id}.png`);
+	if (!obj) return json({ error: "Not found" }, 404);
+	return new Response(obj.body, {
+		headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400", ...corsHeaders() },
+	});
+}
+
+async function handleGetMyMapart(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth.response;
+	const { results } = await env.DB.prepare("SELECT * FROM maparts WHERE claimedByAccountId = ? ORDER BY title COLLATE NOCASE").bind(auth.admin.id).all();
+	return json(results.map(mapartForOwner));
+}
+
+async function handleClaimMapart(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(String(body.id || "")).first();
+	if (!m) return json({ error: "Mapart not found" }, 404);
+	if (m.claimedByAccountId && m.claimedByAccountId !== auth.admin.id) {
+		return json({ error: "This mapart is already claimed by someone else — ask a head admin if that's wrong." }, 403);
+	}
+	await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ?, autoClaimBlocked = 0 WHERE id = ?")
+		.bind(auth.admin.id, new Date().toISOString(), m.id).run();
+	return json({ ok: true });
+}
+
+async function handleAbandonMapart(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const res = await env.DB.prepare(
+		"UPDATE maparts SET claimedByAccountId = NULL, claimedAt = NULL, autoClaimBlocked = 1 WHERE id = ? AND claimedByAccountId = ?"
+	).bind(String(body.id || ""), auth.admin.id).run();
+	if (res.meta.changes === 0) return json({ error: "You don't own that mapart" }, 404);
+	return json({ ok: true });
+}
+
+// Owner (verified account that has claimed it) or any head admin.
+async function handleUpdateMapart(request, env) {
+	const base = await requireAnyAdmin(request, env);
+	if (!base.ok) return base.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(String(body.id || "")).first();
+	if (!m) return json({ error: "Mapart not found" }, 404);
+	const owns = base.admin.mcVerified && m.claimedByAccountId === base.admin.id;
+	if (!base.admin.isHeadAdmin && !owns) return json({ error: "Claim this mapart first to edit it." }, 403);
+
+	const sets = [], vals = [];
+	let newTitle = null;
+	if (body.title !== undefined) {
+		const t = String(body.title).trim();
+		if (!t || t.length > 100) return json({ error: "title must be 1-100 characters" }, 400);
+		sets.push("title = ?"); vals.push(t); newTitle = t;
+	}
+	if (body.artist !== undefined) {
+		const a = String(body.artist || "").trim();
+		if (a.length > 40) return json({ error: "artist must be at most 40 characters" }, 400);
+		sets.push("artist = ?"); vals.push(a || null);
+	}
+	if (body.whereToBuy !== undefined) {
+		const w = String(body.whereToBuy || "").trim();
+		if (w.length > 200) return json({ error: "whereToBuy must be at most 200 characters" }, 400);
+		sets.push("whereToBuy = ?"); vals.push(w || null);
+	}
+	if (body.notForSale !== undefined) { sets.push("notForSale = ?"); vals.push(body.notForSale ? 1 : 0); }
+	if (body.category !== undefined) {
+		const c = body.category ? String(body.category) : null;
+		if (c !== null && !MAPART_CATEGORIES.includes(c)) return json({ error: "Unknown category" }, 400);
+		sets.push("category = ?"); vals.push(c);
+	}
+	if (sets.length === 0) return json({ error: "Nothing to update" }, 400);
+	if (body.title !== undefined || body.artist !== undefined) sets.push("locked = 1");
+	if (newTitle !== null && newTitle !== m.title) {
+		sets.push("slug = ?"); vals.push(await assignMapartSlug(env, m.id, newTitle));
+	}
+	sets.push("updatedAt = ?"); vals.push(new Date().toISOString());
+	await env.DB.prepare(`UPDATE maparts SET ${sets.join(", ")} WHERE id = ?`).bind(...vals, m.id).run();
+	const fresh = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(m.id).first();
+	return json({ ok: true, mapart: mapartForOwner(fresh) });
+}
+
+async function handleAdminListMapart(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	const { results } = await env.DB.prepare(
+		"SELECT m.*, a.username AS claimedByUsername FROM maparts m LEFT JOIN admins a ON a.id = m.claimedByAccountId ORDER BY m.title COLLATE NOCASE"
+	).all();
+	return json(results.map((m) => ({ ...mapartForOwner(m), claimedByUsername: m.claimedByUsername || null, rawName: m.rawName || "", leadMapId: m.leadMapId })));
+}
+
+// Deleting also blocks the piece from being re-created by later scans.
+async function handleAdminDeleteMapart(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(String(body.id || "")).first();
+	if (!m) return json({ error: "Mapart not found" }, 404);
+	await env.DB.prepare("INSERT OR REPLACE INTO mapartBlocked (world, leadMapId, blockedAt) VALUES (?, ?, ?)")
+		.bind(m.world, m.leadMapId, new Date().toISOString()).run();
+	await deleteMapartRow(env, m.id);
+	return json({ ok: true });
+}
+
+// body: {id, username} — username null/"" clears the claim.
+async function handleAdminAssignMapart(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const m = await env.DB.prepare("SELECT id FROM maparts WHERE id = ?").bind(String(body.id || "")).first();
+	if (!m) return json({ error: "Mapart not found" }, 404);
+	const username = String(body.username || "").trim();
+	if (!username) {
+		await env.DB.prepare("UPDATE maparts SET claimedByAccountId = NULL, claimedAt = NULL WHERE id = ?").bind(m.id).run();
+		return json({ ok: true });
+	}
+	const acct = await env.DB.prepare("SELECT id FROM admins WHERE lower(username) = lower(?)").bind(username).first();
+	if (!acct) return json({ error: "No account with that username" }, 404);
+	await env.DB.prepare("UPDATE maparts SET claimedByAccountId = ?, claimedAt = ?, autoClaimBlocked = 0 WHERE id = ?")
+		.bind(acct.id, new Date().toISOString(), m.id).run();
+	return json({ ok: true });
+}
+
+// Shop-chest listings for a filled map: attach the stitched picture when the
+// map id (once the scanner records it) or, today, the map's exact custom name
+// matches a scanned mapart in the same world.
+async function attachMapartToListings(env, rows) {
+	const { results } = await env.DB.prepare("SELECT id, slug, world, leadMapId, rawName, title, width, height, imageHash FROM maparts").all();
+	if (results.length === 0) return rows;
+	const byLead = new Map(), byName = new Map();
+	for (const m of results) {
+		byLead.set(`${m.world}|${m.leadMapId}`, m);
+		const key = mapartNormKey(m.rawName);
+		if (key) byName.set(`${m.world}|${key}`, m);
+	}
+	for (const r of rows) {
+		if (r.baseItem !== "minecraft:filled_map") continue;
+		let m = Number.isInteger(r.mapId) ? byLead.get(`${r.world}|${r.mapId}`) : null;
+		if (!m) {
+			const key = mapartNormKey(r.itemName);
+			if (key) m = byName.get(`${r.world}|${key}`);
+		}
+		if (m) r.mapart = { id: m.id, slug: m.slug, title: m.title, width: m.width, height: m.height, imageHash: m.imageHash };
+	}
+	return rows;
+}
+
+// A shop listing for a non-leading part of a scanned mapart is redundant —
+// the leading map's listing shows the whole piece — so it's deleted. Only
+// does anything once the shop scanner records mapId.
+async function mergeMapartListings(env, rows) {
+	const withMap = rows.filter((r) => Number.isInteger(r.mapId));
+	if (withMap.length === 0) return 0;
+	let deleted = 0;
+	for (const r of withMap) {
+		const part = await env.DB.prepare(
+			"SELECT m.leadMapId FROM mapartParts p JOIN maparts m ON m.id = p.mapartId WHERE p.world = ? AND p.mapId = ?"
+		).bind(r.world, r.mapId).first();
+		if (part && part.leadMapId !== r.mapId) {
+			const res = await env.DB.prepare("DELETE FROM listings WHERE rowKey = ?").bind(r._key).run();
+			deleted += res.meta.changes;
+		}
+	}
+	return deleted;
+}
+
+// ---------------- verification links ----------------
+
+// Head admin: body {mcUsername, days?} -> {token, url, expiresAt}
+async function handleAdminCreateVerificationLink(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const mcUsername = String(body.mcUsername || "").trim();
+	if (!isValidClaimedMcUsername(mcUsername)) return json({ error: "That doesn't look like a valid Minecraft username" }, 400);
+	const days = Math.min(365, Math.max(1, Math.floor(Number(body.days) || 7)));
+	const token = newToken();
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+	await env.DB.prepare("INSERT INTO verificationLinks (token, mcUsername, createdBy, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?)")
+		.bind(token, mcUsername, auth.admin ? auth.admin.username : "master", now.toISOString(), expiresAt).run();
+	return json({ token, url: VERIFICATION_LINK_BASE_URL + token, mcUsername, expiresAt });
+}
+
+async function handleAdminListVerificationLinks(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	const { results } = await env.DB.prepare("SELECT * FROM verificationLinks ORDER BY createdAt DESC LIMIT 100").all();
+	const now = Date.now();
+	return json(results.map((l) => {
+		const status = l.usedAt ? "used" : Date.parse(l.expiresAt) < now ? "expired" : "active";
+		return {
+			mcUsername: l.mcUsername, createdBy: l.createdBy, createdAt: l.createdAt, expiresAt: l.expiresAt, usedAt: l.usedAt || null,
+			status, token: status === "active" ? l.token : null, url: status === "active" ? VERIFICATION_LINK_BASE_URL + l.token : null,
+		};
+	}));
+}
+
+async function handleAdminRevokeVerificationLink(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const res = await env.DB.prepare("DELETE FROM verificationLinks WHERE token = ? AND usedAt IS NULL").bind(String(body.token || "")).run();
+	if (res.meta.changes === 0) return json({ error: "No such unused link" }, 404);
+	return json({ ok: true });
+}
+
+async function loadUsableVerificationLink(env, token) {
+	const link = await env.DB.prepare("SELECT * FROM verificationLinks WHERE token = ?").bind(String(token || "")).first();
+	if (!link) return { error: json({ error: "This link doesn't exist." }, 404) };
+	if (link.usedAt) return { error: json({ error: "This link has already been used." }, 410) };
+	if (Date.parse(link.expiresAt) < Date.now()) return { error: json({ error: "This link has expired." }, 410) };
+	return { link };
+}
+
+// Public — lets the landing page show which username it's about.
+async function handleVerificationLinkInfo(request, env) {
+	const token = new URL(request.url).searchParams.get("token");
+	const res = await loadUsableVerificationLink(env, token);
+	if (res.error) return res.error;
+	return json({ mcUsername: res.link.mcUsername, expiresAt: res.link.expiresAt });
+}
+
+// body: {token, mode: "register"|"link", username?, password}
+//  register: creates a brand-new, already-verified account (login username
+//    defaults to the MC username; pick another if it's taken).
+//  link: logs into an existing account with username+password and marks its
+//    MC username verified. Either way the link is single-use.
+async function handleRedeemVerificationLink(request, env) {
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const password = String(body.password || "");
+	const mode = body.mode === "link" ? "link" : "register";
+	const usable = await loadUsableVerificationLink(env, body.token);
+	if (usable.error) return usable.error;
+	const link = usable.link;
+
+	const holder = await env.DB.prepare(
+		"SELECT id, username FROM admins WHERE mcVerified = 1 AND lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))"
+	).bind(link.mcUsername).first();
+
+	let accountId, accountUsername;
+	const now = new Date().toISOString();
+	if (mode === "link") {
+		const username = String(body.username || "").trim();
+		const admin = await env.DB.prepare("SELECT * FROM admins WHERE username = ?").bind(username).first();
+		if (!admin || !(await verifyPassword(password, admin.passwordSalt, admin.passwordHash))) {
+			return json({ error: "Invalid username or password" }, 401);
+		}
+		if (holder && holder.id !== admin.id) return json({ error: "That Minecraft username is already verified on another account." }, 409);
+		accountId = admin.id; accountUsername = admin.username;
+	} else {
+		if (holder) return json({ error: "That Minecraft username is already verified on another account." }, 409);
+		if (password.length < 8) return json({ error: "password must be at least 8 characters" }, 400);
+		const username = String(body.username || "").trim() || link.mcUsername;
+		if (!isValidClaimedMcUsername(username)) return json({ error: "Login username may only contain letters, digits and underscores (max 16)." }, 400);
+		const taken = await env.DB.prepare("SELECT id FROM admins WHERE username = ?").bind(username).first();
+		if (taken) return json({ error: "That login username is already taken — pick a different one." }, 409);
+		accountId = crypto.randomUUID(); accountUsername = username;
+	}
+
+	// Claim the single use before doing anything irreversible-ish.
+	const claimed = await env.DB.prepare("UPDATE verificationLinks SET usedAt = ?, usedByAccountId = ? WHERE token = ? AND usedAt IS NULL")
+		.bind(now, accountId, link.token).run();
+	if (claimed.meta.changes === 0) return json({ error: "This link has already been used." }, 410);
+
+	try {
+		if (mode === "link") {
+			await env.DB.prepare("UPDATE admins SET mcUsername = ?, mcVerified = 1 WHERE id = ?").bind(link.mcUsername, accountId).run();
+		} else {
+			const salt = newSaltHex();
+			const hash = await hashPassword(password, salt);
+			await env.DB.prepare(
+				"INSERT INTO admins (id, username, passwordHash, passwordSalt, isHeadAdmin, permissions, createdAt, createdBy, mcUsername, mcVerified) VALUES (?, ?, ?, ?, 0, '[]', ?, 'verification-link', ?, 1)"
+			).bind(accountId, accountUsername, hash, salt, now, link.mcUsername).run();
+		}
+	} catch (e) {
+		await env.DB.prepare("UPDATE verificationLinks SET usedAt = NULL, usedByAccountId = NULL WHERE token = ?").bind(link.token).run();
+		return json({ error: "Couldn't finish — please try again." }, 502);
+	}
+
+	await mapartAutoClaimSweep(env, accountId, link.mcUsername);
+
+	const token = newToken();
+	const expiresAt = new Date(Date.now() + ADMIN_SESSION_TTL_MS).toISOString();
+	await env.DB.prepare("INSERT INTO adminSessions (token, adminId, createdAt, expiresAt) VALUES (?, ?, ?, ?)")
+		.bind(token, accountId, now, expiresAt).run();
+	const acct = await env.DB.prepare("SELECT isHeadAdmin, permissions FROM admins WHERE id = ?").bind(accountId).first();
+	let permissions = [];
+	try { permissions = JSON.parse(acct.permissions || "[]"); } catch (e) { /* ignore */ }
+	return json({ token, username: accountUsername, isHeadAdmin: !!acct.isHeadAdmin, permissions, expiresAt, mcUsername: link.mcUsername, mcVerified: true });
+}
+
 const ROUTES = [
 	["POST", "/listings", handleUploadListings],
 	["GET", "/listings", handleGetListings],
@@ -3077,6 +3722,22 @@ const ROUTES = [
 	["POST", "/account/contact-info", handleSetAccountContactInfo],
 	["POST", "/account/register/start", handleStartRegistration],
 	["POST", "/account/register/direct", handleDirectRegistration],
+	["GET", "/mapart", handleGetMapart],
+	["GET", "/mapart/by-slug", handleGetMapartBySlug],
+	["GET", "/mapart/image", handleGetMapartImage],
+	["POST", "/mapart/upload", handleUploadMapart],
+	["GET", "/mapart/mine", handleGetMyMapart],
+	["POST", "/mapart/claim", handleClaimMapart],
+	["POST", "/mapart/abandon", handleAbandonMapart],
+	["POST", "/mapart/update", handleUpdateMapart],
+	["GET", "/admin/mapart", handleAdminListMapart],
+	["POST", "/admin/mapart/delete", handleAdminDeleteMapart],
+	["POST", "/admin/mapart/assign", handleAdminAssignMapart],
+	["POST", "/admin/verification-links/create", handleAdminCreateVerificationLink],
+	["GET", "/admin/verification-links", handleAdminListVerificationLinks],
+	["POST", "/admin/verification-links/revoke", handleAdminRevokeVerificationLink],
+	["GET", "/verify-link/info", handleVerificationLinkInfo],
+	["POST", "/verify-link/redeem", handleRedeemVerificationLink],
 	["GET", "/account/register/status", handleGetRegistrationStatus],
 	["POST", "/account/register/complete", handleCompleteRegistration],
 	["POST", "/account/register/verify-callback", handleRegistrationVerifyCallback],

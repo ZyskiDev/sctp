@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mapart Management - SCTP</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23101B14'/><rect x='40' y='40' width='120' height='120' rx='14' fill='%23B7E23D'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+	:root{
+		--bg:#101B14; --panel:#1B2A20; --panel-alt:#22332A; --line:#33453A;
+		--muted:#8FA593; --text:#EAEFE7; --shell:#D9C89A;
+		--accent:#B7E23D; --accent-dim:#87AE29; --accent-ink:#16210F;
+		--info:#8C93E8; --warn:#E2A33D; --bad:#E2643D;
+		--font-display:'Fraunces',serif; --font-body:'Inter',sans-serif; --font-mono:'JetBrains Mono',monospace;
+	}
+	*{box-sizing:border-box;}
+	body{margin:0;background:radial-gradient(1200px 500px at 15% -10%, rgba(183,226,61,0.07), transparent 60%), var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.5;}
+	a{color:var(--accent);}
+	.wrap{max-width:1000px;margin:0 auto;padding:0 24px;}
+	header.site{border-bottom:1px solid var(--line);padding:28px 0 22px;}
+	.header-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:14px;}
+	.brand-row{display:flex;align-items:center;gap:14px;min-width:0;}
+	.brand-mark{flex:0 0 auto;width:40px;height:40px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-size:21px;}
+	header.site h1{font-family:var(--font-display);font-weight:600;font-size:28px;margin:0 0 4px;}
+	header.site .tag{color:var(--muted);font-size:14px;margin:0;}
+	main{padding:28px 0 60px;}
+	h2.section{font-family:var(--font-display);font-size:20px;margin:28px 0 12px;}
+	.notice{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;color:var(--muted);font-size:14px;}
+	.notice.warn{border-color:var(--warn);color:var(--warn);background:rgba(226,163,61,0.1);}
+	.notice strong{color:var(--text);}
+
+	.mine-card{display:grid;grid-template-columns:200px 1fr;gap:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;}
+	@media (max-width:640px){.mine-card{grid-template-columns:1fr;}}
+	.thumb{background:#0C140F;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;height:200px;padding:8px;}
+	.thumb img{max-width:100%;max-height:100%;image-rendering:pixelated;display:block;}
+	.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+	@media (max-width:640px){.form-grid{grid-template-columns:1fr;}}
+	.field{display:flex;flex-direction:column;gap:4px;}
+	.field.full{grid-column:1 / -1;}
+	.field label{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+	input[type=text],select{
+		width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);
+		border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;
+	}
+	input:focus,select:focus{outline:none;border-color:var(--accent-dim);}
+	.check{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text);margin-top:2px;}
+	.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center;}
+	.btn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit;}
+	.btn:hover{background:var(--accent-dim);}
+	.btn:disabled{opacity:.5;cursor:default;}
+	.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block;}
+	.btn-ghost:hover{border-color:var(--accent-dim);color:var(--accent);}
+	.btn-danger{background:transparent;border:1px solid var(--bad);color:var(--bad);border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;}
+	.status{font-size:12.5px;color:var(--accent);}
+	.status.err{color:var(--bad);}
+	.card-title{font-family:var(--font-display);font-size:17px;font-weight:600;margin:0 0 10px;}
+
+	.claim-search{width:100%;max-width:380px;margin-bottom:12px;}
+	.claim-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+	.claim-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;}
+	.claim-card .thumb{height:140px;}
+	.claim-card .t{font-weight:600;font-size:14px;}
+	.claim-card .a{color:var(--muted);font-size:12.5px;}
+	.empty{color:var(--muted);padding:24px 0;font-size:14px;}
+	footer.site{padding:20px 0 40px;color:var(--muted);font-size:12.5px;text-align:center;}
+	[hidden]{display:none!important;}
+</style>
+</head>
+<body>
+
+<header class="site">
+	<div class="wrap">
+		<div class="header-row">
+			<div class="brand-row">
+				<div class="brand-mark">🖼️</div>
+				<div>
+					<h1>Mapart Management</h1>
+					<p class="tag">Edit the mapart you own, or claim pieces that were listed wrongly.</p>
+				</div>
+			</div>
+			<nav id="siteNavMount"></nav>
+		</div>
+	</div>
+</header>
+
+<main class="wrap">
+	<div id="gate" class="notice" hidden></div>
+
+	<div id="content" hidden>
+		<h2 class="section" style="margin-top:0;">Your mapart</h2>
+		<div id="mineList"></div>
+
+		<h2 class="section">Claim a mapart</h2>
+		<p class="notice" style="margin-bottom:14px;">Found a piece of yours that's listed under the wrong name, or with no artist? Claim it to fix it. Pieces already claimed by someone else can't be taken &mdash; ask a head admin if that's wrong.</p>
+		<input type="text" class="claim-search" id="claimSearch" placeholder="Search unclaimed mapart by title or artist…">
+		<div class="claim-list" id="claimList"></div>
+	</div>
+</main>
+
+<footer class="site"><div class="wrap"><a href="/mapart/">&larr; Back to the mapart catalog</a></div></footer>
+
+<script src="/site-nav.js" defer></script>
+<script src="/account-widget.js" defer></script>
+<script>
+(function(){
+	"use strict";
+
+	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
+	var CATEGORIES = ["Pets","Anime","Art","Memes","Photography","Letters","Fandom","Misc","Flags"];
+	var catalog = [];
+	var mine = [];
+
+	function esc(s){
+		return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+			return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+		});
+	}
+	function imageUrl(m){ return API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || ""); }
+	function session(){ return window.sctpAccount ? window.sctpAccount.getSession() : null; }
+	function authFetch(path, opts){
+		var s = session();
+		opts = opts || {};
+		opts.headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {}, s ? { Authorization: "Bearer " + s.token } : {});
+		return fetch(API_BASE + path, opts).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, status: r.status, data: d }; }); });
+	}
+
+	function gate(msg, warn){
+		var g = document.getElementById("gate");
+		g.className = "notice" + (warn ? " warn" : "");
+		g.innerHTML = msg;
+		g.hidden = false;
+		document.getElementById("content").hidden = true;
+	}
+
+	function renderMine(){
+		var host = document.getElementById("mineList");
+		if(!mine.length){
+			host.innerHTML = '<p class="empty">You don\'t own any mapart yet. Pieces where you\'re the artist are claimed for you automatically once your account is verified &mdash; or claim one below.</p>';
+			return;
+		}
+		host.innerHTML = mine.map(function(m){
+			return '<div class="mine-card" data-id="' + esc(m.id) + '">' +
+				'<div class="thumb"><img src="' + esc(imageUrl(m)) + '" alt=""></div>' +
+				'<div>' +
+					'<div class="card-title">' + esc(m.title) + ' <span style="color:var(--muted);font-size:12px;font-weight:400;">(' + esc(m.world) + ', ' + m.width + '&times;' + m.height + ')</span></div>' +
+					'<div class="form-grid">' +
+						'<div class="field"><label>Title</label><input type="text" data-f="title" maxlength="100" value="' + esc(m.title) + '"></div>' +
+						'<div class="field"><label>Artist / seller</label><input type="text" data-f="artist" maxlength="40" value="' + esc(m.artist || "") + '" placeholder="Minecraft username"></div>' +
+						'<div class="field"><label>Category</label><select data-f="category"><option value="">No category</option>' +
+							CATEGORIES.map(function(c){ return '<option value="' + c + '"' + (m.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join("") + '</select></div>' +
+						'<div class="field"><label>Where to buy</label><input type="text" data-f="whereToBuy" maxlength="200" value="' + esc(m.whereToBuyCustom || "") + '" placeholder="' + esc(m.artist ? "/shop " + m.artist : "e.g. /shop Steve") + '"></div>' +
+						'<div class="field full"><label class="check"><input type="checkbox" data-f="notForSale"' + (m.notForSale ? ' checked' : '') + '> Not for sale (hides where-to-buy)</label></div>' +
+					'</div>' +
+					'<div class="actions">' +
+						'<button type="button" class="btn" data-act="save">Save changes</button>' +
+						'<a class="btn-ghost" href="/mapart/' + encodeURIComponent(m.slug) + '" target="_blank" rel="noopener">View page</a>' +
+						'<button type="button" class="btn-danger" data-act="abandon">Abandon</button>' +
+						'<span class="status" data-role="status"></span>' +
+					'</div>' +
+				'</div>' +
+			'</div>';
+		}).join("");
+
+		host.querySelectorAll(".mine-card").forEach(function(card){
+			var id = card.getAttribute("data-id");
+			var status = card.querySelector('[data-role="status"]');
+			function setStatus(t, err){ status.textContent = t; status.className = "status" + (err ? " err" : ""); }
+			card.querySelector('[data-act="save"]').addEventListener("click", function(){
+				var body = {
+					id: id,
+					title: card.querySelector('[data-f="title"]').value,
+					artist: card.querySelector('[data-f="artist"]').value,
+					category: card.querySelector('[data-f="category"]').value || null,
+					whereToBuy: card.querySelector('[data-f="whereToBuy"]').value,
+					notForSale: card.querySelector('[data-f="notForSale"]').checked
+				};
+				setStatus("Saving…", false);
+				authFetch("/mapart/update", { method: "POST", body: JSON.stringify(body) }).then(function(res){
+					if(!res.ok){ setStatus(res.data.error || "Couldn't save.", true); return; }
+					setStatus("Saved!", false);
+					var i = mine.findIndex(function(x){ return x.id === id; });
+					if(i !== -1) mine[i] = res.data.mapart;
+					var card2 = card.querySelector(".card-title");
+					if(card2) card2.firstChild.textContent = res.data.mapart.title + " ";
+				});
+			});
+			card.querySelector('[data-act="abandon"]').addEventListener("click", function(){
+				if(!confirm("Abandon this mapart? You'll lose the ability to edit it, and it won't be auto-claimed for you again.")) return;
+				authFetch("/mapart/abandon", { method: "POST", body: JSON.stringify({ id: id }) }).then(function(res){
+					if(!res.ok){ setStatus(res.data.error || "Couldn't abandon.", true); return; }
+					loadAll();
+				});
+			});
+		});
+	}
+
+	function renderClaimable(){
+		var q = document.getElementById("claimSearch").value.trim().toLowerCase();
+		var mineIds = {};
+		mine.forEach(function(m){ mineIds[m.id] = true; });
+		var rows = catalog.filter(function(m){
+			if(m.claimed || mineIds[m.id]) return false;
+			if(!q) return true;
+			return (m.title || "").toLowerCase().indexOf(q) !== -1 || (m.artist || "").toLowerCase().indexOf(q) !== -1;
+		}).slice(0, 60);
+		var host = document.getElementById("claimList");
+		if(!rows.length){ host.innerHTML = '<p class="empty">No unclaimed mapart matches.</p>'; return; }
+		host.innerHTML = rows.map(function(m){
+			return '<div class="claim-card">' +
+				'<div class="thumb"><img src="' + esc(imageUrl(m)) + '" alt="" loading="lazy"></div>' +
+				'<div class="t">' + esc(m.title) + '</div>' +
+				'<div class="a">' + (m.artist ? 'by ' + esc(m.artist) : 'Unknown artist') + ' &middot; ' + esc(m.world) + '</div>' +
+				'<button type="button" class="btn" data-claim="' + esc(m.id) + '">Claim</button>' +
+				'<span class="status err" data-err="' + esc(m.id) + '"></span>' +
+			'</div>';
+		}).join("");
+		host.querySelectorAll("[data-claim]").forEach(function(btn){
+			btn.addEventListener("click", function(){
+				var id = btn.getAttribute("data-claim");
+				btn.disabled = true;
+				authFetch("/mapart/claim", { method: "POST", body: JSON.stringify({ id: id }) }).then(function(res){
+					if(!res.ok){
+						btn.disabled = false;
+						host.querySelector('[data-err="' + id + '"]').textContent = res.data.error || "Couldn't claim.";
+						return;
+					}
+					loadAll();
+				});
+			});
+		});
+	}
+
+	function loadAll(){
+		return Promise.all([
+			authFetch("/mapart/mine"),
+			fetch(API_BASE + "/mapart").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
+		]).then(function(results){
+			var res = results[0];
+			if(res.status === 403){
+				gate('<strong>Your account isn\'t verified yet.</strong> Mapart management is only available to accounts with a verified Minecraft username. Ask a head admin to send you a verification link.', true);
+				return;
+			}
+			if(res.status === 401){
+				gate('Your login expired &mdash; please log in again from the account button up top.', true);
+				return;
+			}
+			if(!res.ok){ gate(esc(res.data.error || "Couldn't load your mapart."), true); return; }
+			mine = res.data;
+			catalog = results[1];
+			document.getElementById("gate").hidden = true;
+			document.getElementById("content").hidden = false;
+			renderMine();
+			renderClaimable();
+		});
+	}
+
+	document.getElementById("claimSearch").addEventListener("input", renderClaimable);
+
+	function start(){
+		if(!session()){
+			gate('<strong>Log in first.</strong> Use the account button up top, then come back here. Mapart management is available to accounts with a verified Minecraft username.', false);
+			return;
+		}
+		loadAll();
+	}
+	// account-widget.js loads deferred — wait for it before reading the session.
+	if(document.readyState === "complete") start();
+	else window.addEventListener("load", start);
+	window.sctpOnAccountChange = function(){ location.reload(); };
+})();
+</script>
+</body>
+</html>

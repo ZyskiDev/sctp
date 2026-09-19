@@ -358,6 +358,41 @@
 		</details>
 
 		<details class="category" open>
+		<summary>Mapart &amp; verification</summary>
+		<div class="category-body">
+
+		<section data-perm="__headAdminOnly__">
+		<details class="section-toggle" open>
+		<summary>Verification links</summary>
+		<div class="meta" style="margin-bottom:8px;">Generate a single-use, expiring link tied to a Minecraft username. Whoever opens it can create a brand-new account or link an existing one &mdash; either way that Minecraft username becomes verified. Send it to the player privately.</div>
+		<div class="card">
+			<label for="vlUsername">Minecraft username</label>
+			<input type="text" id="vlUsername" placeholder="exact Minecraft username (Bedrock: with the leading dot)" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<label for="vlDays">Expires after (days)</label>
+			<input type="number" id="vlDays" value="7" min="1" max="365" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+			<button id="vlCreateBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Generate link</button>
+			<div class="err" id="vlErr"></div>
+			<div id="vlResult" style="margin-top:10px;"></div>
+		</div>
+		<div id="vlList"></div>
+		</details>
+		</section>
+
+		<section data-perm="__headAdminOnly__">
+		<details class="section-toggle" open>
+		<summary>Mapart <span class="count-badge" id="mapartCountBadge"></span></summary>
+		<div class="meta" style="margin-bottom:8px;">Every scanned mapart. Edit anything, assign it to an account (or clear the claim), or delete it &mdash; deleting also stops scans from re-adding it.</div>
+		<div class="card">
+			<input type="text" id="mapartAdminSearch" placeholder="Filter by title, artist, or claimed-by…" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
+		</div>
+		<div id="mapartAdminList"></div>
+		</details>
+		</section>
+
+		</div>
+		</details>
+
+		<details class="category" open>
 		<summary>Content tools</summary>
 		<div class="category-body">
 
@@ -501,6 +536,7 @@
 		if(hasPerm("suggestions")) suggestions = await api("/admin/suggestions");
 		if(hasPerm("bugReports")) bugReports = await api("/admin/bug-reports");
 		if(hasPerm("playerReports")) playerReports = await api("/admin/player-reports");
+		if(hasPerm("__headAdminOnly__")){ await refreshMapartAdmin(); await refreshVerifLinks(); }
 		render();
 	}
 
@@ -1082,6 +1118,133 @@
 			alert("Failed: " + err.message);
 		}
 	}
+
+	// ---------------- verification links ----------------
+
+	var verifLinks = [];
+
+	function renderVerifLinks(){
+		var el = document.getElementById("vlList");
+		if(!el) return;
+		if(!verifLinks.length){ el.innerHTML = '<div class="empty">No links generated yet.</div>'; return; }
+		el.innerHTML = verifLinks.map(function(l){
+			var badge = l.status === "active" ? '<span class="badge approved">active</span>' : '<span class="badge">' + esc(l.status) + '</span>';
+			return '<div class="card"><div><strong>' + esc(l.mcUsername) + '</strong> ' + badge + '</div>' +
+				'<div class="meta">created ' + esc(new Date(l.createdAt).toLocaleString()) + ' by ' + esc(l.createdBy) + ' &middot; expires ' + esc(new Date(l.expiresAt).toLocaleString()) + (l.usedAt ? ' &middot; used ' + esc(new Date(l.usedAt).toLocaleString()) : '') + '</div>' +
+				(l.url ? '<div style="margin-top:6px;"><input type="text" readonly value="' + esc(l.url) + '" style="width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:12px;" onclick="this.select()"> ' +
+					'<button type="button" class="vl-copy" data-url="' + esc(l.url) + '" style="margin-top:6px;">Copy link</button> <button type="button" class="vl-revoke" data-token="' + esc(l.token) + '" style="margin-top:6px;">Revoke</button></div>' : '') +
+				'</div>';
+		}).join("");
+	}
+
+	async function refreshVerifLinks(){
+		verifLinks = await api("/admin/verification-links");
+		renderVerifLinks();
+	}
+
+	async function createVerifLink(){
+		var errEl = document.getElementById("vlErr");
+		errEl.textContent = "";
+		var mc = document.getElementById("vlUsername").value.trim();
+		if(!mc){ errEl.textContent = "Enter a Minecraft username."; return; }
+		try {
+			var res = await api("/admin/verification-links/create", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ mcUsername: mc, days: Number(document.getElementById("vlDays").value) || 7 }) });
+			document.getElementById("vlResult").innerHTML = '<div class="meta">Link for <strong>' + esc(res.mcUsername) + '</strong> (expires ' + esc(new Date(res.expiresAt).toLocaleString()) + '):</div>' +
+				'<input type="text" readonly value="' + esc(res.url) + '" style="width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;" onclick="this.select()">';
+			document.getElementById("vlUsername").value = "";
+			await refreshVerifLinks();
+		} catch(err){
+			errEl.textContent = err.message;
+		}
+	}
+
+	// ---------------- mapart (admin) ----------------
+
+	var adminMapart = [];
+	var MAPART_CATEGORIES = ["Pets","Anime","Art","Memes","Photography","Letters","Fandom","Misc","Flags"];
+
+	function mapartImg(m){ return API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || ""); }
+
+	function renderMapartAdmin(){
+		var el = document.getElementById("mapartAdminList");
+		if(!el) return;
+		document.getElementById("mapartCountBadge").textContent = adminMapart.length ? String(adminMapart.length) : "";
+		var q = document.getElementById("mapartAdminSearch").value.trim().toLowerCase();
+		var rows = adminMapart.filter(function(m){
+			if(!q) return true;
+			return (m.title || "").toLowerCase().indexOf(q) !== -1 || (m.artist || "").toLowerCase().indexOf(q) !== -1 || (m.claimedByUsername || "").toLowerCase().indexOf(q) !== -1;
+		});
+		if(!rows.length){ el.innerHTML = '<div class="empty">' + (adminMapart.length ? 'No mapart matches that filter.' : 'No mapart scanned yet.') + '</div>'; return; }
+		el.innerHTML = rows.slice(0, 40).map(function(m){
+			var f = 'style="width:100%;margin:2px 0 8px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:13px;"';
+			return '<div class="card mapart-admin-card" data-id="' + esc(m.id) + '" style="display:flex;gap:14px;flex-wrap:wrap;">' +
+				'<div style="flex:0 0 150px;"><img src="' + esc(mapartImg(m)) + '" alt="" loading="lazy" style="width:150px;height:150px;object-fit:contain;image-rendering:pixelated;background:#0C140F;border:1px solid var(--line);border-radius:8px;"></div>' +
+				'<div style="flex:1 1 320px;min-width:0;">' +
+					'<div class="meta">' + esc(m.world) + ' &middot; ' + m.width + '&times;' + m.height + ' &middot; lead map #' + m.leadMapId + ' &middot; raw name: ' + esc(m.rawName || '—') + '</div>' +
+					'<div class="meta">' + (m.claimedByUsername ? 'claimed by <strong>' + esc(m.claimedByUsername) + '</strong>' : 'unclaimed') + ' &middot; <a href="/mapart/' + encodeURIComponent(m.slug) + '" target="_blank" rel="noopener">view page</a></div>' +
+					'<label>Title</label><input type="text" data-f="title" maxlength="100" value="' + esc(m.title) + '" ' + f + '>' +
+					'<label>Artist / seller</label><input type="text" data-f="artist" maxlength="40" value="' + esc(m.artist || '') + '" ' + f + '>' +
+					'<label>Category</label><select data-f="category" ' + f + '><option value="">No category</option>' + MAPART_CATEGORIES.map(function(c){ return '<option value="' + c + '"' + (m.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join("") + '</select>' +
+					'<label>Where to buy (blank = default /shop artist)</label><input type="text" data-f="whereToBuy" maxlength="200" value="' + esc(m.whereToBuyCustom || '') + '" ' + f + '>' +
+					'<label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" data-f="notForSale"' + (m.notForSale ? ' checked' : '') + '> Not for sale</label>' +
+					'<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">' +
+						'<button type="button" class="mp-save" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Save</button>' +
+						'<input type="text" data-f="assign" placeholder="assign to account username" style="width:190px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:13px;">' +
+						'<button type="button" class="mp-assign">Assign</button>' +
+						'<button type="button" class="mp-unclaim">Clear claim</button>' +
+						'<button type="button" class="mp-delete" style="color:var(--danger);border-color:var(--danger);">Delete</button>' +
+						'<span class="mp-status meta"></span>' +
+					'</div>' +
+				'</div></div>';
+		}).join("") + (rows.length > 40 ? '<div class="meta">Showing the first 40 of ' + rows.length + ' — narrow the filter to see others.</div>' : '');
+	}
+
+	async function refreshMapartAdmin(){
+		adminMapart = await api("/admin/mapart");
+		renderMapartAdmin();
+	}
+
+	document.addEventListener("click", async function(e){
+		var t = e.target;
+		if(t.classList.contains("vl-copy")){
+			try { await navigator.clipboard.writeText(t.getAttribute("data-url")); t.textContent = "Copied!"; } catch(err){ window.prompt("Copy this link:", t.getAttribute("data-url")); }
+			return;
+		}
+		if(t.classList.contains("vl-revoke")){
+			if(!confirm("Revoke this link?")) return;
+			try { await api("/admin/verification-links/revoke", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ token: t.getAttribute("data-token") }) }); await refreshVerifLinks(); } catch(err){ alert("Failed: " + err.message); }
+			return;
+		}
+		var card = t.closest ? t.closest(".mapart-admin-card") : null;
+		if(!card) return;
+		var id = card.getAttribute("data-id");
+		var status = card.querySelector(".mp-status");
+		function val(f){ var n = card.querySelector('[data-f="' + f + '"]'); return n.type === "checkbox" ? n.checked : n.value; }
+		try {
+			if(t.classList.contains("mp-save")){
+				status.textContent = "Saving…";
+				await api("/mapart/update", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, title: val("title"), artist: val("artist"), category: val("category") || null, whereToBuy: val("whereToBuy"), notForSale: val("notForSale") }) });
+				await refreshMapartAdmin();
+			} else if(t.classList.contains("mp-assign")){
+				var u = val("assign").trim();
+				if(!u){ status.textContent = "Enter an account username."; return; }
+				await api("/admin/mapart/assign", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, username:u }) });
+				await refreshMapartAdmin();
+			} else if(t.classList.contains("mp-unclaim")){
+				await api("/admin/mapart/assign", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, username:"" }) });
+				await refreshMapartAdmin();
+			} else if(t.classList.contains("mp-delete")){
+				if(!confirm("Delete this mapart? Scans won't re-add it.")) return;
+				await api("/admin/mapart/delete", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id }) });
+				await refreshMapartAdmin();
+			}
+		} catch(err){
+			status.textContent = "Failed: " + err.message;
+		}
+	});
+
+	document.getElementById("vlCreateBtn").addEventListener("click", createVerifLink);
+	document.getElementById("mapartAdminSearch").addEventListener("input", renderMapartAdmin);
 
 	// ---------------- maintenance ----------------
 
