@@ -99,9 +99,11 @@
 		<h2 class="section">Add listings</h2>
 		<p class="help">Manual listings are for things the Shop Logger mod can't see (or for shops you haven't had scanned yet). They show up in the main table with an "added manually" note, an unlimited-stock marker and no scan time. Up to <span id="capText">100</span> per seller.</p>
 		<div class="card">
-			<div style="max-width:220px;margin-bottom:12px;">
-				<div class="lrow" style="grid-template-columns:1fr;margin:0;"><div class="f"><label>World</label>
-					<select id="addWorld"><option value="Firefly">Firefly</option><option value="Honeybee">Honeybee</option></select></div></div>
+			<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+				<div style="width:220px;"><div class="lrow" style="grid-template-columns:1fr;margin:0;"><div class="f"><label>World</label>
+					<select id="addWorld"><option value="Firefly">Firefly</option><option value="Honeybee">Honeybee</option></select></div></div></div>
+				<div style="width:220px;" id="addSellerWrap" hidden><div class="lrow" style="grid-template-columns:1fr;margin:0;"><div class="f"><label>Add as seller</label>
+					<select id="addSeller"></select></div></div></div>
 			</div>
 			<div id="addRows"></div>
 			<div class="actions">
@@ -196,7 +198,7 @@
 		if(!entries.length){ setAddStatus("Fill in at least one row.", true); return; }
 		btn.disabled = true;
 		setAddStatus("Adding…", false);
-		authFetch("/store/listings/add", { method: "POST", body: JSON.stringify({ world: document.getElementById("addWorld").value, entries: entries }) }).then(function(res){
+		authFetch("/store/listings/add", { method: "POST", body: JSON.stringify({ world: document.getElementById("addWorld").value, seller: document.getElementById("addSeller").value, entries: entries }) }).then(function(res){
 			btn.disabled = false;
 			if(!res.ok){ setAddStatus(res.data.error || "Couldn't add.", true); return; }
 			setAddStatus("Added " + res.data.added.length + " listing" + (res.data.added.length === 1 ? "" : "s") + "!", false);
@@ -218,7 +220,7 @@
 		host.innerHTML = rows.map(function(m){
 			return '<div data-id="' + esc(m.id) + '">' +
 				'<div class="lrow list">' +
-					'<div class="f"><span class="world-tag">' + esc(m.world) + '</span><input type="text" data-f="itemName" maxlength="100" value="' + esc(m.itemName) + '"></div>' +
+					'<div class="f"><span class="world-tag">' + esc(m.world) + (m.seller && m.seller.toLowerCase() !== seller.toLowerCase() ? ' &middot; ' + esc(m.seller) : '') + '</span><input type="text" data-f="itemName" maxlength="100" value="' + esc(m.itemName) + '"></div>' +
 					'<div class="f"><label>Price</label><input type="number" data-f="price" min="0" step="any" value="' + esc(m.price) + '"></div>' +
 					'<div class="f"><label>Currency</label><input type="text" data-f="currency" maxlength="40" list="currencyList" value="' + esc(m.currency) + '"></div>' +
 					'<div class="f"><label>Where to find it</label><input type="text" data-f="position" maxlength="200" value="' + esc(m.position) + '"></div>' +
@@ -285,6 +287,11 @@
 			var firstWorld = (res.data.manual[0] || res.data.scanned[0] || {}).world;
 			document.getElementById("sellerLink").href = "/s/" + (firstWorld === "Honeybee" ? "hb" : "ff") + "/" + encodeURIComponent(seller);
 			manual = res.data.manual;
+			// Sellers whose manual listings were handed to this account show up here too.
+			var managed = res.data.managedSellers || [];
+			var sel = document.getElementById("addSeller");
+			sel.innerHTML = [seller].concat(managed.map(function(m){ return m.sellerName; })).map(function(n){ return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join("");
+			document.getElementById("addSellerWrap").hidden = !managed.length;
 			if(!document.querySelector("#addRows .add-row")) addRow();
 			renderManual();
 			renderScanned(res.data.scanned, res.data.scannedTotal);

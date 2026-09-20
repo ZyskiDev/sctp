@@ -20,3 +20,6 @@ verification-links.csv
 # Wrangler caches (contain the Cloudflare account email)
 .wrangler/
 **/.wrangler/
+
+# Per-artist DM drafts containing live verification links
+dm-messages/

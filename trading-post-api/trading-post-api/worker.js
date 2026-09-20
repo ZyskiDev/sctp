@@ -3797,14 +3797,12 @@ async function handleAdminRederiveMapart(request, env) {
 	return json({ ok: true, examined: rows.length, changed, autoClaimed: claimed });
 }
 
-// One pseudo-listing per catalogued mapart, for the website's listings
-// table. currency "display" = no real price (the site already sorts those
-// last and keeps them out of averages); mapartGallery tells the site to show
-// the "not a live listing" info icon and hide Report/Remove.
 // ---------------- seller store management (verified accounts) ----------------
 // A verified account manages the listings of its own MC username: manual
 // listings can be added, edited and deleted; scanned ones are read-only here
-// (the mod owns them and rewrites them on every scan).
+// (the mod owns them and rewrites them on every scan). storeManagers can also
+// delegate ALL manual listings of another seller name to an account (e.g. a
+// shared plot warp) — those listings keep showing the original seller.
 const MAX_STORE_MANUAL_LISTINGS = 100;
 const MAX_STORE_ENTRIES_PER_BATCH = 25;
 
@@ -3817,30 +3815,34 @@ async function requireStoreOwner(request, env) {
 	}
 	const blocked = await env.DB.prepare("SELECT 1 AS x FROM blockedSellers WHERE usernameKey = ?").bind(seller.toLowerCase()).first();
 	if (blocked) return { ok: false, response: json({ error: "This seller can't manage listings." }, 403) };
-	return { ok: true, admin: auth.admin, seller };
+	const managed = (await env.DB.prepare("SELECT sellerKey, sellerName FROM storeManagers WHERE accountId = ?").bind(auth.admin.id).all()).results;
+	const key = seller.toLowerCase();
+	return { ok: true, admin: auth.admin, seller, key, managed, keys: [key, ...managed.map((m) => m.sellerKey)] };
 }
 
 const STORE_OWNER_SQL = "lower(ltrim(seller, '.')) = ?";
+function storeOwnersSql(keys) { return `lower(ltrim(seller, '.')) IN (${keys.map(() => "?").join(",")})`; }
 
 async function handleStoreListings(request, env) {
 	const auth = await requireStoreOwner(request, env);
 	if (!auth.ok) return auth.response;
 	const key = auth.seller.toLowerCase();
-	const manual = await env.DB.prepare(`SELECT * FROM listings WHERE lastSeen LIKE 'M%' AND ${STORE_OWNER_SQL} ORDER BY world, itemName COLLATE NOCASE`).bind(key).all();
+	const manual = await env.DB.prepare(`SELECT * FROM listings WHERE lastSeen LIKE 'M%' AND ${storeOwnersSql(auth.keys)} ORDER BY seller COLLATE NOCASE, world, itemName COLLATE NOCASE`).bind(...auth.keys).all();
 	const scanned = await env.DB.prepare(
 		`SELECT itemName, baseItem, bulk, bundled, price, priceLabel, stackSize, amount, stacksInStock, currency, world, position, lastSeen FROM listings WHERE lastSeen NOT LIKE 'M%' AND ${STORE_OWNER_SQL} ORDER BY world, itemName COLLATE NOCASE LIMIT 500`
 	).bind(key).all();
 	const total = await env.DB.prepare(`SELECT COUNT(*) AS c FROM listings WHERE lastSeen NOT LIKE 'M%' AND ${STORE_OWNER_SQL}`).bind(key).first();
 	return json({
 		seller: auth.seller,
+		managedSellers: auth.managed.map((m) => ({ sellerName: m.sellerName })),
 		manualCap: MAX_STORE_MANUAL_LISTINGS,
-		manual: manual.results.map((r) => ({ id: r.lastSeen, itemName: r.itemName, price: r.price, priceLabel: r.priceLabel, currency: r.currency, world: r.world, position: r.position })),
+		manual: manual.results.map((r) => ({ id: r.lastSeen, itemName: r.itemName, price: r.price, priceLabel: r.priceLabel, currency: r.currency, world: r.world, position: r.position, seller: r.seller })),
 		scanned: scanned.results.map((r) => ({ ...r, bulk: !!r.bulk, bundled: !!r.bundled })),
 		scannedTotal: total.c,
 	});
 }
 
-// body: {world, entries: [{itemName, price, currency, position, priceLabel?}]}
+// body: {world, seller? (own name by default, or one delegated to this account), entries: [{itemName, price, currency, position, priceLabel?}]}
 async function handleStoreAddListings(request, env) {
 	const auth = await requireStoreOwner(request, env);
 	if (!auth.ok) return auth.response;
@@ -3853,20 +3855,28 @@ async function handleStoreAddListings(request, env) {
 	if (entries.length === 0) return json({ error: "No entries given" }, 400);
 	if (entries.length > MAX_STORE_ENTRIES_PER_BATCH) return json({ error: `Add at most ${MAX_STORE_ENTRIES_PER_BATCH} listings at a time` }, 400);
 
+	let target = auth.seller;
+	const wanted = String(body.seller || "").trim();
+	if (wanted && wanted.toLowerCase() !== auth.key) {
+		const m = auth.managed.find((x) => x.sellerKey === wanted.toLowerCase());
+		if (!m) return json({ error: "You can't manage listings for that seller." }, 403);
+		target = m.sellerName;
+	}
+
 	const parsed = [];
 	const seen = new Set();
 	for (const e of entries) {
 		const r = parseManualListingEntry(e);
 		if (r.error) return json({ error: r.error }, 400);
-		const k = manualListingRowKey(world, auth.seller, r.entry.itemName);
+		const k = manualListingRowKey(world, target, r.entry.itemName);
 		if (seen.has(k)) return json({ error: `"${r.entry.itemName}" is in the list twice` }, 400);
 		seen.add(k);
 		parsed.push({ ...r.entry, rowKey: k });
 	}
 
-	const count = await env.DB.prepare(`SELECT COUNT(*) AS c FROM listings WHERE lastSeen LIKE 'M%' AND ${STORE_OWNER_SQL}`).bind(auth.seller.toLowerCase()).first();
+	const count = await env.DB.prepare(`SELECT COUNT(*) AS c FROM listings WHERE lastSeen LIKE 'M%' AND ${STORE_OWNER_SQL}`).bind(target.toLowerCase()).first();
 	if (count.c + parsed.length > MAX_STORE_MANUAL_LISTINGS) {
-		return json({ error: `You can have at most ${MAX_STORE_MANUAL_LISTINGS} manual listings (you have ${count.c}).` }, 400);
+		return json({ error: `${target} can have at most ${MAX_STORE_MANUAL_LISTINGS} manual listings (it has ${count.c}).` }, 400);
 	}
 	for (const e of parsed) {
 		const exists = await env.DB.prepare("SELECT 1 AS x FROM listings WHERE rowKey = ?").bind(e.rowKey).first();
@@ -3877,7 +3887,7 @@ async function handleStoreAddListings(request, env) {
 	await env.DB.batch(parsed.map((e, i) => env.DB.prepare(
 		`INSERT INTO listings (rowKey, id, itemName, baseItem, bulk, bundled, mixedContents, price, priceLabel, stackSize, amount, stacksInStock, currency, seller, world, position, lastSeen)
 		 VALUES (?, ?, ?, 'manual', 0, 0, 0, ?, ?, 1, 1, 1, ?, ?, ?, ?, ?)`
-	).bind(e.rowKey, newId(), e.itemName, e.price, e.priceLabel, e.currency, auth.seller, world, e.position, ids[i])));
+	).bind(e.rowKey, newId(), e.itemName, e.price, e.priceLabel, e.currency, target, world, e.position, ids[i])));
 	return json({ ok: true, added: parsed.map((e, i) => ({ itemName: e.itemName, id: ids[i] })) });
 }
 
@@ -3889,7 +3899,7 @@ async function handleStoreUpdateListing(request, env) {
 	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
 	const id = String(body.id || "").trim();
 	if (!MANUAL_ID_PATTERN.test(id)) return json({ error: "Invalid id" }, 400);
-	const row = await env.DB.prepare(`SELECT * FROM listings WHERE lastSeen = ? AND ${STORE_OWNER_SQL}`).bind(id, auth.seller.toLowerCase()).first();
+	const row = await env.DB.prepare(`SELECT * FROM listings WHERE lastSeen = ? AND ${storeOwnersSql(auth.keys)}`).bind(id, ...auth.keys).first();
 	if (!row) return json({ error: "Listing not found" }, 404);
 
 	const merged = {
@@ -3911,7 +3921,7 @@ async function handleStoreUpdateListing(request, env) {
 	}
 	await env.DB.prepare("UPDATE listings SET rowKey = ?, itemName = ?, price = ?, priceLabel = ?, currency = ?, position = ? WHERE lastSeen = ?")
 		.bind(newKey, e.itemName, e.price, e.priceLabel, e.currency, e.position, id).run();
-	return json({ ok: true, listing: { id, itemName: e.itemName, price: e.price, priceLabel: e.priceLabel, currency: e.currency, world: row.world, position: e.position } });
+	return json({ ok: true, listing: { id, itemName: e.itemName, price: e.price, priceLabel: e.priceLabel, currency: e.currency, world: row.world, position: e.position, seller: row.seller } });
 }
 
 async function handleStoreDeleteListing(request, env) {
@@ -3921,7 +3931,7 @@ async function handleStoreDeleteListing(request, env) {
 	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
 	const id = String(body.id || "").trim();
 	if (!MANUAL_ID_PATTERN.test(id)) return json({ error: "Invalid id" }, 400);
-	const res = await env.DB.prepare(`DELETE FROM listings WHERE lastSeen = ? AND ${STORE_OWNER_SQL}`).bind(id, auth.seller.toLowerCase()).run();
+	const res = await env.DB.prepare(`DELETE FROM listings WHERE lastSeen = ? AND ${storeOwnersSql(auth.keys)}`).bind(id, ...auth.keys).run();
 	if (res.meta.changes === 0) return json({ error: "Listing not found" }, 404);
 	return json({ ok: true });
 }
@@ -4107,6 +4117,10 @@ async function handleDeleteOwnMapart(request, env) {
 	return json({ ok: true });
 }
 
+// One pseudo-listing per catalogued mapart, for the website's listings
+// table. currency "display" = no real price (the site already sorts those
+// last and keeps them out of averages); mapartGallery tells the site to show
+// the "not a live listing" info icon and hide Report/Remove.
 async function getMapartGalleryRows(env) {
 	const { results } = await env.DB.prepare("SELECT * FROM maparts").all();
 	return results.map((m) => {

@@ -37,6 +37,8 @@ public class WatchlistScreen extends Screen {
 	private boolean rareLoaded = false;
 	private boolean loadFailed = false;
 	private long searchChangedAtMillis = -1;
+	// Scroll position to restore once the list is populated again — see init().
+	private double pendingScroll = -1;
 	private static final long SEARCH_DEBOUNCE_MS = 300;
 	// Matches WatchedItemOptionsScreen's own unit — maxPrice is stored in
 	// diamonds, but shown in diamond blocks everywhere in the UI.
@@ -49,9 +51,20 @@ public class WatchlistScreen extends Screen {
 
 	@Override
 	protected void init() {
+		// init() runs again every time this screen is shown — including when a
+		// child screen (the options page after adding an item, an item's detail
+		// page, ...) hands control back — and it builds brand-new widgets. Carry
+		// the previous search text and scroll position over so you land back in
+		// the same search results at the same spot, not on the watchlist home.
+		// (The old widgets are still referenced here; they're only replaced below.)
+		String keepSearch = searchBox != null ? searchBox.getValue() : "";
+		double keepScroll = list != null ? list.scrollAmount() : 0;
+
 		int top = 30;
 		searchBox = new EditBox(font, 10, top, width - 20, 20,
 				Component.literal("Search to add, clear to view watchlist..."));
+		// Set BEFORE the responder is attached, so restoring it doesn't count as a fresh edit.
+		searchBox.setValue(keepSearch);
 		searchBox.setResponder(s -> searchChangedAtMillis = System.currentTimeMillis());
 		addRenderableWidget(searchBox);
 		top += 24;
@@ -62,7 +75,12 @@ public class WatchlistScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("Back"), btn -> onClose())
 				.bounds(10, height - 26, 60, 20).build());
 
-		loadData();
+		pendingScroll = keepScroll;
+		if (vanillaLoaded && rareLoaded && !loadFailed) {
+			refreshList(); // catalogs are already in memory from the first visit — no reload needed
+		} else {
+			loadData();
+		}
 	}
 
 	@Override
@@ -113,6 +131,15 @@ public class WatchlistScreen extends Screen {
 	}
 
 	private void refreshList() {
+		populateList();
+		// Only once both catalogs are in — an early refresh has nothing to scroll through yet.
+		if (pendingScroll >= 0 && !isLoading()) {
+			list.setScrollAmount(pendingScroll);
+			pendingScroll = -1;
+		}
+	}
+
+	private void populateList() {
 		list.clearAllEntries();
 		String q = searchBox.getValue().trim().toLowerCase(Locale.ROOT);
 
