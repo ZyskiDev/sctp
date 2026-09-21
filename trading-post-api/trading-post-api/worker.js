@@ -4935,18 +4935,62 @@ const RAREDLE_STREAK_BONUS_CAP = 10;
 // Pixel hint: a blurred-down version of the rare's icon that sharpens as guesses are used —
 // after guess 4 a 2x2 grid, 3x3 after 5, 4x4 after 6, 8x8 after 7.
 const RAREDLE_PIXEL_STEPS = [[7, 8], [6, 4], [5, 3], [4, 2]]; // [guesses used, grid size], highest first
+// Categories that can never be the secret rare (guessing them is still allowed). Empty = every category can be picked.
+const RAREDLE_EXCLUDED_CATEGORIES = new Set([]);
 const RAREDLE_NO_PEEK_BONUS = 125;      // extra points for not opening the Rare Items pages during the game
 const RAREDLE_NO_REPEAT_DAYS = 90;
 const RAREDLE_CATALOG_URL = "https://sctp.nl/data/rare-items.json";
 
-let raredleCatalogCache = { at: 0, items: null, byId: null };
+// Sources whose rares are never picked as the secret rare (hand-picked list; guessing them is still fine).
+// Matched against each part of an item's "obtained from" text (split on / and ,), ignoring case and punctuation.
+const RAREDLE_EXCLUDED_SOURCES = [
+	"Pocket Pals Claw Machine", "Gills' Fishing Rod", "May the 4th Plushie Chance Box", "Easter 2025 Event", "D6",
+	"Menagerie Sword", "White Cat & Associates Chance Box", "May the 4th Chance Box", "Archangel Armor Set",
+];
+
+let raredleCatalogCache = { at: 0, items: null, byId: null, derived: new Set() };
+
+// Rares whose "obtained from" is another rare (e.g. things dropped by "Demonic Wishing Eye" or "Infested Axe").
+// They're never picked as the secret rare — guessing them is still fine. The origin text is matched
+// against every rare's name, word for word.
+function raredleDerivedIds(items) {
+	const norm = (s) => String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+	const names = new Map(); // normalised name -> ids
+	for (const i of items) {
+		const n = norm(i.name);
+		if (n.length < 4) continue;
+		if (!names.has(n)) names.set(n, []);
+		names.get(n).push(i.id);
+	}
+	const out = new Set();
+	for (const i of items) {
+		const src = norm(i.obtainedFrom);
+		if (!src || src === "null") continue;
+		const words = src.split(" ");
+		let found = false;
+		for (let a = 0; a < words.length && !found; a++) {
+			for (let b = a; b < Math.min(words.length, a + 8) && !found; b++) {
+				const ids = names.get(words.slice(a, b + 1).join(" "));
+				if (ids && ids.some((id) => id !== i.id)) found = true;
+			}
+		}
+		if (found) out.add(i.id);
+	}
+	// plus everything from the hand-picked excluded sources
+	const excluded = new Set(RAREDLE_EXCLUDED_SOURCES.map(norm));
+	for (const i of items) {
+		const v = String(i.obtainedFrom == null ? "" : i.obtainedFrom);
+		if (v.split(/\s*[\/,]\s*/).some((part) => excluded.has(norm(part)))) out.add(i.id);
+	}
+	return out;
+}
 async function getRareCatalog() {
 	if (raredleCatalogCache.items && Date.now() - raredleCatalogCache.at < 30 * 60 * 1000) return raredleCatalogCache;
 	const res = await fetch(RAREDLE_CATALOG_URL, { cf: { cacheTtl: 1800, cacheEverything: true } });
 	if (!res.ok) throw new Error("catalog unavailable");
 	const items = await res.json();
 	const byId = new Map(items.map((i) => [i.id, i]));
-	raredleCatalogCache = { at: Date.now(), items, byId };
+	raredleCatalogCache = { at: Date.now(), items, byId, derived: raredleDerivedIds(items) };
 	return raredleCatalogCache;
 }
 
@@ -5049,8 +5093,8 @@ async function raredleAnswerFor(env, date) {
 	const { results: recent } = await env.DB.prepare("SELECT itemId FROM raredleAnswers ORDER BY date DESC LIMIT ?").bind(RAREDLE_NO_REPEAT_DAYS).all();
 	const used = new Set(recent.map((r) => r.itemId));
 	// Only items with enough attributes to make for a fair puzzle.
-	let pool = cat.items.filter((i) => i.texture && i.category && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null" && !used.has(i.id));
-	if (!pool.length) pool = cat.items.filter((i) => i.category && i.releaseDate && i.releaseDate !== "null");
+	let pool = cat.items.filter((i) => i.texture && i.category && !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null" && !used.has(i.id));
+	if (!pool.length) pool = cat.items.filter((i) => i.category && !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && i.releaseDate && i.releaseDate !== "null");
 	const pick = pool[crypto.getRandomValues(new Uint32Array(1))[0] % pool.length].id;
 	await env.DB.prepare("INSERT OR IGNORE INTO raredleAnswers (date, itemId) VALUES (?, ?)").bind(date, pick).run();
 	const stored = await env.DB.prepare("SELECT itemId FROM raredleAnswers WHERE date = ?").bind(date).first();
@@ -5126,8 +5170,8 @@ async function handleRaredleState(request, env) {
 // ---- practice rounds (testing mode): unlimited random rares, one open round per account,
 // never counted toward points, streaks or leaderboards.
 function raredlePracticePool(cat) {
-	const pool = cat.items.filter((i) => i.texture && i.category && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null");
-	return pool.length ? pool : cat.items;
+	const pool = cat.items.filter((i) => i.texture && i.category && !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null");
+	return pool.length ? pool : cat.items.filter((i) => !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category));
 }
 
 async function raredleNewPractice(env, accountId, cat) {
