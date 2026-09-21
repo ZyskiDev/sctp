@@ -342,6 +342,7 @@
 	$("resetBtn").addEventListener("click", function(){
 		if(busy) return;
 		busy = true;
+		try { localStorage.removeItem("sctp_raredle_peek"); } catch(e){}
 		api("/raredle/reset", { method: "POST", body: "{}" }).then(function(r){
 			busy = false;
 			if(!r.ok){ $("gErr").textContent = r.data.error || "Couldn't reset."; return; }
