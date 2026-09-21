@@ -40,7 +40,7 @@ Most data from the website, like the item library and current listings, can be e
 ### Mapart scanner
 The mod finds item-frame mapart near you, stitches multi-map pieces together and uploads them to the mapart gallery in the background — without freezing your game or spamming chat. Turn it on or off, and see what it found, from the Mapart Scanner button on the X-menu.
 ### Watchlist
-The mod allows you to keep a watchlist for rares, as well as set a max price, and will notify you in-game if the item is found on the SCTP! Marketplace listings are included, and there are quick price buttons when you set a limit.
+The mod allows you to keep a watchlist for rares, as well as set a max price, and will notify you in-game if the item is found on the SCTP! Marketplace listings are included, and there are quick price buttons when you set a limit. Don't want to hear about one particular listing? Hit its grey [Ignore] button.
 ### Report from the game
 Spot a wrong listing? Hit the red [Report] button in a watchlist alert or the listings screen to send it to the moderators in one click.
 ### Sold item notifications

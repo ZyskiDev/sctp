@@ -189,6 +189,13 @@ public class ShopLoggerClient implements ClientModInitializer {
 					.then(ClientCommands.argument("id", IntegerArgumentType.integer())
 							.executes(ShopLoggerClient::watchReport)));
 
+			// Click target of the grey [Ignore] button in watchlist alerts (see WatchlistIgnore), and its undo.
+			dispatcher.register(ClientCommands.literal("watchignore")
+					.then(ClientCommands.argument("id", IntegerArgumentType.integer())
+							.executes(ShopLoggerClient::watchIgnore)));
+			dispatcher.register(ClientCommands.literal("watchunignore")
+					.executes(ShopLoggerClient::watchUnignore));
+
 			dispatcher.register(ClientCommands.literal("watchbeam")
 					.then(ClientCommands.argument("world", StringArgumentType.word())
 							.then(ClientCommands.argument("x", IntegerArgumentType.integer())
@@ -325,6 +332,16 @@ public class ShopLoggerClient implements ClientModInitializer {
 
 	private static int watchOptions(CommandContext<FabricClientCommandSource> ctx) {
 		pendingWatchOptionsItem = StringArgumentType.getString(ctx, "item");
+		return 1;
+	}
+
+	private static int watchIgnore(CommandContext<FabricClientCommandSource> ctx) {
+		WatchlistIgnore.ignorePending(Minecraft.getInstance(), IntegerArgumentType.getInteger(ctx, "id"));
+		return 1;
+	}
+
+	private static int watchUnignore(CommandContext<FabricClientCommandSource> ctx) {
+		WatchlistIgnore.unignoreAll(Minecraft.getInstance());
 		return 1;
 	}
 

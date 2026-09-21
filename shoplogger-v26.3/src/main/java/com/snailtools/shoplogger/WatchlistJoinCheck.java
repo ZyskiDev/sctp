@@ -94,6 +94,7 @@ public final class WatchlistJoinCheck {
 			if ("lookingFor".equals(m.type)) continue; // only alert on stuff you could actually buy
 			WatchedItem match = findWatched(m.itemName, watched);
 			if (match == null) continue;
+			if (WatchlistIgnore.isIgnored(WatchlistIgnore.marketKey(m.id))) continue;
 			boolean noPrice = m.priceInfo() == null;
 			if (match.excludeNoPriceOrDisplay && noPrice) continue;
 			if (!noPrice && match.maxPrice != null && m.diamondValue() > match.maxPrice) continue;
@@ -128,7 +129,8 @@ public final class WatchlistJoinCheck {
 				.append(Component.literal("Selling " + m.quantity + "x " + m.itemName + " at ").withStyle(ChatFormat.RESULT))
 				.append(WatchlistAlert.buildMarketplaceLink(m.seller, m.id));
 		msg.append(Component.literal((m.sellerVerified ? " ✓" : "") + " — " + priceText + bidText + "  ").withStyle(ChatFormat.RESULT));
-		msg.append(WatchlistAlert.buildOptionsButton(m.itemName));
+		msg.append(WatchlistAlert.buildOptionsButton(m.itemName)).append(Component.literal("  "));
+		msg.append(WatchlistIgnore.buildChatButton(WatchlistIgnore.marketKey(m.id)));
 		return msg;
 	}
 
@@ -159,6 +161,7 @@ public final class WatchlistJoinCheck {
 				boolean isDisplay = "display".equalsIgnoreCase(l.currency);
 				if (watchedItem.excludeNoPriceOrDisplay && isDisplay) continue;
 				if (!MatchUtil.alphaOnly(l.itemName).equals(MatchUtil.alphaOnly(watchedItem.itemName))) continue;
+				if (WatchlistIgnore.isIgnored(WatchlistIgnore.shopKey(ShopReporter.fromListing(l)))) continue;
 				if (!isDisplay && watchedItem.maxPrice != null && l.pricePerItemInDiamonds() > watchedItem.maxPrice) continue;
 
 				sellerCount++;
@@ -182,6 +185,7 @@ public final class WatchlistJoinCheck {
 			msg.append(WatchlistAlert.buildTpButton(best.world, pos, best.seller)).append(Component.literal("  "));
 		}
 		msg.append(ShopReporter.buildChatButton(ShopReporter.fromListing(best))).append(Component.literal("  "));
+		msg.append(WatchlistIgnore.buildChatButton(WatchlistIgnore.shopKey(ShopReporter.fromListing(best)))).append(Component.literal("  "));
 		msg.append(WatchlistAlert.buildOptionsButton(watchedName)).append(Component.literal("  "));
 		msg.append(WatchlistAlert.buildRemoveButton(watchedName));
 

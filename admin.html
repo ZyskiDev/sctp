@@ -35,6 +35,12 @@
 	}
 	.login button{background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;width:100%;}
 	.err{color:var(--danger);font-size:13px;min-height:18px;margin-top:6px;}
+	.mk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px 14px;margin-top:12px;}
+	.mk-field label{display:block;font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+	.mk-field input[type=text],.mk-field input[type=number],.mk-field select,.mk-field textarea{width:100%;box-sizing:border-box;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;}
+	.mk-field textarea{min-height:92px;resize:vertical;}
+	.mk-field.wide{grid-column:1 / -1;}
+	.mk-hint{font-size:12px;color:var(--muted);margin-top:3px;}
 	.hidden{display:none;}
 
 	.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;}
@@ -147,6 +153,18 @@
 			<summary>Resolved reports</summary>
 			<div id="reportsResolved" style="margin-top:12px;"></div>
 		</details>
+		</details>
+		</section>
+
+		<section data-perm="manageMapart">
+		<details class="section-toggle" open>
+		<summary>Marketing studio</summary>
+		<div class="meta" style="margin-bottom:10px;">Make shareable pictures for Discord, X, Instagram, YouTube and more. Pick what to promote, fill in the details, then open it in the image studio to choose the size (13 formats), style (12 looks), layout and colours &mdash; or download every size / every style in one go.</div>
+		<div class="card">
+			<div class="mk-field" style="max-width:420px;"><label for="mkTemplate">What do you want to promote?</label><select id="mkTemplate"></select></div>
+			<div class="mk-grid" id="mkFields"></div>
+			<div class="actions" style="margin-top:12px;"><button type="button" class="approve" id="mkOpen">Open in image studio</button><span class="meta" id="mkStatus" style="margin-left:10px;"></span></div>
+		</div>
 		</details>
 		</section>
 
@@ -799,6 +817,181 @@
 			errEl.textContent = "Failed: " + err.message;
 		}
 	}
+
+	// ---------------- marketing studio ----------------
+	// Every template collects a few fields, builds a picture "spec" and hands it to
+	// the shared image studio (share-studio.js) for size / style / layout choices.
+	var mkCache = {};
+	function mkLoad(key, url){
+		if(!mkCache[key]) mkCache[key] = fetch(url).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+		return mkCache[key];
+	}
+	function mkMapartUrl(m){ return API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || ""); }
+	function mkNames(m){ return String(m.artist || "").split(" & ").map(function(x){ return x.trim(); }).filter(Boolean); }
+	function mkBy(m){ var n = mkNames(m); return n.length ? (m.commissioned ? "built by " : "by ") + n.join(" & ") : ""; }
+	function mkLines(t){ return String(t || "").split("\n").map(function(x){ return x.trim(); }).filter(Boolean); }
+	function mkFmt(n){ return Number(n).toLocaleString("en"); }
+	function mkMapartLabel(m){ return m.title + " \u00b7 " + (m.artist || "unknown artist") + " \u00b7 " + m.world; }
+	function mkMapartSpec(m, eyebrow){
+		var details = [m.world + (m.width * m.height > 1 ? "  \u00b7  " + m.width + "\u00d7" + m.height + " maps" : "") + (m.category ? "  \u00b7  " + m.category : "")];
+		if(m.commissioned && m.commissionedBy) details.push("commissioned by " + m.commissionedBy);
+		if(m.price) details.push("Price: " + m.price);
+		return { type: "feature", eyebrow: eyebrow, title: m.title, subtitle: mkBy(m), details: details, imageUrl: mkMapartUrl(m), pixel: true, footerUrl: "sctp.nl/mapart/" + m.slug, filename: "mapart-" + m.slug };
+	}
+	var MK = [
+		{ id: "announce", label: "Announcement (headline + feature chips)", fields: [
+			{ k: "eyebrow", label: "Small line above", def: "Snailcraft Trading Post" }, { k: "headline", label: "Headline", def: "SCTP 2.0" },
+			{ k: "subline", label: "Subline", def: "Mapart, collections and tons of new quality-of-life upgrades", wide: true },
+			{ k: "chips", label: "Feature chips (one per line)", type: "area", def: "Mapart support\nCollections\nSearch by image\nPublic profiles\nTons of QOL", wide: true },
+			{ k: "url", label: "Link text", def: "sctp.nl" } ],
+		  build: function(v){ return Promise.resolve({ type: "announce", eyebrow: v.eyebrow, title: v.headline, subtitle: v.subline, chips: mkLines(v.chips), footerUrl: v.url || "sctp.nl", filename: "announcement" }); } },
+		{ id: "statement", label: "Big statement / quote", fields: [
+			{ k: "eyebrow", label: "Small line above", def: "Snailcraft Trading Post" }, { k: "headline", label: "Statement", def: "Every shop on the server, in one list.", wide: true },
+			{ k: "subline", label: "Subline", def: "", wide: true }, { k: "url", label: "Link text", def: "sctp.nl" } ],
+		  build: function(v){ return Promise.resolve({ type: "text", eyebrow: v.eyebrow, title: v.headline, subtitle: v.subline, footerUrl: v.url || "sctp.nl", filename: "statement" }); } },
+		{ id: "whatsnew", label: "What's new / changelog (bullet list)", fields: [
+			{ k: "eyebrow", label: "Small line above", def: "What's new" }, { k: "headline", label: "Headline", def: "SCTP update" }, { k: "subline", label: "Subline", def: "" },
+			{ k: "bullets", label: "Bullets (one per line, up to 12)", type: "area", def: "Hide any table column\nSearch mapart by image\nCollections with ownership toggles\nPublic player profiles", wide: true } ],
+		  build: function(v){ return Promise.resolve({ type: "list", eyebrow: v.eyebrow, title: v.headline, subtitle: v.subline, bullets: mkLines(v.bullets), footerUrl: "sctp.nl", filename: "whats-new" }); } },
+		{ id: "numbers", label: "By the numbers (live stats)", fields: [
+			{ k: "eyebrow", label: "Small line above", def: "By the numbers" }, { k: "headline", label: "Headline", def: "Snailcraft Trading Post" }, { k: "subline", label: "Subline", def: "Live from the shop scanner" } ],
+		  build: function(v){
+			return Promise.all([mkLoad("listings", API_BASE + "/listings"), mkLoad("mapart", API_BASE + "/mapart"), mkLoad("market", API_BASE + "/marketplace/listings")]).then(function(r){
+				var ls = Array.isArray(r[0]) ? r[0] : [], sellers = {}, items = {};
+				ls.forEach(function(x){ sellers[String(x.seller).toLowerCase()] = 1; items[String(x.baseItem).toLowerCase()] = 1; });
+				var stats = [{ value: mkFmt(ls.length), label: "listings" }, { value: mkFmt(Object.keys(sellers).length), label: "sellers" }, { value: mkFmt(Object.keys(items).length), label: "distinct items" }];
+				if(Array.isArray(r[1])) stats.push({ value: mkFmt(r[1].length), label: "mapart catalogued" });
+				var ml = Array.isArray(r[2]) ? r[2] : (r[2] && r[2].listings) || null;
+				if(ml) stats.push({ value: mkFmt(ml.length), label: "open marketplace listings" });
+				return { type: "stats", eyebrow: v.eyebrow, title: v.headline, subtitle: v.subline, stats: stats, footerUrl: "sctp.nl", filename: "by-the-numbers" };
+			}); } },
+		{ id: "mapartOne", label: "Mapart spotlight (pick any piece)", fields: [
+			{ k: "pick", label: "Mapart (start typing a title)", type: "mapart", wide: true }, { k: "eyebrow", label: "Small line above", def: "Mapart spotlight" } ],
+		  build: function(v, ctx){ var m = ctx.mapartByLabel[v.pick]; if(!m) return Promise.reject(new Error("Pick a mapart from the suggestions.")); return Promise.resolve(mkMapartSpec(m, v.eyebrow)); } },
+		{ id: "mapartMany", label: "Mapart collection (artist / category / random)", fields: [
+			{ k: "mode", label: "Choose by", type: "select", options: [["artist", "Artist name"], ["category", "Category"], ["world", "World"], ["random", "Random pieces"]], def: "artist" },
+			{ k: "value", label: "Artist / category / world", def: "" }, { k: "count", label: "How many (max 30)", type: "number", def: "9" },
+			{ k: "headline", label: "Headline (optional)", def: "" } ],
+		  build: function(v, ctx){
+			var list = ctx.mapart.slice(), val = String(v.value || "").trim().toLowerCase(), n = Math.max(1, Math.min(30, parseInt(v.count, 10) || 9));
+			if(v.mode === "artist") list = list.filter(function(m){ return mkNames(m).some(function(a){ return a.toLowerCase() === val; }); });
+			else if(v.mode === "category") list = list.filter(function(m){ return (m.category || "").toLowerCase() === val; });
+			else if(v.mode === "world") list = list.filter(function(m){ return (m.world || "").toLowerCase() === val; });
+			else list.sort(function(){ return Math.random() - 0.5; });
+			if(!list.length) return Promise.reject(new Error("No mapart matched that."));
+			list = list.slice(0, n);
+			var title = v.headline || (v.mode === "artist" ? v.value : v.mode === "category" ? v.value + " mapart" : v.mode === "world" ? "Mapart from " + v.value : "Mapart picks");
+			return Promise.resolve({ type: "grid", eyebrow: "Snailcraft mapart", title: title, subtitle: list.length + " piece" + (list.length === 1 ? "" : "s"), gridAspect: 1.0, footerUrl: "sctp.nl/mapart", filename: "mapart-collection",
+				items: list.map(function(m){ return { name: m.title, imageUrl: mkMapartUrl(m), pixel: true }; }) }); } },
+		{ id: "rareOne", label: "Rare item spotlight (pick any rare)", fields: [
+			{ k: "pick", label: "Rare item (start typing a name)", type: "rare", wide: true }, { k: "eyebrow", label: "Small line above", def: "Snailcraft rare" } ],
+		  build: function(v, ctx){
+			var r = ctx.rareByName[v.pick]; if(!r) return Promise.reject(new Error("Pick a rare from the suggestions."));
+			var details = []; if(r.effect) details.push(r.effect); if(r.obtainedFrom && r.obtainedFrom !== "null") details.push("Obtained from: " + r.obtainedFrom);
+			if(r.typeSlot && r.typeSlot !== "null") details.push("Type: " + r.typeSlot + (r.dyeable && r.dyeable !== "null" ? "  \u00b7  Dyeable: " + r.dyeable : ""));
+			return Promise.resolve({ type: "feature", eyebrow: v.eyebrow, title: r.name, subtitle: [r.category, r.releaseDate && r.releaseDate !== "null" ? "Released " + r.releaseDate : ""].filter(Boolean).join("  \u00b7  "), details: details, imageUrl: r.texture, pixel: true, footerUrl: "sctp.nl/items/" + r.id, filename: "rare-" + r.id }); } },
+		{ id: "rareMany", label: "Rare set (filter by release / source / category)", fields: [
+			{ k: "category", label: "Category contains", def: "" }, { k: "released", label: "Released contains (e.g. 2026 or Aug 2026)", def: "" },
+			{ k: "from", label: "Obtained from contains (e.g. aquatic crate)", def: "" }, { k: "slot", label: "Type / slot contains", def: "" },
+			{ k: "count", label: "How many (max 60)", type: "number", def: "24" }, { k: "headline", label: "Headline", def: "New rares" } ],
+		  build: function(v, ctx){
+			var has = function(x, y){ return !y || String(x || "").toLowerCase().indexOf(String(y).trim().toLowerCase()) !== -1; };
+			var list = ctx.rare.filter(function(r){ return has(r.category, v.category) && has(r.releaseDate, v.released) && has(r.obtainedFrom, v.from) && has(r.typeSlot, v.slot); });
+			if(!list.length) return Promise.reject(new Error("No rares matched those filters."));
+			var n = Math.max(1, Math.min(60, parseInt(v.count, 10) || 24));
+			var sub = [v.released, v.from, v.slot, v.category].filter(Boolean).join("  \u00b7  ");
+			return Promise.resolve({ type: "grid", eyebrow: "Snailcraft rares", title: v.headline, subtitle: (sub ? sub + "  \u00b7  " : "") + list.length + " item" + (list.length === 1 ? "" : "s"), gridAspect: 0.86, footerUrl: "sctp.nl/items", filename: "rare-set",
+				items: list.slice(0, n).map(function(r){ return { name: r.name, imageUrl: r.texture, pixel: true }; }) }); } },
+		{ id: "market", label: "Marketplace promo", fields: [
+			{ k: "headline", label: "Headline", def: "The SCTP Marketplace" }, { k: "subline", label: "Subline", def: "Buy, sell and trade with other players, take bids, and find helpers with jobs.", wide: true },
+			{ k: "chips", label: "Chips (one per line)", type: "area", def: "Post listings\nTake bids\nJobs board\nShare links", wide: true } ],
+		  build: function(v){
+			return mkLoad("market", API_BASE + "/marketplace/listings").then(function(d){
+				var ml = Array.isArray(d) ? d : (d && d.listings) || null, chips = mkLines(v.chips);
+				if(ml && ml.length) chips.unshift(mkFmt(ml.length) + " open listings right now");
+				return { type: "announce", eyebrow: "Marketplace", title: v.headline, subtitle: v.subline, chips: chips, footerUrl: "sctp.nl/marketplace", filename: "marketplace" };
+			}); } },
+		{ id: "mod", label: "Mod release / download", fields: [
+			{ k: "version", label: "Version", def: "2.0" }, { k: "note", label: "Subline", def: "Now with a built-in mapart scanner, better watchlist and in-game reporting.", wide: true },
+			{ k: "builds", label: "Builds (one per line)", type: "area", def: "Fabric 26.2\nFabric 26.3\nNeoForge 26.2\nNeoForge 26.3", wide: true } ],
+		  build: function(v){ return Promise.resolve({ type: "announce", eyebrow: "Now available", title: "Shop Logger " + v.version, subtitle: v.note, chips: mkLines(v.builds), footerUrl: "sctp.nl \u2014 Download mod", filename: "mod-" + v.version }); } },
+		{ id: "raredle", label: "Rare-dle teaser / launch", fields: [
+			{ k: "eyebrow", label: "Small line above", def: "Coming soon" }, { k: "headline", label: "Headline", def: "Rare-dle" },
+			{ k: "subline", label: "Subline", def: "Guess the secret Snailcraft rare in 8 tries. New puzzle every day.", wide: true } ],
+		  build: function(v){ return Promise.resolve({ type: "tiles", eyebrow: v.eyebrow, title: v.headline, subtitle: v.subline, stat: "8 tries", statLabel: "one rare a day",
+			rows: [["wrong","close","wrong","wrong","close","correct"],["close","correct","wrong","correct","wrong","correct"],["correct","correct","correct","correct","correct","correct"]], footerUrl: "sctp.nl/rare-dle", filename: "rare-dle" }); } },
+		{ id: "event", label: "Event / giveaway", fields: [
+			{ k: "eyebrow", label: "Small line above", def: "Giveaway" }, { k: "headline", label: "Headline", def: "Win a rare!" }, { k: "subline", label: "Prize / date", def: "Ends Sunday 20:00 UTC" },
+			{ k: "bullets", label: "How to enter (one per line)", type: "area", def: "Log in at sctp.nl\nTick off your collection\nScreenshot it in our Discord", wide: true } ],
+		  build: function(v){ return Promise.resolve({ type: "list", eyebrow: v.eyebrow, title: v.headline, subtitle: v.subline, bullets: mkLines(v.bullets), footerUrl: "sctp.nl", filename: "event" }); } },
+		{ id: "shoutout", label: "Player / artist shoutout", fields: [
+			{ k: "user", label: "Username", def: "", wide: true }, { k: "headline", label: "Headline (optional)", def: "" } ],
+		  build: function(v){
+			var u = String(v.user || "").trim(); if(!u) return Promise.reject(new Error("Enter a username."));
+			return fetch(API_BASE + "/profile?username=" + encodeURIComponent(u)).then(function(r){ return r.json(); }).then(function(p){
+				var mp = (p && p.mapart) || [];
+				if(!mp.length) return { type: "text", eyebrow: "Community shoutout", title: v.headline || u, subtitle: "", footerUrl: "sctp.nl/s/ff/" + encodeURIComponent(u), filename: "shoutout-" + u };
+				return { type: "grid", eyebrow: "Community shoutout", title: v.headline || (p.username || u), subtitle: mp.length + " mapart" + (mp.length === 1 ? "" : "s") + (p.commission && p.commission.open ? "  \u00b7  open for commissions" : ""), gridAspect: 1.0,
+					footerUrl: "sctp.nl/s/ff/" + encodeURIComponent(p.username || u), filename: "shoutout-" + u,
+					items: mp.slice(0, 30).map(function(m){ return { name: m.title, imageUrl: mkMapartUrl(m), pixel: true }; }) };
+			}); } },
+		{ id: "motd", label: "Today's mapart of the day", fields: [],
+		  build: function(){ return fetch(API_BASE + "/mapart/of-the-day?t=" + Date.now()).then(function(r){ return r.json(); }).then(function(d){ if(!d.mapart) throw new Error("No mapart of the day yet."); return mkMapartSpec(d.mapart, "Mapart of the day"); }); } }
+	];
+
+	var mkCtx = null;
+	function mkContext(){
+		if(mkCtx) return Promise.resolve(mkCtx);
+		return Promise.all([mkLoad("mapart", API_BASE + "/mapart"), mkLoad("rare", "/data/rare-items.json")]).then(function(r){
+			var mapart = Array.isArray(r[0]) ? r[0] : [], rare = Array.isArray(r[1]) ? r[1] : [];
+			var byLabel = {}, byName = {};
+			mapart.forEach(function(m){ byLabel[mkMapartLabel(m)] = m; });
+			rare.forEach(function(x){ byName[x.name] = x; });
+			mkCtx = { mapart: mapart, rare: rare, mapartByLabel: byLabel, rareByName: byName };
+			return mkCtx;
+		});
+	}
+	function mkRenderFields(){
+		var t = MK.filter(function(x){ return x.id === document.getElementById("mkTemplate").value; })[0], host = document.getElementById("mkFields");
+		host.innerHTML = t.fields.map(function(f){
+			var id = "mk_" + f.k, inner;
+			if(f.type === "area") inner = '<textarea id="' + id + '">' + esc(f.def || "") + '</textarea>';
+			else if(f.type === "select") inner = '<select id="' + id + '">' + f.options.map(function(o){ return '<option value="' + o[0] + '"' + (o[0] === f.def ? " selected" : "") + '>' + esc(o[1]) + '</option>'; }).join("") + '</select>';
+			else if(f.type === "number") inner = '<input type="number" id="' + id + '" value="' + esc(f.def || "") + '">';
+			else if(f.type === "mapart" || f.type === "rare") inner = '<input type="text" id="' + id + '" list="' + id + '_list" autocomplete="off" placeholder="Loading…"><datalist id="' + id + '_list"></datalist>';
+			else inner = '<input type="text" id="' + id + '" value="' + esc(f.def || "") + '">';
+			return '<div class="mk-field' + (f.wide || f.type === "area" ? " wide" : "") + '"><label for="' + id + '">' + esc(f.label) + '</label>' + inner + '</div>';
+		}).join("") || '<div class="meta">Nothing to fill in — it uses today\'s pick.</div>';
+		if(t.fields.some(function(f){ return f.type === "mapart" || f.type === "rare"; })){
+			mkContext().then(function(ctx){
+				t.fields.forEach(function(f){
+					if(f.type !== "mapart" && f.type !== "rare") return;
+					var input = document.getElementById("mk_" + f.k), dl = document.getElementById("mk_" + f.k + "_list");
+					if(!input) return;
+					input.placeholder = f.type === "mapart" ? "e.g. " + (ctx.mapart[0] ? ctx.mapart[0].title : "a mapart title") : "e.g. " + (ctx.rare[0] ? ctx.rare[0].name : "a rare name");
+					dl.innerHTML = (f.type === "mapart" ? ctx.mapart.map(mkMapartLabel) : ctx.rare.map(function(r){ return r.name; })).map(function(o){ return '<option value="' + esc(o) + '">'; }).join("");
+				});
+			});
+		}
+	}
+	(function initMarketing(){
+		var sel = document.getElementById("mkTemplate");
+		if(!sel) return;
+		sel.innerHTML = MK.map(function(t){ return '<option value="' + t.id + '">' + esc(t.label) + '</option>'; }).join("");
+		sel.addEventListener("change", mkRenderFields);
+		mkRenderFields();
+		document.getElementById("mkOpen").addEventListener("click", function(){
+			var t = MK.filter(function(x){ return x.id === sel.value; })[0], st = document.getElementById("mkStatus"), v = {};
+			t.fields.forEach(function(f){ var el = document.getElementById("mk_" + f.k); v[f.k] = el ? el.value : ""; });
+			if(!window.sctpShare){ st.textContent = "The image maker is still loading - try again in a second."; return; }
+			st.textContent = "Preparing…";
+			mkContext().then(function(ctx){ return t.build(v, ctx); }).then(function(spec){
+				st.textContent = "";
+				spec.modalTitle = "Marketing studio - " + t.label;
+				window.sctpShare.open(spec);
+			}).catch(function(e){ st.textContent = e && e.message ? e.message : "Couldn't build that picture."; });
+		});
+	})();
 
 	// ---------------- mapart of the day ----------------
 	var motdCurrent = null;

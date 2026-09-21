@@ -13,6 +13,9 @@
 //   "grid"     many small pictures     {eyebrow, title, subtitle, items:[{name, sub, imageUrl, pixel}], footerUrl}
 //   "tiles"    Rare-dle style squares  {eyebrow, title, subtitle, rows:[[state...]], stat, statLabel, footerUrl}
 //   "announce" headline + chips        {eyebrow, title, subtitle, chips[], footerUrl}
+//   "text"     one big statement       {eyebrow, title, subtitle, footerUrl}
+//   "list"     headline + bullet list  {eyebrow, title, subtitle, bullets[], footerUrl}
+//   "stats"    headline + big numbers  {eyebrow, title, subtitle, stats:[{value, label}], footerUrl}
 (function () {
 	"use strict";
 
@@ -388,6 +391,84 @@
 		footer(g, W, H, spec, o, st, accent, pad);
 	}
 
+	function drawText(g, W, H, spec, o, st, accent) {
+		var pad = Math.round(Math.min(W, H) * 0.09);
+		var title = o.headline || spec.title || "", sub = o.subline != null && o.subline !== "" ? o.subline : (spec.subtitle || "");
+		var footH = (o.logo || o.url) ? Math.round(Math.min(W, H) / 40 * 1.9) + 14 : 0;
+		var wt = st.display === HEAVY ? "400" : "800";
+		var boxH = H - pad * 2 - footH, maxW = W - pad * 2;
+		var es = Math.max(15, Math.round(Math.min(W, H) / 28));
+		var tf = fitText(g, title, st.display, wt, maxW, 5, Math.round(Math.min(W * 0.16, boxH * 0.5)), 28); fitFont(g, tf, wt, st.display);
+		var sf = sub ? fitText(g, sub, st.body, "500", maxW * 0.92, 3, Math.round(tf.size * 0.34), 15) : null;
+		if (sf) fitFont(g, sf, "500", st.body);
+		var total = (spec.eyebrow ? es * 2.2 : 0) + (tf.lines.length - 1) * tf.lh + tf.size + (sf ? 24 + (sf.lines.length - 1) * sf.lh + sf.size : 0);
+		var y = pad + Math.max(0, (boxH - total) / 2);
+		g.textAlign = "center";
+		if (spec.eyebrow) { g.fillStyle = accent; g.font = "700 " + es + "px " + st.body; g.fillText(spec.eyebrow.toUpperCase(), W / 2, y + es); y += es * 2.2; }
+		g.save(); g.translate(Math.max(3, tf.size / 18), Math.max(3, tf.size / 18)); textBlock(g, tf, W / 2, y + tf.size * 0.9, st.id === "sctp" ? "#5D7A17" : "rgba(0,0,0,0.3)", "center"); g.restore();
+		y = textBlock(g, tf, W / 2, y + tf.size * 0.9, accent, "center");
+		if (sf) textBlock(g, sf, W / 2, y + 24 + sf.size, st.text, "center");
+		g.textAlign = "left";
+		footer(g, W, H, spec, o, st, accent, pad);
+	}
+
+	function drawList(g, W, H, spec, o, st, accent) {
+		var pad = Math.round(Math.min(W, H) * 0.07), ar = W / H, wide = ar > 1.5;
+		var title = o.headline || spec.title || "", sub = o.subline != null && o.subline !== "" ? o.subline : (spec.subtitle || "");
+		var footH = (o.logo || o.url) ? Math.round(Math.min(W, H) / 40 * 1.9) + 14 : 0;
+		var wt = st.display === HEAVY ? "400" : "800";
+		var bullets = (spec.bullets || []).filter(Boolean).slice(0, 12);
+		var headW = wide ? W * 0.38 : W - pad * 2, y = pad;
+		var es = Math.max(14, Math.round(Math.min(W, H) / 30));
+		if (spec.eyebrow) { g.fillStyle = accent; g.font = "700 " + es + "px " + st.body; g.textAlign = "left"; g.fillText(spec.eyebrow.toUpperCase(), pad, y + es); y += es * 2.1; }
+		var tf = fitText(g, title, st.display, wt, headW, wide ? 4 : 3, Math.round(Math.min(W * (wide ? 0.09 : 0.13), H * 0.16)), 26); fitFont(g, tf, wt, st.display);
+		y = textBlock(g, tf, pad, y + tf.size * 0.9, st.text, "left");
+		if (sub) { var sf = fitText(g, sub, st.body, "500", headW, 3, Math.round(tf.size * 0.4), 14); fitFont(g, sf, "500", st.body); y = textBlock(g, sf, pad, y + sf.size + 8, st.muted, "left"); }
+		var bx = wide ? W * 0.47 : pad, bw = wide ? W - bx - pad : W - pad * 2;
+		var by = wide ? pad : y + pad * 0.6, bh = H - footH - pad - by;
+		if (!bullets.length) { footer(g, W, H, spec, o, st, accent, pad); return; }
+		var gap = Math.round(Math.min(W, H) * 0.018), rowH = Math.min(120, (bh - gap * (bullets.length - 1)) / bullets.length);
+		var fs = Math.max(13, Math.round(rowH * 0.34));
+		bullets.forEach(function (t, i) {
+			var ry = by + i * (rowH + gap) + (wide ? Math.max(0, (bh - bullets.length * (rowH + gap) + gap) / 2) : 0);
+			box(g, bx, ry, bw, rowH, st, { noShadow: false });
+			g.fillStyle = accent; g.fillRect(bx + rowH * 0.22, ry + rowH * 0.3, rowH * 0.4, rowH * 0.4);
+			var f = fitText(g, t, st.body, "600", bw - rowH * 1.1, 2, fs, 11); fitFont(g, f, "600", st.body);
+			var ty = ry + rowH / 2 - ((f.lines.length - 1) * f.lh) / 2 + f.size * 0.35;
+			textBlock(g, f, bx + rowH * 0.9, ty, st.text, "left");
+		});
+		footer(g, W, H, spec, o, st, accent, pad);
+	}
+
+	function drawStats(g, W, H, spec, o, st, accent) {
+		var pad = Math.round(Math.min(W, H) * 0.07), ar = W / H;
+		var title = o.headline || spec.title || "", sub = o.subline != null && o.subline !== "" ? o.subline : (spec.subtitle || "");
+		var footH = (o.logo || o.url) ? Math.round(Math.min(W, H) / 40 * 1.9) + 14 : 0;
+		var wt = st.display === HEAVY ? "400" : "800", y = pad;
+		var es = Math.max(14, Math.round(Math.min(W, H) / 30));
+		if (spec.eyebrow) { g.fillStyle = accent; g.font = "700 " + es + "px " + st.body; g.textAlign = "left"; g.fillText(spec.eyebrow.toUpperCase(), pad, y + es); y += es * 2.1; }
+		var tf = fitText(g, title, st.display, wt, W - pad * 2, 2, Math.round(Math.min(W * 0.1, H * 0.14)), 26); fitFont(g, tf, wt, st.display);
+		y = textBlock(g, tf, pad, y + tf.size * 0.9, st.text, "left");
+		if (sub) { var sf = fitText(g, sub, st.body, "500", W - pad * 2, 2, Math.round(tf.size * 0.4), 14); fitFont(g, sf, "500", st.body); y = textBlock(g, sf, pad, y + sf.size + 8, st.muted, "left"); }
+		var stats = (spec.stats || []).slice(0, 8);
+		if (!stats.length) { footer(g, W, H, spec, o, st, accent, pad); return; }
+		var top = y + pad * 0.6, availH = H - footH - pad - top, availW = W - pad * 2;
+		var cols = stats.length <= 2 ? stats.length : (ar > 1.2 ? Math.min(4, stats.length) : 2);
+		var rows = Math.ceil(stats.length / cols), gap = Math.round(Math.min(W, H) * 0.025);
+		var cw = (availW - gap * (cols - 1)) / cols, ch = Math.min(availH / rows - gap, cw * 0.9);
+		var gy = top + Math.max(0, (availH - rows * (ch + gap) + gap) / 2);
+		stats.forEach(function (s, i) {
+			var cx = pad + (i % cols) * (cw + gap), cy = gy + Math.floor(i / cols) * (ch + gap);
+			box(g, cx, cy, cw, ch, st, i === 0 ? { fill: accent, stroke: st.line } : {});
+			var vf = fitText(g, String(s.value), st.display, wt, cw - 24, 1, Math.round(ch * 0.42), 16); fitFont(g, vf, wt, st.display);
+			g.fillStyle = i === 0 ? st.ink : accent; g.textAlign = "center"; g.fillText(vf.lines[0], cx + cw / 2, cy + ch * 0.52);
+			var lf = fitText(g, String(s.label), st.body, "600", cw - 24, 2, Math.round(ch * 0.15), 10); fitFont(g, lf, "600", st.body);
+			textBlock(g, lf, cx + cw / 2, cy + ch * 0.52 + lf.size * 1.6, i === 0 ? st.ink : st.muted, "center");
+		});
+		g.textAlign = "left";
+		footer(g, W, H, spec, o, st, accent, pad);
+	}
+
 	// ---------------- public render ----------------
 	function sizeFor(o) {
 		var f = byId(FORMATS, o.format);
@@ -412,6 +493,9 @@
 			if (spec.type === "feature") drawFeature(g, sz.w, sz.h, spec, o, st, accent, imgs[0]);
 			else if (spec.type === "grid") drawGrid(g, sz.w, sz.h, spec, o, st, accent, imgs);
 			else if (spec.type === "tiles") drawTiles(g, sz.w, sz.h, spec, o, st, accent);
+			else if (spec.type === "text") drawText(g, sz.w, sz.h, spec, o, st, accent);
+			else if (spec.type === "list") drawList(g, sz.w, sz.h, spec, o, st, accent);
+			else if (spec.type === "stats") drawStats(g, sz.w, sz.h, spec, o, st, accent);
 			else drawAnnounce(g, sz.w, sz.h, spec, o, st, accent);
 			return canvas;
 		});
@@ -504,7 +588,7 @@
 		bg.className = "ss-bg";
 		bg.innerHTML = '<div class="ss-modal"><h2>' + esc(spec.modalTitle || "Make an image") + '</h2><p class="ss-sub">Pick a size and a style — it updates live. Everything is made in your browser.</p>' +
 			'<div class="ss-layout"><div><div class="ss-prev" id="ssPrev"><canvas id="ssCanvas"></canvas></div><div class="ss-note" id="ssInfo" style="margin-top:6px;"></div></div><div><div id="ssCtl"></div>' +
-			'<div class="ss-btns"><a class="primary" id="ssPng" download>Download PNG</a><a id="ssJpg" download>Download JPG</a><button type="button" id="ssCopy">Copy image</button><button type="button" id="ssDice">&#127922; Random style</button><button type="button" id="ssAll">Download every size</button><button type="button" id="ssClose">Close</button></div>' +
+			'<div class="ss-btns"><a class="primary" id="ssPng" download>Download PNG</a><a id="ssJpg" download>Download JPG</a><button type="button" id="ssCopy">Copy image</button><button type="button" id="ssDice">&#127922; Random style</button><button type="button" id="ssAll">Download every size</button><button type="button" id="ssAllStyles">Download every style</button><button type="button" id="ssClose">Close</button></div>' +
 			'<div class="ss-note" id="ssNote"></div></div></div></div>';
 		document.body.appendChild(bg);
 		bg.addEventListener("mousedown", function (e) { if (e.target === bg) bg.remove(); });
@@ -535,6 +619,19 @@
 				var c = document.createElement("canvas");
 				render(c, spec, Object.assign({}, o, { format: f.id })).then(function () {
 					var a = document.createElement("a"); a.download = (spec.filename || "sctp-image") + "-" + f.id + "-" + o.style + ".png"; a.href = c.toDataURL("image/png"); document.body.appendChild(a); a.click(); a.remove();
+					setTimeout(next, 350);
+				});
+			})();
+		};
+		bg.querySelector("#ssAllStyles").onclick = function () {
+			var b = this, o = ctl.get(), i = 0;
+			b.disabled = true;
+			(function next() {
+				if (i >= STYLES.length) { b.disabled = false; b.textContent = "Download every style"; draw(); return; }
+				var sty = STYLES[i++]; b.textContent = "Rendering " + i + "/" + STYLES.length + "…";
+				var c = document.createElement("canvas");
+				render(c, spec, Object.assign({}, o, { style: sty.id, pattern: "auto", accent: "auto" })).then(function () {
+					var a = document.createElement("a"); a.download = (spec.filename || "sctp-image") + "-" + o.format + "-" + sty.id + ".png"; a.href = c.toDataURL("image/png"); document.body.appendChild(a); a.click(); a.remove();
 					setTimeout(next, 350);
 				});
 			})();

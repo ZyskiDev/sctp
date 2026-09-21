@@ -14,6 +14,7 @@ Everything since mod 1.6 (released 14 Sep 2026).
 - **Settings screen** reorganised and simplified.
 - **Watchlist:** quick price buttons (1, 5, 10, 15, 20, 25, 32, 48 blocks) in item options; a "Search" button per row that jumps to the item's detail page; the watchlist screen keeps your search text and scroll position when you return from another screen; alerts now include marketplace listings with a clickable link to the listing on the website.
 - **In-game reporting:** a red [Report] button on watchlist alerts and in the listings list — one click, once per listing per session.
+- **Ignore this listing:** a grey [Ignore] button on watchlist alerts (shop listings and marketplace posts) stops that exact listing from alerting you again — the item stays on your watchlist and other sellers still alert. `/watchunignore` forgets everything you ignored.
 - **Rare rentals:** optional Advanced setting (off by default) to also highlight rentable rares inside opened shulker boxes.
 - **Auto-scanner:** no longer silently right-clicks while you hold a name tag or a feather (so it can't redeem fly tokens).
 - Shop-visit alert fixes; proper names for music discs.
@@ -38,6 +39,8 @@ Everything since mod 1.6 (released 14 Sep 2026).
 - **Collections** (`/collection/`): tick off rare items and mapart per world, with full stats; public by default at `/collection/<username>` (private toggle). Ownership toggles on the item-library cards, the mapart catalog cards and both detail pages.
 - **Public profiles:** the seller page (`/s/ff/<name>`) is now a tabbed profile — Shop, Mapart (with commission info), Collection, Marketplace. "My Profile" and "My Collection" in the account menu.
 - **Rare-dle** (`/rare-dle/`, testing mode): a daily "guess the secret rare" game — login required, 8 tries, per-attribute feedback, a hint after 4 guesses, points and streaks, and Today / All-time / Streak leaderboards. While in testing mode you can reset the daily game or play unlimited random practice rounds (practice never counts toward points or leaderboards).
+- **Marketing studio (admin panel):** 13 ready-made templates (announcement, big statement, what's-new list, live "by the numbers", mapart and rare spotlights, mapart/rare collections, marketplace promo, mod release, Rare-dle teaser, event/giveaway, player shoutout, today's mapart) that open in the image maker, which can also download every size or every style in one go.
+- **Home page:** a featured strip with a bigger mapart of the day, a slot reserved for Rare-dle, and a marketplace card with the live listing count.
 - **Image maker:** shareable pictures in 13 formats (Discord, X, Instagram, story, YouTube, wallpaper, banners, custom…) and 12 styles with patterns, layouts and your own colours — for mapart of the day, mapart pages, rare item pages, profiles, the collection "still needed / owned" builder and Rare-dle results.
 
 ### Website — shops and marketplace

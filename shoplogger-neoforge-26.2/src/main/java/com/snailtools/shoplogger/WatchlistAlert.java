@@ -36,6 +36,7 @@ public final class WatchlistAlert {
 		for (ShopEntry entry : entries) {
 			WatchedItem match = findWatched(entry.itemName(), watched);
 			if (match == null) continue;
+			if (WatchlistIgnore.isIgnored(WatchlistIgnore.shopKey(ShopReporter.fromEntry(entry)))) continue; // the player chose to ignore this exact listing
 			// A display sign has no real price, so a max-price cap can't apply to
 			// it either way — it only ever gets filtered by excludeNoPriceOrDisplay.
 			boolean isDisplay = ShopSign.DISPLAY_CURRENCY.equalsIgnoreCase(entry.currency());
@@ -69,6 +70,8 @@ public final class WatchlistAlert {
 				.append(buildTpButton(entry.world(), entry.containerPos(), entry.seller()))
 				.append(Component.literal("  "))
 				.append(ShopReporter.buildChatButton(ShopReporter.fromEntry(entry)))
+				.append(Component.literal("  "))
+				.append(WatchlistIgnore.buildChatButton(WatchlistIgnore.shopKey(ShopReporter.fromEntry(entry))))
 				.append(Component.literal("  "))
 				.append(buildOptionsButton(entry.itemName()))
 				.append(Component.literal("  "))
