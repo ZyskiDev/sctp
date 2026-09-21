@@ -213,6 +213,38 @@
 	.mapart-detail h1{font-family:var(--font-display);font-weight:600;font-size:34px;margin:0 0 6px;line-height:1.15;}
 	.mapart-detail .by{color:var(--shell);font-size:16px;margin:0 0 14px;}
 	.mapart-detail .by a{color:var(--shell);}
+	/* public profile tabs */
+	.ptabs{display:flex;gap:6px;margin:0 0 18px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+	.ptab{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:var(--font-body);font-weight:600;font-size:14.5px;padding:10px 6px;margin:0 12px -1px 0;cursor:pointer;}
+	.ptab.active{color:var(--accent);border-bottom-color:var(--accent);}
+	.ptab:hover{color:var(--text);}
+	.ptab .n{font-size:11px;color:var(--muted);font-family:var(--font-mono);margin-left:4px;}
+	.comm-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 18px;}
+	.comm-box .ch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+	.comm-box .ch b{font-family:var(--font-display);font-size:17px;}
+	.comm-pill{font-size:11.5px;border-radius:999px;padding:2px 10px;border:1px solid var(--line);}
+	.comm-pill.open{color:var(--accent);border-color:rgba(183,226,61,0.5);}
+	.comm-pill.closed{color:var(--muted);}
+	.comm-box .info{white-space:pre-wrap;font-size:14px;color:var(--text);margin:6px 0;}
+	.comm-box .disc{font-size:13.5px;color:var(--shell);}
+	.pm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
+	.pm-card{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;text-decoration:none;color:var(--text);}
+	.pm-card:hover{border-color:var(--accent-dim);}
+	.pm-card .im{height:170px;background:#0C140F;display:flex;align-items:center;justify-content:center;padding:8px;}
+	.pm-card .im img{max-width:100%;max-height:100%;image-rendering:pixelated;}
+	.pm-card .in{padding:9px 12px 11px;font-size:13px;}
+	.pm-card .t{font-weight:600;font-size:14.5px;}
+	.pm-card .s{color:var(--muted);font-size:12px;margin-top:2px;}
+	.pm-role{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-left:6px;}
+	.conv-toggle{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;margin-right:12px;cursor:pointer;}
+	.price-check{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:0 0 16px;}
+	.price-check .pc-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:8px;}
+	.price-check .pc-title span{text-transform:none;letter-spacing:0;font-weight:400;margin-left:6px;}
+	.price-check .pc-row{display:flex;gap:28px;flex-wrap:wrap;}
+	.price-check .pc-world{font-size:12px;color:var(--shell);font-weight:600;}
+	.price-check .pc-val{font-family:var(--font-display);font-size:24px;font-weight:600;}
+	.price-check .pc-val.none{font-size:15px;color:var(--muted);font-family:var(--font-body);font-weight:500;padding:5px 0;}
+	.price-check .pc-sub{font-size:12px;color:var(--muted);}
 	.artist-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;font-family:inherit;line-height:1;}
 	.artist-toggle:hover{color:var(--accent);}
 	.artist-toggle .arr{display:inline-block;transition:transform .12s;}
@@ -263,6 +295,7 @@
 <script src="/mapart-report.js" defer></script>
 <script src="/collection.js" defer></script>
 <script src="/collection-toggle.js" defer></script>
+<script src="/share-studio.js" defer></script>
 <script>
 (function(){
 	"use strict";
@@ -423,6 +456,12 @@
 	// Real player-market rates: 64 iron = 1 diamond, 18 gold = 1 diamond, 1
 	// netherite ingot = 18 diamonds — block variants use the standard 9-per-block
 	// crafting ratio. Same table as index.html's CURRENCY_VALUE.
+	// "Convert currencies to diamond-equivalent" — one remembered preference shared by every page.
+	// On (default): iron/gold/netherite/blocks are converted so prices compare on one scale.
+	// Off: the raw price number in each listing's own currency is used as-is.
+	var CONVERT_KEY = "sctp_convert_currencies";
+	function convertOn(){ try { return localStorage.getItem(CONVERT_KEY) !== "0"; } catch(e){ return true; } }
+	function setConvert(v){ try { localStorage.setItem(CONVERT_KEY, v ? "1" : "0"); } catch(e){} }
 	var CURRENCY_VALUE = {
 		diamond: 1, diamondblock: 9,
 		iron: 1/64, ironingot: 1/64, ironblock: 9/64,
@@ -431,7 +470,7 @@
 	};
 	function priceInDiamonds(r){
 		if(String(r.currency||"").toLowerCase() === "display") return Infinity;
-		var mult = CURRENCY_VALUE[String(r.currency||"").toLowerCase()];
+		var mult = convertOn() ? CURRENCY_VALUE[String(r.currency||"").toLowerCase()] : 1;
 		return r.price * (mult || 1);
 	}
 	function pricePerItem(r){ return priceInDiamonds(r) / (r.stackSize || 1); }
@@ -653,7 +692,8 @@
 						'<div class="mapart-frame" id="mapartFrame" title="Click to zoom"><img src="' + esc(img) + '" alt="' + esc(m.title) + '"><span class="mapart-spy">&#128269; click to zoom</span></div>' +
 						'<div class="mapart-detail">' +
 							'<h1>' + esc(m.title) + '</h1>' +
-							'<p class="by">' + (m.artist ? 'by ' + artistsHtml : 'Unknown artist') + '</p>' +
+							'<p class="by">' + (m.artist ? (m.commissioned ? 'built by ' : 'by ') + artistsHtml : (m.commissioned ? 'Builder unknown' : 'Unknown artist')) + '</p>' +
+							(m.commissioned && m.commissionedBy ? '<p class="by" style="margin-top:-8px;font-size:14px;color:var(--muted);">commissioned by <a href="/s/' + worldSlug + '/' + encodeURIComponent(m.commissionedBy) + '">' + esc(m.commissionedBy) + '</a></p>' : '') +
 							'<div class="mapart-pills">' +
 								(m.category ? '<span class="mapart-pill cat">' + esc(m.category) + '</span>' : '<span class="mapart-pill">no category</span>') +
 								'<span class="mapart-pill">' + esc(m.world) + '</span>' +
@@ -668,6 +708,7 @@
 							'</dl>' +
 							'<button type="button" class="share-item-btn" style="margin-left:0;" data-share-url="' + esc(location.origin + "/mapart/" + encodeURIComponent(m.slug)) + '">Share</button> ' +
 							'<span id="mapartCollectHost"></span> ' +
+							'<button type="button" class="share-item-btn" id="mapartImgBtn" style="margin-left:0;">Make image</button> ' +
 							'<button type="button" class="report-player-btn" id="mapartReportBtn">Report</button>' +
 							
 							(m.claimed ? '' : '<p style="color:var(--muted);font-size:13px;margin-top:18px;">Is this yours? Log in and use <strong>Mapart Management</strong> in the account menu to claim it.</p>') +
@@ -716,6 +757,20 @@
 			window.sctpMapartReport.open({ id: m.id, slug: m.slug, title: m.title, artist: m.artist, world: m.world, category: m.category }, function(kind){
 				if(kind === "removed") location.href = "/mapart/";
 				else if(kind === "edited") setTimeout(function(){ location.reload(); }, 800);
+			});
+		});
+
+		document.getElementById("mapartImgBtn").addEventListener("click", function(){
+			if(!window.sctpShare) return;
+			var names = m.artist ? m.artist.split(" & ").map(function(a){ return a.trim(); }).filter(Boolean) : [];
+			var details = [m.world + (m.width * m.height > 1 ? "  \u00b7  " + m.width + "\u00d7" + m.height + " maps" : "") + (m.category ? "  \u00b7  " + m.category : "")];
+			if(m.commissioned && m.commissionedBy) details.push("commissioned by " + m.commissionedBy);
+			if(m.price) details.push("Price: " + m.price);
+			window.sctpShare.open({
+				modalTitle: "Make an image of this mapart", type: "feature", eyebrow: "Mapart",
+				title: m.title, subtitle: names.length ? (m.commissioned ? "built by " : "by ") + names.join(" & ") : "",
+				details: details, imageUrl: API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || ""),
+				pixel: true, footerUrl: "sctp.nl/mapart/" + m.slug, filename: "mapart-" + m.slug
 			});
 		});
 
@@ -776,11 +831,126 @@
 		var profile = approved.filter(function(e){ return String(e.username||"").toLowerCase() === usernameKey; })[0] || null;
 
 		renderProfile(profile);
-		document.getElementById("app").insertAdjacentHTML("beforeend", renderMarketplaceSection(allListings.filter(function(r){ return r.marketplace; })));
+		var marketHtml = renderMarketplaceSection(allListings.filter(function(r){ return r.marketplace; }));
 		populateCurrencyOptions();
 		renderApp();
 		applyFilters();
+		setupProfileTabs(marketHtml);
 	}
+
+	// ---------------- tabs: Shop | Mapart | Collection | Marketplace ----------------
+	// One page for a player: their shop (this world), the mapart they made or
+	// commissioned (with commission info), their public collection and their
+	// marketplace activity. The extra tabs only appear when there's something in them.
+	function setupProfileTabs(marketHtml){
+		var app = document.getElementById("app");
+		var layout = app.querySelector(".layout");
+		var bar = document.createElement("div");
+		bar.className = "ptabs";
+		var panels = { shop: document.createElement("div"), mapart: document.createElement("div"), collection: document.createElement("div"), market: document.createElement("div") };
+		Object.keys(panels).forEach(function(k){ panels[k].id = "panel-" + k; panels[k].hidden = k !== "shop"; });
+		layout.parentNode.insertBefore(bar, layout);
+		layout.parentNode.insertBefore(panels.shop, layout);
+		panels.shop.appendChild(layout);
+		["mapart", "collection", "market"].forEach(function(k){ app.appendChild(panels[k]); });
+		panels.market.innerHTML = marketHtml || "";
+
+		var tabs = [{ key: "shop", label: "Shop", n: allListings.length }];
+		var mounted = {};
+		function draw(){
+			bar.innerHTML = tabs.map(function(t){ return '<button type="button" class="ptab" data-tab="'+t.key+'">'+esc(t.label)+(t.n ? '<span class="n">'+t.n+'</span>' : '')+'</button>'; }).join("");
+			bar.querySelectorAll(".ptab").forEach(function(b){ b.addEventListener("click", function(){ show(b.getAttribute("data-tab")); }); });
+			show(currentTab);
+		}
+		var currentTab = (location.hash || "").replace("#", "");
+		function show(key){
+			if(!tabs.some(function(t){ return t.key === key; })) key = "shop";
+			currentTab = key;
+			Object.keys(panels).forEach(function(k){ panels[k].hidden = k !== key; });
+			bar.querySelectorAll(".ptab").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab") === key); });
+			try { history.replaceState(null, "", key === "shop" ? location.pathname : "#" + key); } catch(e){}
+			if(key === "collection" && !mounted.collection && window.sctpCollection){
+				mounted.collection = true;
+				window.sctpCollection.mount(panels.collection, { username: profileData.username, editable: false });
+			}
+		}
+		var profileData = { username: username };
+		draw();
+
+		fetch(API_BASE + "/profile?username=" + encodeURIComponent(username)).then(function(r){ return r.ok ? r.json() : null; }).then(function(p){
+			if(!p || p.error) return;
+			profileData = p;
+			var head = document.querySelector(".profile-top");
+			if(p.commission && p.commission.open && head){
+				head.insertAdjacentHTML("beforeend", '<a href="#mapart" class="comm-pill open" data-goto="mapart" style="text-decoration:none;">&#127912; Open for commissions</a>');
+				head.querySelector("[data-goto]").addEventListener("click", function(e){ e.preventDefault(); show("mapart"); });
+			}
+			var mp = p.mapart || [];
+			if(mp.length && head && window.sctpShare){
+				head.insertAdjacentHTML("beforeend", '<button type="button" class="share-player-btn" id="profileImgBtn">Make card</button>');
+				document.getElementById("profileImgBtn").addEventListener("click", function(){
+					window.sctpShare.open({
+						modalTitle: "Make a card for " + p.username, type: "grid", eyebrow: "Snailcraft mapart artist", title: p.username,
+						subtitle: mp.length + " mapart" + (mp.length === 1 ? "" : "s") + (p.commission && p.commission.open ? "  \u00b7  open for commissions" : ""),
+						footerUrl: "sctp.nl/s/ff/" + encodeURIComponent(p.username), filename: "profile-" + p.username, gridAspect: 1.0,
+						items: mp.map(function(m){ return { name: m.title, imageUrl: API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || ""), pixel: true }; })
+					});
+				});
+			}
+			var hasComm = p.commission && (p.commission.open || p.commission.info);
+			if(mp.length || hasComm){
+				tabs.push({ key: "mapart", label: "Mapart", n: mp.length });
+				panels.mapart.innerHTML = renderProfileMapart(p, mp);
+			}
+			if(p.hasAccount && p.collection && p.collection.public){
+				var cn = (p.collection.counts || []).reduce(function(a, c){ return a + c.n; }, 0);
+				if(cn) tabs.push({ key: "collection", label: "Collection", n: cn });
+			}
+			var mk = p.marketplace || [];
+			if(mk.length || marketHtml){
+				tabs.push({ key: "market", label: "Marketplace", n: mk.length });
+				panels.market.insertAdjacentHTML("beforeend", renderProfileMarketHistory(mk));
+			}
+			draw();
+		}).catch(function(){});
+	}
+
+	function renderProfileMapart(p, mp){
+		var c = p.commission || {};
+		var comm = '';
+		if(c.open || c.info){
+			comm = '<div class="comm-box"><div class="ch"><b>Commissions</b><span class="comm-pill '+(c.open ? 'open' : 'closed')+'">'+(c.open ? 'Open' : 'Closed')+'</span></div>'+
+				(c.info ? '<div class="info">'+esc(c.info)+'</div>' : '')+
+				(c.open && c.discord ? '<div class="disc">Contact on Discord: <b>'+esc(c.discord)+'</b></div>' : '')+
+				(c.open && !c.discord ? '<div class="disc">Find them in game to ask.</div>' : '')+
+			'</div>';
+		}
+		if(!mp.length) return comm + '<p style="color:var(--muted);">No mapart listed for this player yet.</p>';
+		return comm + '<div class="pm-grid">'+mp.map(function(m){
+			var img = API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || "");
+			var role = m.role === "commissioner" ? "commissioned" : (m.commissioned ? "built" : "");
+			var buy = m.notForSale ? "Not for sale" : (m.price ? "Price: " + m.price : (m.whereToBuy || ""));
+			return '<a class="pm-card" href="/mapart/'+encodeURIComponent(m.slug)+'"><div class="im"><img src="'+esc(img)+'" alt="" loading="lazy"></div>'+
+				'<div class="in"><div class="t">'+esc(m.title)+(role ? '<span class="pm-role">'+role+'</span>' : '')+'</div>'+
+				'<div class="s">'+esc(m.world)+(m.category ? ' &middot; '+esc(m.category) : '')+(m.width*m.height > 1 ? ' &middot; '+m.width+'&times;'+m.height : '')+'</div>'+
+				(buy ? '<div class="s">'+esc(buy)+'</div>' : '')+'</div></a>';
+		}).join("")+'</div>';
+	}
+
+	function renderProfileMarketHistory(mk){
+		if(!mk.length) return "";
+		function price(m){
+			if(m.type === "lookingFor") return m.budget ? fmtNum(m.budget)+" "+esc(m.budgetCurrency || "") : "—";
+			return m.askingPrice ? fmtNum(m.askingPrice)+" "+esc(m.askingCurrency || "") : "—";
+		}
+		return '<section class="table-card" style="margin-bottom:20px;"><div class="table-toolbar"><span class="count">Marketplace history</span></div>'+
+			'<div class="table-scroll"><table><thead><tr><th>Type</th><th>Item</th><th>Qty</th><th>Price</th><th>World</th><th>Status</th><th>Posted</th></tr></thead><tbody>'+
+			mk.map(function(m){
+				return '<tr><td><span class="badge marketplace">'+(m.type === "lookingFor" ? "Looking for" : "Selling")+'</span></td><td>'+esc(m.itemName)+'</td><td>'+fmtNum(m.quantity)+'</td><td>'+price(m)+'</td><td>'+esc(m.world)+'</td>'+
+					'<td>'+(m.status === "fulfilled" ? '<span style="color:var(--accent);">&#10003; completed</span>' : 'active')+'</td><td>'+esc(String(m.createdAt).slice(0,10))+'</td></tr>';
+			}).join("")+'</tbody></table></div></section>';
+	}
+
 
 	// ---------------- profile header ----------------
 	function renderProfile(profile){
@@ -849,6 +1019,7 @@
 				'</select></div>'+
 				'<div class="f-group"><label class="f-checkbox"><input type="checkbox" id="fHideDisplay"> Hide display-only listings</label></div>'+
 				(currencyChecks ? '<div class="f-group"><label>Currency</label><div class="currency-checks">'+currencyChecks+'</div></div>' : '')+
+				'<div class="f-group"><label class="f-checkbox" title="On: other currencies are converted to diamonds. Off: raw prices in each listing\'s own currency."><input type="checkbox" id="fConvert"'+(convertOn() ? ' checked' : '')+'> Convert currencies to diamond-equivalent</label></div>'+
 				'<div class="f-group"><label>Price (in diamonds)</label><div class="f-range">'+
 					'<input type="number" id="fPriceMin" placeholder="min" min="0"><input type="number" id="fPriceMax" placeholder="max" min="0">'+
 				'</div></div>'+
@@ -871,6 +1042,10 @@
 		'</div>';
 		document.getElementById("app").insertAdjacentHTML("beforeend", html);
 
+		document.getElementById("fConvert").addEventListener("change", function(){
+			setConvert(this.checked);
+			applyFilters();
+		});
 		["fSearch","fBulk","fHideDisplay","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
 			var el = document.getElementById(id);
 			el.addEventListener("input", applyFilters);
@@ -1057,6 +1232,8 @@
 				'</div>'+
 				renamedNotice+
 				(isRare ? '<div id="rareCollectHost" class="col-detail" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px;"></div>' : '')+
+				(isRare ? '<div id="priceCheck" class="price-check"></div>' : '')+
+				(isRare ? '<div style="margin:-6px 0 14px;"><button type="button" class="share-item-btn" id="rareImgBtn" style="margin-left:0;">Make image</button></div>' : '')+
 				(isRare ? rareInfoHtml(entry) : '')+
 				'<p class="history-note" id="historyNote"></p>'+
 				'<div id="itemStatsRow"></div>'+
@@ -1073,6 +1250,7 @@
 				'</div>'+
 				'<section class="table-card">'+
 					'<div class="table-toolbar"><span class="count" id="itemResultCount"></span>'+
+						'<label class="conv-toggle" title="On: other currencies are converted to diamonds. Off: raw prices in each listing\'s own currency."><input type="checkbox" id="itemConvert"'+(convertOn() ? ' checked' : '')+'> Convert currencies to diamond-equivalent</label>'+
 						'<select id="itemWorldFilter" class="world-filter">'+
 							'<option value="">All worlds</option>'+
 							'<option value="Firefly">Firefly</option>'+
@@ -1083,9 +1261,31 @@
 					'<div class="pagination" id="itemPagination" style="display:none;"></div>'+
 				'</section>';
 			document.getElementById("app").insertAdjacentHTML("beforeend", html);
-			if(isRare) mountRareCollect(entry.id);
+			if(isRare){
+				mountRareCollect(entry.id);
+				document.getElementById("rareImgBtn").addEventListener("click", function(){
+					if(!window.sctpShare) return;
+					var details = [];
+					if(entry.effect) details.push(entry.effect);
+					if(entry.obtainedFrom && entry.obtainedFrom !== "null") details.push("Obtained from: " + entry.obtainedFrom);
+					if(entry.typeSlot && entry.typeSlot !== "null") details.push("Type: " + entry.typeSlot + (entry.dyeable && entry.dyeable !== "null" ? "  \u00b7  Dyeable: " + entry.dyeable : ""));
+					var pc = document.querySelectorAll("#priceCheck .pc-cell");
+					var vals = [];
+					pc.forEach(function(c){ var v = c.querySelector(".pc-val"); if(v && !v.classList.contains("none")) vals.push(c.querySelector(".pc-world").textContent + " " + v.textContent.replace(/\s+/g, " ").trim()); });
+					if(vals.length) details.push("Value: " + vals.join("  \u00b7  "));
+					window.sctpShare.open({
+						modalTitle: "Make an image of this rare", type: "feature", eyebrow: "Snailcraft rare",
+						title: entry.name, subtitle: [entry.category, entry.releaseDate && entry.releaseDate !== "null" ? "Released " + entry.releaseDate : ""].filter(Boolean).join("  \u00b7  "),
+						details: details, imageUrl: entry.texture, pixel: true, footerUrl: "sctp.nl/items/" + slug, filename: "rare-" + slug
+					});
+				});
+			}
 			document.getElementById("itemWorldFilter").addEventListener("change", function(){
 				worldFilter = this.value;
+				renderItemTable();
+			});
+			document.getElementById("itemConvert").addEventListener("change", function(){
+				setConvert(this.checked);
 				renderItemTable();
 			});
 			document.getElementById("scalePer1").addEventListener("click", function(){ setPriceScale(1); });
@@ -1264,7 +1464,24 @@
 		var itemPage = 1;
 		var itemSort = "recent";
 
+		// Price check for rares: a general value per world (median of what it's
+		// currently listed for, in diamond-equivalent per item) — a ballpark, not a quote.
+		function renderPriceCheck(){
+			var host = document.getElementById("priceCheck");
+			if(!host) return;
+			function fmt(d){ return d > 9 ? (Math.round(d/9*100)/100) + " db" : (Math.round(d*100)/100) + " dia"; }
+			function cell(world){
+				var prices = currentListings.filter(function(r){ return r.world === world && String(r.currency||"").toLowerCase() !== "display" && (convertOn() || String(r.currency||"").toLowerCase() === "diamond"); })
+					.map(pricePerItem).filter(function(p){ return isFinite(p) && p > 0; }).sort(function(a,b){ return a - b; });
+				if(!prices.length) return '<div class="pc-cell"><div class="pc-world">'+world+'</div><div class="pc-val none">No estimate yet</div><div class="pc-sub">not listed right now</div></div>';
+				var mid = prices.length % 2 ? prices[(prices.length-1)/2] : (prices[prices.length/2-1] + prices[prices.length/2]) / 2;
+				return '<div class="pc-cell"><div class="pc-world">'+world+'</div><div class="pc-val">&asymp; '+fmt(mid)+'</div><div class="pc-sub">from '+prices.length+' listing'+(prices.length===1?'':'s')+'</div></div>';
+			}
+			host.innerHTML = '<div class="pc-title">Price check <span>general value, per item</span></div><div class="pc-row">'+cell("Firefly")+cell("Honeybee")+'</div>';
+		}
+
 		function renderItemTable(){
+			renderPriceCheck();
 			var area = document.getElementById("itemTableArea");
 			var pag = document.getElementById("itemPagination");
 			var rows = worldFilter ? currentListings.filter(function(r){ return r.world === worldFilter; }) : currentListings;

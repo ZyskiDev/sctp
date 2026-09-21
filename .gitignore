@@ -23,3 +23,6 @@ verification-links.csv
 
 # Per-artist DM drafts containing live verification links
 dm-messages/
+
+# Pre-rendered SCTP 2.0 announcement pack (~34 MB) — regenerable, not needed by the site
+content-2.0/

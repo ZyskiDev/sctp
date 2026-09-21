@@ -20,15 +20,25 @@
 (function () {
 	"use strict";
 
+	// Top-level nav: plain links, dropdown menus ("menu") and one call-to-action
+	// button ("cta"). Menus open on click; inside the mobile drawer they are
+	// simply listed under their heading.
 	var LINKS = [
 		{ href: "/", label: "Home" },
 		{ href: "/items/", label: "Items" },
-		{ href: "/list/", label: "List" },
 		{ href: "/marketplace/", label: "Marketplace", isNew: true,
 			newPopup: "<strong>&#10024; New: the Marketplace!</strong>Buy, sell &amp; trade directly with other players &mdash; post listings, take bids, get notified.<span class=\"site-nav-new-cta-row\"><a href=\"/register/\">Register your account &rarr;</a></span>" },
-		{ href: "/stats/", label: "Stats" },
-		{ href: "/roadmap/", label: "Roadmap" },
-		{ href: "/docs/", label: "Info" },
+		{ menu: "more", label: "More", items: [
+			{ href: "/roadmap/", label: "Roadmap" },
+			{ href: "/list/", label: "Search by material list" },
+			{ href: "/stats/", label: "World/Shop statistics" }
+		] },
+		{ menu: "info", label: "Info", items: [
+			{ href: "/docs/faq", label: "FAQ" },
+			{ href: "/docs/installation", label: "Installation" },
+			{ href: "/docs/features", label: "Features" }
+		] },
+		{ cta: true, disabled: true, href: "/rare-dle/", label: "Rare-dle", note: "coming soon" }
 	];
 	var MOBILE_BREAKPOINT = 760;
 
@@ -97,13 +107,46 @@
 		"@media (max-width:" + MOBILE_BREAKPOINT + "px){" +
 			".site-nav-new-wrap{display:flex;width:100%;}" +
 			".site-nav-new-popup{right:6px;}" +
-		"}";
+		"}" +
+		// ---- dropdown menus (More, Info) ----
+		".site-nav-dd{position:relative;display:inline-flex;align-items:center;}" +
+		".site-nav-dd-btn{background:none;border:none;color:var(--shell,#D9C89A);font:inherit;font-size:14px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:5px;font-family:inherit;}" +
+		".site-nav-dd-btn:hover,.site-nav-dd-btn.active,.site-nav-dd.open .site-nav-dd-btn{color:var(--accent,#B7E23D);}" +
+		".site-nav-dd-btn .caret{font-size:9px;transition:transform .15s ease;display:inline-block;}" +
+		".site-nav-dd.open .site-nav-dd-btn .caret{transform:rotate(180deg);}" +
+		".site-nav-dd-panel{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);min-width:220px;background:var(--panel,#1B2A20);border:1px solid var(--line,#33453A);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,0.45);display:none;z-index:120;}" +
+		".site-nav-dd.open .site-nav-dd-panel{display:block;}" +
+		".site-nav-dd-panel a{display:block;padding:9px 12px;border-radius:8px;white-space:nowrap;}" +
+		".site-nav-dd-panel a:hover{background:var(--panel-alt,#22332A);}" +
+		"@media (max-width:" + MOBILE_BREAKPOINT + "px){" +
+			".site-nav-dd{display:block;width:100%;}" +
+			".site-nav-dd-btn{width:100%;padding:10px 12px 2px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#8FA593);cursor:default;pointer-events:none;}" +
+			".site-nav-dd-btn .caret{display:none;}" +
+			".site-nav-dd-panel{position:static;transform:none;display:block;min-width:0;border:none;box-shadow:none;background:transparent;padding:0 0 4px 8px;}" +
+			".site-nav-dd-panel a{white-space:normal;}" +
+			".site-nav-links{max-width:calc(100vw - 24px);}" +
+		"}" +
+		// ---- Rare-dle call-to-action: same idea as the home page's Download button
+		// (moving gradient, soft glow, a light sweep) in warm colours and a calmer rhythm.
+		"#siteNavMount a.site-nav-cta{position:relative;overflow:hidden;display:inline-block;padding:7px 14px;border-radius:999px;color:#2A1408;font-weight:800;font-size:13.5px;letter-spacing:.01em;white-space:nowrap;" +
+			"background:linear-gradient(90deg,#FFB347,#FF7A59,#F0508F,#FFB347);background-size:300% auto;animation:siteNavCtaShift 7s linear infinite,siteNavCtaGlow 3.6s ease-in-out infinite;}" +
+		"#siteNavMount a.site-nav-cta:hover,#siteNavMount a.site-nav-cta.active{color:#2A1408;filter:brightness(1.06);animation-play-state:paused,paused;}" +
+		"#siteNavMount a.site-nav-cta::after{content:'';position:absolute;top:0;left:-60%;width:30%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,0.45),transparent);transform:skewX(-20deg);animation:siteNavCtaShine 5.5s ease-in-out infinite;pointer-events:none;}" +
+		"#siteNavMount a.site-nav-cta .site-nav-cta-note{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.8;margin-left:4px;padding-left:8px;border-left:1px solid rgba(42,20,8,0.35);}" +
+		// Disabled state: same pill, but greyed back, still and not clickable.
+		"#siteNavMount .site-nav-cta-disabled{position:relative;display:inline-block;padding:7px 14px;border-radius:999px;color:#2A1408;font-weight:800;font-size:13.5px;white-space:nowrap;cursor:not-allowed;user-select:none;opacity:.55;filter:saturate(.7);background:linear-gradient(90deg,#FFB347,#FF7A59,#F0508F);}" +
+		"#siteNavMount .site-nav-cta-disabled .site-nav-cta-note{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-left:4px;padding-left:8px;border-left:1px solid rgba(42,20,8,0.35);}" +
+		"@media (max-width:" + MOBILE_BREAKPOINT + "px){#siteNavMount .site-nav-cta-disabled{display:block;text-align:center;margin:6px 4px 2px;}}" +
+		"@keyframes siteNavCtaShift{0%{background-position:0% center;}100%{background-position:300% center;}}" +
+		"@keyframes siteNavCtaGlow{0%{box-shadow:0 0 0 0 rgba(255,122,89,0.40);}50%{box-shadow:0 0 12px 3px rgba(255,122,89,0.28);}100%{box-shadow:0 0 0 0 rgba(255,122,89,0);}}" +
+		"@keyframes siteNavCtaShine{0%{left:-60%;}55%{left:130%;}100%{left:130%;}}" +
+		"@media (max-width:" + MOBILE_BREAKPOINT + "px){#siteNavMount a.site-nav-cta{display:block;text-align:center;margin:6px 4px 2px;}}";
 	document.head.appendChild(style);
 
 	// "/foo", "/foo/", and "/foo/index.html" are all the same page for
 	// highlighting purposes.
 	function normalize(path) {
-		return path.replace(/index\.html$/, "").replace(/\/+$/, "") || "/";
+		return path.replace(/(index)?\.html$/, "").replace(/\/+$/, "") || "/";
 	}
 	function isActive(href) {
 		var here = normalize(location.pathname);
@@ -112,10 +155,28 @@
 		return here === target || here.indexOf(target + "/") === 0;
 	}
 
+	function menuActive(l) {
+		return l.items.some(function (it) { return isActive(it.href); });
+	}
+
 	function render() {
 		var mount = document.getElementById("siteNavMount");
 		if (!mount) return;
 		var linksHtml = LINKS.map(function (l) {
+			if (l.menu) {
+				return '<div class="site-nav-dd" data-menu="' + l.menu + '">' +
+					'<button type="button" class="site-nav-dd-btn' + (menuActive(l) ? " active" : "") + '" aria-haspopup="true" aria-expanded="false">' + l.label + ' <span class="caret">&#9662;</span></button>' +
+					'<div class="site-nav-dd-panel">' + l.items.map(function (it) {
+						return '<a href="' + it.href + '"' + (isActive(it.href) ? ' class="active"' : "") + ">" + it.label + "</a>";
+					}).join("") + "</div></div>";
+			}
+			if (l.cta && l.disabled) {
+				// Not clickable for now — the page itself still works by direct link.
+				return '<span class="site-nav-cta site-nav-cta-disabled" aria-disabled="true" title="Coming soon">&#127919; ' + l.label + (l.note ? ' <span class="site-nav-cta-note">' + l.note + "</span>" : "") + "</span>";
+			}
+			if (l.cta) {
+				return '<a class="site-nav-cta' + (isActive(l.href) ? " active" : "") + '" href="' + l.href + '">&#127919; ' + l.label + (l.note ? ' <span class="site-nav-cta-note">' + l.note + "</span>" : "") + "</a>";
+			}
 			var attrs = l.requireAuth ? " data-require-auth hidden" : "";
 			var classes = (l.isNew ? "site-nav-new-link " : "") + (isActive(l.href) ? "active" : "");
 			var link = '<a href="' + l.href + '"' + (classes.trim() ? ' class="' + classes.trim() + '"' : "") + attrs + ">" + l.label
@@ -147,6 +208,29 @@
 		linksEl.querySelectorAll("a").forEach(function (a) {
 			a.addEventListener("click", function () { setOpen(false); });
 		});
+		// Dropdown menus (desktop): click the heading to open, click elsewhere / Esc / a link to close.
+		var menus = mount.querySelectorAll(".site-nav-dd");
+		function closeMenus(except) {
+			menus.forEach(function (dd) {
+				if (dd === except) return;
+				dd.classList.remove("open");
+				dd.querySelector(".site-nav-dd-btn").setAttribute("aria-expanded", "false");
+			});
+		}
+		menus.forEach(function (dd) {
+			var btn = dd.querySelector(".site-nav-dd-btn");
+			btn.addEventListener("click", function (e) {
+				e.stopPropagation();
+				var open = !dd.classList.contains("open");
+				closeMenus(dd);
+				dd.classList.toggle("open", open);
+				btn.setAttribute("aria-expanded", open ? "true" : "false");
+			});
+			dd.querySelectorAll("a").forEach(function (a) { a.addEventListener("click", function () { closeMenus(); }); });
+		});
+		document.addEventListener("click", function (e) { if (!mount.contains(e.target)) closeMenus(); });
+		document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenus(); });
+
 		// Resizing past the breakpoint (rotating a tablet, restoring a
 		// dev-tools panel) shouldn't leave the drawer stuck open once it's
 		// no longer collapsed.

@@ -49,6 +49,8 @@
 		border-radius:8px;padding:10px 12px;font-family:var(--font-body);font-size:13px;cursor:pointer;
 	}
 	.filters input:focus,.filters select:focus{outline:none;border-color:var(--accent-dim);}
+	.img-search-btn{background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px 14px;font-family:var(--font-body);font-size:13px;cursor:pointer;}
+	.img-search-btn:hover{border-color:var(--accent-dim);color:var(--accent);}
 	.count{color:var(--muted);font-size:13px;margin:0 0 14px;}
 
 	.mapart-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));gap:16px;}
@@ -117,6 +119,7 @@
 	<div class="filters">
 		<input type="text" id="search" placeholder="Search by title or artist…">
 		<select id="fCategory"></select>
+		<button type="button" id="imgSearchBtn" class="img-search-btn" title="Find a mapart by uploading a picture">&#128444; Search by image</button>
 		<select id="fWorld">
 			<option value="">Both worlds</option>
 			<option value="Firefly">Firefly</option>
@@ -135,6 +138,7 @@
 <script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
 <script src="/mapart-report.js" defer></script>
+<script src="/mapart-search.js" defer></script>
 <script src="/collection-toggle.js" defer></script>
 <script>
 (function(){
@@ -161,10 +165,12 @@
 	function artistList(m){ return String(m.artist || "").split(" & ").map(function(s){ return s.trim(); }).filter(Boolean); }
 	function artistHtml(m){
 		var names = artistList(m);
-		if(!names.length) return 'Unknown artist';
-		if(names.length === 1) return 'by ' + esc(names[0]);
-		return 'by ' + esc(names[0]) + ' <button type="button" class="artist-toggle" data-artists title="Show all ' + names.length + ' artists" aria-expanded="false"><span class="arr">&#9662;</span> +' + (names.length - 1) + '</button>' +
-			'<div class="artist-list" hidden>' + names.map(function(n, i){ return '<div>' + esc(n) + (i === 0 ? '<span class="head">head artist</span>' : '') + '</div>'; }).join("") + '</div>';
+		var lead = m.commissioned ? 'built by ' : 'by ';
+		var tail = m.commissioned && m.commissionedBy ? '<div class="mapart-artist" style="font-size:12.5px;">commissioned by ' + esc(m.commissionedBy) + '</div>' : '';
+		if(!names.length) return (m.commissioned ? 'Builder unknown' : 'Unknown artist') + tail;
+		if(names.length === 1) return lead + esc(names[0]) + tail;
+		return lead + esc(names[0]) + ' <button type="button" class="artist-toggle" data-artists title="Show all ' + names.length + ' artists" aria-expanded="false"><span class="arr">&#9662;</span> +' + (names.length - 1) + '</button>' +
+			'<div class="artist-list" hidden>' + names.map(function(n, i){ return '<div>' + esc(n) + (i === 0 ? '<span class="head">head artist</span>' : '') + '</div>'; }).join("") + '</div>' + tail;
 	}
 
 	function render(){
@@ -227,6 +233,8 @@
 		if(window.sctpCol) window.sctpCol.reload();
 		if(window.sctpCol) window.sctpCol.ready(render); else render();
 	};
+
+	document.getElementById("imgSearchBtn").addEventListener("click", function(){ if(window.sctpMapartSearch) window.sctpMapartSearch.open(); });
 
 	["search"].forEach(function(id){ document.getElementById(id).addEventListener("input", render); });
 	catSel.addEventListener("change", render);

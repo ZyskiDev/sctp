@@ -362,6 +362,22 @@
 	tr.marketplace-row:hover{background:rgba(217,200,154,0.09);}
 	.price-main{font-family:var(--font-mono);font-weight:600;}
 	.price-sub{font-family:var(--font-mono);color:var(--muted);font-size:11.5px;}
+	/* hideable columns */
+	thead th{position:relative;}
+	thead th .col-x{margin-left:6px;color:var(--muted);opacity:0;font-size:12px;cursor:pointer;padding:0 3px;border-radius:4px;}
+	thead th:hover .col-x{opacity:.8;}
+	thead th .col-x:hover{opacity:1;color:#E27D6B;background:rgba(226,125,107,0.12);}
+	.col-menu-btn{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit;text-transform:none;letter-spacing:0;}
+	.col-menu-btn:hover{color:var(--accent);border-color:var(--accent-dim);}
+	.col-menu{position:absolute;z-index:70;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+	.col-menu .cm-title{font-size:11px;color:var(--muted);padding:4px 8px;text-transform:uppercase;letter-spacing:.04em;}
+	.col-menu button{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--text);padding:7px 10px;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;}
+	.col-menu button:hover{background:var(--panel-alt);}
+	.col-menu .cm-empty{padding:6px 10px;font-size:12.5px;color:var(--muted);}
+	.dym{color:var(--muted);font-size:13.5px;margin:6px 0 0;}
+	.dym a{color:var(--accent);font-weight:600;cursor:pointer;}
+	.dym-inline{margin-left:10px;font-size:12.5px;color:var(--muted);font-weight:400;}
+	.dym-inline a{color:var(--accent);cursor:pointer;font-weight:600;}
 
 	.empty-state, .loading-state{
 		padding:60px 24px;text-align:center;color:var(--muted);
@@ -615,6 +631,8 @@
 		<span>loading listings…</span>
 	</div>
 
+	<div class="motd" id="motd" hidden></div>
+
 	<div class="layout">
 		<aside class="filters">
 			<h2>Filters</h2>
@@ -644,6 +662,10 @@
 			</div>
 
 			<div class="f-group">
+				<label class="f-checkbox" title="On: iron, gold, netherite and blocks are converted to diamonds so every price compares on one scale. Off: the raw price in each listing's own currency is used."><input type="checkbox" id="fConvert" checked> Convert currencies to diamond-equivalent</label>
+			</div>
+
+			<div class="f-group">
 				<label for="currencyDropdownBtn">Currency</label>
 				<div class="f-dropdown">
 					<button type="button" id="currencyDropdownBtn" aria-haspopup="true" aria-expanded="false" class="f-dropdown-btn">All currencies ▾</button>
@@ -657,6 +679,10 @@
 					<input type="number" id="fPriceMin" placeholder="min" min="0">
 					<input type="number" id="fPriceMax" placeholder="max" min="0">
 				</div>
+				<select id="fPriceUnit" title="Compare against the price of one single item (diamond-equivalent), or the price of the whole listing">
+					<option value="item">per single item</option>
+					<option value="listing">per listing</option>
+				</select>
 			</div>
 
 			<div class="f-group">
@@ -974,12 +1000,18 @@
 		gold: 1/18, goldingot: 1/18, goldblock: 9/18,
 		netherite: 18, netheriteingot: 18, netheriteblock: 162
 	};
+	// "Convert currencies to diamond-equivalent" — one remembered preference shared by every page.
+	// On (default): iron/gold/netherite/blocks are converted so prices compare on one scale.
+	// Off: the raw price number in each listing's own currency is used as-is.
+	var CONVERT_KEY = "sctp_convert_currencies";
+	function convertOn(){ try { return localStorage.getItem(CONVERT_KEY) !== "0"; } catch(e){ return true; } }
+	function setConvert(v){ try { localStorage.setItem(CONVERT_KEY, v ? "1" : "0"); } catch(e){} }
 	function priceInDiamonds(r){
 		// [DISPLAY] listings have no real price — treat them as the single most
 		// expensive thing rather than the cheapest (price 0 would otherwise sort
 		// them first in a "lowest price" search, which is backwards).
 		if(String(r.currency||"").toLowerCase() === "display") return Infinity;
-		var mult = CURRENCY_VALUE[String(r.currency||"").toLowerCase()];
+		var mult = convertOn() ? CURRENCY_VALUE[String(r.currency||"").toLowerCase()] : 1;
 		return r.price * (mult || 1);
 	}
 
@@ -989,6 +1021,17 @@
 	// listing price.
 	function pricePerItem(r){
 		return priceInDiamonds(r) / (r.stackSize || 1);
+	}
+
+	// "= 0.5 dia each": the listing's price per single item in diamond-equivalent
+	// terms, so mixed currencies / stack sizes read on one scale. Only shown
+	// when it adds information (not for already-1-diamond-per-item listings).
+	function eachPriceHtml(r){
+		if(!convertOn()) return "";
+		var each = pricePerItem(r);
+		if(!isFinite(each) || each <= 0) return "";
+		if(String(r.currency||"").toLowerCase() === "diamond" && (r.stackSize || 1) === 1) return "";
+		return '<br><span class="price-sub" title="Price of one single item, in diamonds">&asymp; '+fmtAvgPrice(each)+' each</span>';
 	}
 
 	function toBool(v){
@@ -1612,6 +1655,7 @@
 		var hideDisplay = document.getElementById("fHideDisplay").checked;
 		var priceMin = document.getElementById("fPriceMin").value;
 		var priceMax = document.getElementById("fPriceMax").value;
+		var priceUnit = document.getElementById("fPriceUnit").value;
 		var minStock = document.getElementById("fMinStock").value;
 		var excludeItems = document.getElementById("fExcludeItems").value.toLowerCase()
 			.split(",").map(function(s){ return s.trim(); }).filter(Boolean);
@@ -1651,8 +1695,9 @@
 			if(currency !== "display" && currencyFilters.hasOwnProperty(currency) && !currencyFilters[currency]) return false;
 			if(excludeItems.length && excludeItems.indexOf(String(r.baseItem||"").toLowerCase()) !== -1) return false;
 			if(excludeSellers.length && excludeSellers.indexOf(String(r.seller||"").toLowerCase()) !== -1) return false;
-			if(priceMin !== "" && priceInDiamonds(r) < parseFloat(priceMin)) return false;
-			if(priceMax !== "" && priceInDiamonds(r) > parseFloat(priceMax)) return false;
+			var priceForFilter = priceUnit === "item" ? pricePerItem(r) : priceInDiamonds(r);
+			if(priceMin !== "" && priceForFilter < parseFloat(priceMin)) return false;
+			if(priceMax !== "" && priceForFilter > parseFloat(priceMax)) return false;
 			if(minStock !== "" && r.amount < parseFloat(minStock)) return false;
 			return true;
 		});
@@ -1700,6 +1745,133 @@
 			'<span>updated <b>'+relTime(new Date(newest).toISOString())+'</b></span>';
 	}
 
+	// ---------------- hideable columns ----------------
+	// Every column but the last (Report/Share) can be hidden by its ×; the
+	// "Columns" menu in the last header brings them back. Remembered locally.
+	var COLS = ["icon","item","base","type","price","avg","stock","seller","world","position","recent","since","actions"];
+	var COL_LABELS = { icon:"Icon", item:"Item", base:"Base item", type:"Type", price:"Price", avg:"Avg?", stock:"In stock", seller:"Seller", world:"World", position:"Position", recent:"Last seen", since:"Available since" };
+	var HIDDEN_COLS_KEY = "sctp_hidden_cols";
+	var hiddenCols = (function(){
+		try { var a = JSON.parse(localStorage.getItem(HIDDEN_COLS_KEY) || "[]"); var o = {}; a.forEach(function(k){ if(COL_LABELS[k]) o[k] = true; }); return o; } catch(e){ return {}; }
+	})();
+	function saveHiddenCols(){ try { localStorage.setItem(HIDDEN_COLS_KEY, JSON.stringify(Object.keys(hiddenCols))); } catch(e){} }
+	function applyColStyle(){
+		var st = document.getElementById("colHideStyle");
+		if(!st){ st = document.createElement("style"); st.id = "colHideStyle"; document.head.appendChild(st); }
+		st.textContent = Object.keys(hiddenCols).map(function(k){ return ".c-"+k+"{display:none;}"; }).join("");
+	}
+	function closeColMenu(){ var m = document.getElementById("colMenu"); if(m) m.remove(); }
+	function openColMenu(btn){
+		closeColMenu();
+		var keys = COLS.filter(function(k){ return hiddenCols[k]; });
+		var m = document.createElement("div");
+		m.className = "col-menu"; m.id = "colMenu";
+		m.innerHTML = '<div class="cm-title">Hidden columns</div>' + (keys.length
+			? keys.map(function(k){ return '<button type="button" data-show="'+k+'">Show '+esc(COL_LABELS[k])+'</button>'; }).join("") + '<button type="button" data-show="__all" style="color:var(--accent);">Show all</button>'
+			: '<div class="cm-empty">Nothing hidden. Hover a column header and click × to hide it.</div>');
+		document.body.appendChild(m);
+		var r = btn.getBoundingClientRect();
+		m.style.top = (window.scrollY + r.bottom + 6) + "px";
+		m.style.left = Math.max(8, window.scrollX + r.right - m.offsetWidth) + "px";
+		m.addEventListener("click", function(e){
+			var b = e.target.closest ? e.target.closest("[data-show]") : null;
+			if(!b) return;
+			var k = b.getAttribute("data-show");
+			if(k === "__all") hiddenCols = {}; else delete hiddenCols[k];
+			saveHiddenCols(); applyColStyle(); closeColMenu(); renderTable();
+		});
+	}
+	document.addEventListener("click", function(e){
+		if(!e.target.closest || (!e.target.closest("#colMenu") && !e.target.closest(".col-menu-btn"))) closeColMenu();
+	});
+	// Tags every th/td with its column class (positions are fixed) and adds the hide buttons.
+	function decorateColumns(area){
+		applyColStyle();
+		var ths = area.querySelectorAll("thead th");
+		ths.forEach(function(th, i){
+			var k = COLS[i]; if(!k) return;
+			th.classList.add("c-"+k);
+			if(k === "actions"){
+				th.innerHTML = '<button type="button" class="col-menu-btn" title="Show or hide columns">Columns &#9662;</button>';
+				th.style.cursor = "default";
+				th.querySelector(".col-menu-btn").addEventListener("click", function(e){ e.stopPropagation(); openColMenu(this); });
+				return;
+			}
+			var x = document.createElement("span");
+			x.className = "col-x"; x.title = "Hide this column"; x.textContent = "×";
+			x.addEventListener("click", function(e){ e.stopPropagation(); hiddenCols[k] = true; saveHiddenCols(); applyColStyle(); renderTable(); });
+			th.appendChild(x);
+		});
+		area.querySelectorAll("tbody tr").forEach(function(tr){
+			Array.prototype.forEach.call(tr.children, function(td, i){ if(COLS[i]) td.classList.add("c-"+COLS[i]); });
+		});
+	}
+
+	// ---------------- "did you mean…?" ----------------
+	var dymCache = { n: -1, names: [] };
+	function dymNames(){
+		if(dymCache.n === allListings.length) return dymCache.names;
+		var counts = {};
+		allListings.forEach(function(r){
+			[r.itemNameDisplay, r.seller].forEach(function(n){ if(n){ var k = String(n); counts[k] = (counts[k] || 0) + 1; } });
+		});
+		dymCache = { n: allListings.length, names: Object.keys(counts).map(function(k){ return { name: k, low: k.toLowerCase(), c: counts[k] }; }) };
+		return dymCache.names;
+	}
+	// Edit distance with an early bail-out once it can't beat maxD.
+	function editDistance(a, b, maxD){
+		if(Math.abs(a.length - b.length) > maxD) return maxD + 1;
+		var prev = [], cur = [], i, j;
+		for(j = 0; j <= b.length; j++) prev[j] = j;
+		for(i = 1; i <= a.length; i++){
+			cur[0] = i; var rowMin = i;
+			for(j = 1; j <= b.length; j++){
+				var cost = a.charCodeAt(i-1) === b.charCodeAt(j-1) ? 0 : 1;
+				cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + cost);
+				if(cur[j] < rowMin) rowMin = cur[j];
+			}
+			if(rowMin > maxD) return maxD + 1;
+			var t = prev; prev = cur; cur = t;
+		}
+		return prev[b.length];
+	}
+	function suggestFor(q){
+		q = q.trim().toLowerCase();
+		if(q.length < 3) return null;
+		var maxD = q.length <= 4 ? 1 : q.length <= 8 ? 2 : 3;
+		var best = null;
+		dymNames().forEach(function(n){
+			if(n.low === q) return;
+			var d = editDistance(q, n.low, maxD);
+			// a typo'd single word can also match one word of a longer name
+			if(d > maxD && q.indexOf(" ") === -1 && n.low.indexOf(" ") !== -1){
+				n.low.split(" ").forEach(function(w){ if(w.length >= 3){ var dw = editDistance(q, w, maxD); if(dw < d) d = dw; } });
+			}
+			if(d > maxD) return;
+			if(!best || d < best.d || (d === best.d && n.c > best.c)) best = { name: n.name, d: d, c: n.c };
+		});
+		return best ? best.name : null;
+	}
+	function showDidYouMean(){
+		var q = document.getElementById("searchInput").value.trim();
+		var slot = document.getElementById("dymSlot");
+		var count = document.getElementById("resultCount");
+		count.querySelectorAll(".dym-inline").forEach(function(n){ n.remove(); });
+		if(!q || filtered.length > 3) return;
+		var sug = suggestFor(q);
+		if(!sug) return;
+		var html = 'Did you mean <a data-dym="'+esc(sug)+'">'+esc(sug)+'</a>?';
+		if(slot) slot.innerHTML = '<p class="dym">'+html+'</p>';
+		else { var sp = document.createElement("span"); sp.className = "dym-inline"; sp.innerHTML = html; count.appendChild(sp); }
+		document.querySelectorAll("[data-dym]").forEach(function(a){
+			a.addEventListener("click", function(){
+				var inp = document.getElementById("searchInput");
+				inp.value = a.getAttribute("data-dym");
+				applyFilters();
+			});
+		});
+	}
+
 	function renderTable(){
 		var area = document.getElementById("tableArea");
 		var pag = document.getElementById("pagination");
@@ -1714,7 +1886,8 @@
 					'<button id="emptyUploadBtn">Upload your shop file</button></div>';
 				document.getElementById("emptyUploadBtn").addEventListener("click", openUpload);
 			} else {
-				area.innerHTML = '<div class="empty-state"><h3>No listings match those filters</h3><p>Try widening your price range or clearing the search.</p></div>';
+				area.innerHTML = '<div class="empty-state"><h3>No listings match those filters</h3><p>Try widening your price range or clearing the search.</p><div id="dymSlot"></div></div>';
+				showDidYouMean();
 			}
 			return;
 		}
@@ -1784,7 +1957,7 @@
 				'<td class="item-name">'+itemNameHtml+(r.mapartGallery ? galleryIcon : rareIcon)+'</td>'+
 				'<td class="base-item">'+esc(r.baseItem)+'</td>'+
 				'<td>'+typeCell+'</td>'+
-				'<td><span class="price-main">'+esc(r.priceLabel)+'</span>'+(r.marketplace || r.mapartGallery ? '' : '<br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span>')+'</td>'+
+				'<td><span class="price-main">'+esc(r.priceLabel)+'</span>'+(r.marketplace || r.mapartGallery ? '' : '<br><span class="price-sub">per '+(r.bulk ? 'shulk' : r.stackSize)+'</span>'+eachPriceHtml(r))+'</td>'+
 				(r.mapartGallery
 					? '<td></td>'
 					: '<td style="text-align:center;"><input type="checkbox" class="avg-toggle" data-key="'+esc(rowKey(r))+'" title="Include this listing in the average price above"'+(avgExcluded[rowKey(r)] ? '' : ' checked')+'></td>')+
@@ -1804,6 +1977,8 @@
 		});
 		html += '</tbody></table></div>';
 		area.innerHTML = html;
+		decorateColumns(area);
+		showDidYouMean();
 
 		pag.style.display = "flex";
 		document.getElementById("pageIndicator").textContent = "Page "+page+" of "+totalPages;
@@ -1945,10 +2120,10 @@
 
 	// ---------------- download modal ----------------
 	var DOWNLOAD_JARS = {
-		"fabric|26.2": "shoplogger-26.2-1.6.jar",
-		"fabric|26.3": "shoplogger-26.3-1.6.jar",
-		"neoforge|26.2": "shoplogger-neoforge-26.2-1.6.jar",
-		"neoforge|26.3": "shoplogger-neoforge-26.3-1.6.jar"
+		"fabric|26.2": "shoplogger-26.2-2.0.jar",
+		"fabric|26.3": "shoplogger-26.3-2.0.jar",
+		"neoforge|26.2": "shoplogger-neoforge-26.2-2.0.jar",
+		"neoforge|26.3": "shoplogger-neoforge-26.3-2.0.jar"
 	};
 	var dlLoader = "fabric";
 	var dlVersion = "26.2";
@@ -2488,12 +2663,18 @@
 		document.getElementById(id).addEventListener("change", function(){ applyFilters(); });
 	});
 	["fWorld","fBulk","fHideDisplay",
-		"fPriceMin","fPriceMax","fMinStock","fExcludeItems","fExcludeSellers"].forEach(function(id){
+		"fPriceMin","fPriceMax","fPriceUnit","fMinStock","fExcludeItems","fExcludeSellers"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", function(){ applyFilters(); });
 		document.getElementById(id).addEventListener("input", function(){ applyFilters(); });
 	});
 	// These only change what counts toward the average price summary, not
 	// which rows are in `filtered` — re-render just that panel, not the table.
+	document.getElementById("fConvert").checked = convertOn();
+	document.getElementById("fConvert").addEventListener("change", function(){
+		setConvert(this.checked);
+		applyFilters(true);
+		renderPriceSummary();
+	});
 	["avgThresholdDir","avgThresholdValue","avgThresholdUnit"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", renderPriceSummary);
 		document.getElementById(id).addEventListener("input", renderPriceSummary);
@@ -2561,6 +2742,7 @@
 		updateCurrencyDropdownLabel();
 		document.getElementById("fPriceMin").value = "";
 		document.getElementById("fPriceMax").value = "";
+		document.getElementById("fPriceUnit").value = "item";
 		document.getElementById("fMinStock").value = "";
 		document.getElementById("fExcludeItems").value = "";
 		document.getElementById("fExcludeSellers").value = "";
@@ -2600,6 +2782,23 @@
 	// Report/Remove button depends on login state — re-render whenever
 	// account-widget.js's login/logout changes it, not just on page load.
 	window.sctpOnAccountChange = function(){ renderTable(); };
+
+	// ---------------- mapart of the day ----------------
+	(function loadMotd(){
+		fetch(API_BASE + "/mapart/of-the-day").then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+			if(!d || d.error || !d.mapart) return;
+			var m = d.mapart, el = document.getElementById("motd");
+			var names = String(m.artist || "").split(" & ").map(function(s){ return s.trim(); }).filter(Boolean);
+			var by = names.length ? (m.commissioned ? "built by " : "by ") + names.map(esc).join(" &amp; ") : "";
+			el.innerHTML =
+				'<a class="motd-img" href="/mapart/'+encodeURIComponent(m.slug)+'"><img src="'+esc(mapartImgUrl(m))+'" alt=""></a>' +
+				'<div><div class="motd-kicker">&#127912; Mapart of the day</div>' +
+				'<div class="motd-title"><a href="/mapart/'+encodeURIComponent(m.slug)+'" style="color:inherit;text-decoration:none;">'+esc(m.title)+'</a></div>' +
+				'<div class="motd-by">'+by+(by ? ' &middot; ' : '')+esc(m.world)+'</div></div>' +
+				'<div class="motd-more"><a href="/mapart/'+encodeURIComponent(m.slug)+'">View &rarr;</a> &nbsp; <a href="/mapart/">All mapart</a></div>';
+			el.hidden = false;
+		}).catch(function(){});
+	})();
 
 	// Seller pages link here with ?addShop=<username> when a seller has no
 	// shop info yet, so the modal opens pre-filled instead of them retyping it.

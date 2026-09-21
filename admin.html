@@ -150,6 +150,19 @@
 		</details>
 		</section>
 
+		<section data-perm="manageMapart">
+		<details class="section-toggle" open>
+		<summary>Mapart of the day &amp; image index</summary>
+		<div class="meta" style="margin-bottom:10px;">One random mapart is featured on the home page each day. Pick a different one if it doesn't suit, and make a shareable promo picture for Discord.</div>
+		<div id="motdAdmin"><div class="empty">Loading…</div></div>
+		<div class="card" style="margin-top:12px;">
+			<div class="meta" style="margin-bottom:8px;">Reverse image search &amp; duplicate detection need every piece indexed once (new uploads and scans are indexed automatically). This walks the not-yet-indexed ones in small batches.</div>
+			<button type="button" id="buildIndexBtn" class="change">Build image index</button>
+			<span class="meta" id="buildIndexStatus" style="margin-left:10px;"></span>
+		</div>
+		</details>
+		</section>
+
 		<section data-perm="playerReports">
 		<details class="section-toggle" open>
 		<summary>Player reports <span class="count-badge" id="playerReportsCountBadge"></span></summary>
@@ -439,6 +452,7 @@
 </div>
 
 <script src="/account-widget.js" defer></script>
+<script src="/share-studio.js" defer></script>
 <script>
 (function(){
 	"use strict";
@@ -543,6 +557,7 @@
 
 	async function refresh(){
 		if(hasPerm("reports manageMapart")) reports = await api("/admin/reports");
+		if(hasPerm("manageMapart")) loadMotdAdmin();
 		if(hasPerm("sharedShopRequests")) requests = await api("/admin/shared-shop-requests");
 		if(hasPerm("blockedSellers")) blockedSellers = await api("/admin/blocked-sellers");
 		if(hasPerm("updateNotice")) updateNotice = await api("/admin/update-notice");
@@ -784,6 +799,65 @@
 			errEl.textContent = "Failed: " + err.message;
 		}
 	}
+
+	// ---------------- mapart of the day ----------------
+	var motdCurrent = null;
+	async function loadMotdAdmin(){
+		var host = document.getElementById("motdAdmin");
+		if(!host) return;
+		try {
+			var d = await (await fetch(API_BASE + "/mapart/of-the-day?t=" + Date.now())).json();
+			if(d.error || !d.mapart){ host.innerHTML = '<div class="empty">No mapart to feature yet.</div>'; return; }
+			motdCurrent = d.mapart;
+			renderMotdAdmin();
+		} catch(err){ host.innerHTML = '<div class="empty">Could not load it.</div>'; }
+	}
+	function motdArtists(m){
+		var names = String(m.artist || "").split(" & ").map(function(s){ return s.trim(); }).filter(Boolean);
+		return names.length ? (m.commissioned ? "Built by " : "By ") + names.join(" & ") : "";
+	}
+	function renderMotdAdmin(){
+		var m = motdCurrent, host = document.getElementById("motdAdmin");
+		var img = API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || "");
+		host.innerHTML = '<div class="card"><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">' +
+			'<img src="' + esc(img) + '" alt="" style="height:110px;image-rendering:pixelated;border-radius:6px;background:#0C140F;padding:6px;">' +
+			'<div style="flex:1;min-width:200px;"><div class="title">' + esc(m.title) + '</div><div class="meta">' + esc(motdArtists(m) || "Unknown artist") + ' &middot; ' + esc(m.world) + ' &middot; <a href="/mapart/' + encodeURIComponent(m.slug) + '" target="_blank" rel="noopener">open page</a></div></div>' +
+			'<div class="actions"><button type="button" class="change" id="motdReroll">Pick a different one</button><button type="button" class="approve" id="motdPromo">Make promo image</button></div></div>' +
+			'<div id="motdPromoOut" style="margin-top:12px;"></div></div>';
+		document.getElementById("motdReroll").addEventListener("click", async function(){
+			this.disabled = true;
+			try { var r = await api("/admin/mapart/otd/reroll", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); motdCurrent = r.mapart; renderMotdAdmin(); }
+			catch(err){ alert("Failed: " + err.message); this.disabled = false; }
+		});
+		document.getElementById("motdPromo").addEventListener("click", makeMotdPromo);
+	}
+	// Opens the image studio (many sizes / styles) for today's mapart.
+	function makeMotdPromo(){
+		var m = motdCurrent;
+		if(!window.sctpShare){ alert("The image maker is still loading - try again in a second."); return; }
+		var names = String(m.artist || "").split(" & ").map(function(x){ return x.trim(); }).filter(Boolean);
+		var details = [m.world + (m.width * m.height > 1 ? "  \u00b7  " + m.width + "\u00d7" + m.height + " maps" : "")];
+		if(m.commissioned && m.commissionedBy) details.push("commissioned by " + m.commissionedBy);
+		window.sctpShare.open({
+			modalTitle: "Mapart of the day - image", type: "feature", eyebrow: "Mapart of the day",
+			title: m.title, subtitle: names.length ? (m.commissioned ? "built by " : "by ") + names.join(" & ") : "",
+			details: details, imageUrl: API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || ""),
+			pixel: true, footerUrl: "sctp.nl/mapart/" + m.slug, filename: "mapart-of-the-day"
+		});
+	}
+	document.getElementById("buildIndexBtn").addEventListener("click", async function(){
+		var btn = this, st = document.getElementById("buildIndexStatus");
+		btn.disabled = true;
+		try {
+			for(;;){
+				var r = await api("/admin/mapart/build-index", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ limit: 8 }) });
+				st.textContent = "Indexed " + (r.total - r.remaining) + " / " + r.total + (r.failed ? " (" + r.failed + " unreadable in this batch)" : "");
+				if(!r.remaining) break;
+			}
+			st.textContent += " - done.";
+		} catch(err){ st.textContent = "Failed: " + err.message; }
+		btn.disabled = false;
+	});
 
 	function renderReports(){
 		var pending = reports.filter(function(r){ return r.status === "pending"; }).reverse();

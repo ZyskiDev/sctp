@@ -25,7 +25,7 @@ public class HomeScreen extends Screen {
 	protected void init() {
 		int centerX = width / 2;
 		int w = 220;
-		int y = height / 2 - 72;
+		int y = height / 2 - 84;
 
 		addRenderableWidget(Button.builder(Component.literal("Browse Listings"), btn ->
 				minecraft.setScreenAndShow(new ListingsScreen(this, null)))
@@ -49,6 +49,11 @@ public class HomeScreen extends Screen {
 
 		addRenderableWidget(Button.builder(Component.literal("Marketplace"), btn ->
 				minecraft.setScreenAndShow(new MarketplaceScreen(this)))
+				.bounds(centerX - w / 2, y, w, 20).build());
+		y += 24;
+
+		addRenderableWidget(Button.builder(Component.literal("Mapart Scanner"), btn ->
+				minecraft.setScreenAndShow(new com.snailtools.shoplogger.mapart.MapartPreviewScreen(this)))
 				.bounds(centerX - w / 2, y, w, 20).build());
 		y += 24;
 
@@ -77,7 +82,7 @@ public class HomeScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(context, mouseX, mouseY, delta);
-		context.centeredText(font, title, width / 2, height / 2 - 102, 0xFFFFFFFF);
+		context.centeredText(font, title, width / 2, height / 2 - 114, 0xFFFFFFFF);
 	}
 
 	@Override

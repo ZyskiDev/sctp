@@ -27,6 +27,9 @@
 	header.site .tag{color:var(--muted);font-size:14px;margin:0;}
 	main{padding:28px 0 60px;}
 	h2.section{font-family:var(--font-display);font-size:20px;margin:28px 0 12px;}
+	.dup-warn{margin-top:10px;background:rgba(226,163,61,0.1);border:1px solid var(--warn,#E2A33D);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--text);}
+	.dup-warn a{color:var(--accent);}
+	.comm-card textarea{width:100%;min-height:90px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font-family:inherit;font-size:14px;resize:vertical;}
 	.notice{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;color:var(--muted);font-size:14px;}
 	.notice.warn{border-color:var(--warn);color:var(--warn);background:rgba(226,163,61,0.1);}
 	.notice strong{color:var(--text);}
@@ -145,6 +148,8 @@
 						<div class="field"><label>Category</label><select id="upCategory"></select></div>
 						<div class="field"><label>Where to buy</label><input type="text" id="upWhere" maxlength="200" placeholder="Blank = /shop artist"></div>
 						<div class="field"><label>Price (optional)</label><input type="text" id="upPrice" maxlength="60" placeholder="e.g. 5 diamonds"></div>
+						<div class="field full"><label class="check"><input type="checkbox" id="upCommissioned"> This was a commission (artist = who built it)</label></div>
+						<div class="field full" id="upCommByRow" hidden><label>Commissioned by</label><input type="text" id="upCommBy" maxlength="40" placeholder="Who it was built for"></div>
 						<div class="field full"><label class="check"><input type="checkbox" id="upNotForSale"> Not for sale (hides where-to-buy)</label></div>
 						<div class="field full"><label class="check"><input type="checkbox" id="upSmooth" checked> Smooth resize (turn off for pixel art so edges stay sharp)</label></div>
 					</div>
@@ -154,6 +159,17 @@
 					</div>
 				</div>
 			</div>
+		</div>
+
+		<h2 class="section">Commission info</h2>
+		<div class="upload-card comm-card">
+			<p class="help">Shown on your public profile so people can ask you to build something. Leave commissions closed to hide the contact details.</p>
+			<div class="form-grid">
+				<div class="field full"><label class="check"><input type="checkbox" id="commOpen"> I'm open for commissions</label></div>
+				<div class="field full"><label>Prices &amp; details</label><textarea id="commInfo" maxlength="1000" placeholder="e.g. 1x1 from 5 diamonds, 2x2 from 20 diamonds. Turnaround about a week. Send a reference picture."></textarea></div>
+				<div class="field"><label>Discord</label><input type="text" id="commDiscord" maxlength="60" placeholder="e.g. username"></div>
+			</div>
+			<div class="actions"><button type="button" class="btn" id="commSave">Save commission info</button><span class="status" id="commStatus"></span></div>
 		</div>
 
 		<h2 class="section">Claim a mapart</h2>
@@ -173,6 +189,7 @@
 <script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
 <script src="/artist-field.js" defer></script>
+<script src="/mapart-search.js" defer></script>
 <script>
 (function(){
 	"use strict";
@@ -241,7 +258,9 @@
 					'<div class="card-title">' + esc(m.title) + ' <span style="color:var(--muted);font-size:12px;font-weight:400;">(' + esc(m.world) + ', ' + m.width + '&times;' + m.height + ')</span></div>' +
 					'<div class="form-grid">' +
 						'<div class="field"><label>Title</label><input type="text" data-f="title" maxlength="100" value="' + esc(m.title) + '"></div>' +
-						'<div class="field full"><label>Artist(s) / seller &mdash; use the arrow for collabs</label><div data-artist-host></div></div>' +
+						'<div class="field full"><label data-artist-label>' + (m.commissioned ? 'Built by' : 'Artist(s) / seller') + ' &mdash; use the arrow for collabs</label><div data-artist-host></div></div>' +
+						'<div class="field full"><label class="check"><input type="checkbox" data-f="commissioned"' + (m.commissioned ? ' checked' : '') + '> This was a commission</label></div>' +
+						'<div class="field full" data-comm-by' + (m.commissioned ? '' : ' hidden') + '><label>Commissioned by</label><input type="text" data-f="commissionedBy" maxlength="40" value="' + esc(m.commissionedBy || '') + '" placeholder="Who it was built for"></div>' +
 						'<div class="field"><label>Category</label><select data-f="category"><option value="">No category</option>' +
 							CATEGORIES.map(function(c){ return '<option value="' + c + '"' + (m.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join("") + '</select></div>' +
 						'<div class="field"><label>Where to buy</label><input type="text" data-f="whereToBuy" maxlength="200" value="' + esc(m.whereToBuyCustom || "") + '" placeholder="' + esc(m.artist ? "/shop " + m.artist : "e.g. /shop Steve") + '"></div>' +
@@ -269,6 +288,11 @@
 			var id = card.getAttribute("data-id");
 			var cardMapart = mine.filter(function(x){ return x.id === id; })[0] || {};
 			var artistField = window.sctpArtistField.create(card.querySelector("[data-artist-host]"), { value: cardMapart.artist || "" });
+			var commBox = card.querySelector('[data-f="commissioned"]');
+			commBox.addEventListener("change", function(){
+				card.querySelector("[data-comm-by]").hidden = !commBox.checked;
+				card.querySelector("[data-artist-label]").innerHTML = (commBox.checked ? "Built by" : "Artist(s) / seller") + " &mdash; use the arrow for collabs";
+			});
 			var status = card.querySelector('[data-role="status"]');
 			function setStatus(t, err){ status.textContent = t; status.className = "status" + (err ? " err" : ""); }
 			card.querySelector('[data-act="save"]').addEventListener("click", function(){
@@ -277,6 +301,8 @@
 					title: card.querySelector('[data-f="title"]').value,
 					artist: artistField.getValue(),
 					price: card.querySelector('[data-f="price"]').value,
+					commissioned: commBox.checked,
+					commissionedBy: card.querySelector('[data-f="commissionedBy"]').value,
 					category: card.querySelector('[data-f="category"]').value || null,
 					whereToBuy: card.querySelector('[data-f="whereToBuy"]').value,
 					notForSale: card.querySelector('[data-f="notForSale"]').checked
@@ -367,6 +393,27 @@
 		});
 	}
 
+	function loadCommission(){
+		authFetch("/account/me").then(function(res){
+			if(!res.ok || !res.data.commission) return;
+			document.getElementById("commOpen").checked = !!res.data.commission.open;
+			document.getElementById("commInfo").value = res.data.commission.info || "";
+			document.getElementById("commDiscord").value = res.data.commission.discord || "";
+		});
+	}
+	document.getElementById("commSave").addEventListener("click", function(){
+		var st = document.getElementById("commStatus");
+		st.textContent = "Saving…"; st.className = "status";
+		authFetch("/account/commission", { method: "POST", body: JSON.stringify({
+			open: document.getElementById("commOpen").checked,
+			info: document.getElementById("commInfo").value,
+			discord: document.getElementById("commDiscord").value
+		}) }).then(function(res){
+			if(!res.ok){ st.textContent = res.data.error || "Couldn't save."; st.className = "status err"; return; }
+			st.textContent = "Saved!"; st.className = "status";
+		});
+	});
+
 	function loadAll(){
 		return Promise.all([
 			authFetch("/mapart/mine"),
@@ -386,6 +433,7 @@
 			catalog = results[1];
 			document.getElementById("gate").hidden = true;
 			document.getElementById("content").hidden = false;
+			loadCommission();
 			renderMine();
 			renderClaimable();
 		});
@@ -448,9 +496,24 @@
 		s.textContent = t; s.className = "status" + (err ? " err" : "");
 	}
 
+	document.getElementById("upCommissioned").addEventListener("change", function(){
+		document.getElementById("upCommByRow").hidden = !this.checked;
+	});
 	document.getElementById("upFile").addEventListener("change", function(){
 		var f = this.files && this.files[0];
 		if(!f) return;
+		// Look for a near-identical piece before they bother filling everything in.
+		var old = document.getElementById("dupWarn"); if(old) old.remove();
+		if(window.sctpMapartSearch) window.sctpMapartSearch.search(f).then(function(ms){
+			ms = ms.filter(function(m){ return m.similarity >= 90; });
+			if(!ms.length) return;
+			var w = document.createElement("div");
+			w.id = "dupWarn"; w.className = "dup-warn";
+			w.innerHTML = "<strong>This looks like something already in the gallery:</strong><br>" + ms.slice(0, 3).map(function(m){
+				return '<a href="/mapart/' + encodeURIComponent(m.slug) + '" target="_blank" rel="noopener">' + esc(m.title) + '</a> (' + esc(m.world) + ', ' + m.similarity + '% match)';
+			}).join("<br>") + "<br>Near-identical pictures are rejected on upload.";
+			document.getElementById("cropBox").parentNode.appendChild(w);
+		}).catch(function(){});
 		var url = URL.createObjectURL(f);
 		var img = new Image();
 		img.onload = function(){
@@ -523,6 +586,8 @@
 					title: title,
 					artist: upArtistField.getValue(),
 					price: document.getElementById("upPrice").value.trim(),
+					commissioned: document.getElementById("upCommissioned").checked,
+					commissionedBy: document.getElementById("upCommBy").value.trim(),
 					world: document.getElementById("upWorld").value,
 					category: upCatSel.value || null,
 					whereToBuy: document.getElementById("upWhere").value.trim(),
@@ -535,6 +600,8 @@
 					upImg = null;
 					document.getElementById("cropBox").hidden = true;
 					document.getElementById("upFile").value = "";
+					document.getElementById("upCommissioned").checked = false; document.getElementById("upCommByRow").hidden = true; document.getElementById("upCommBy").value = "";
+					var dw = document.getElementById("dupWarn"); if(dw) dw.remove();
 					["upTitle", "upWhere", "upPrice"].forEach(function(id){ document.getElementById(id).value = ""; });
 					upArtistField = window.sctpArtistField.create(document.getElementById("upArtistHost"), { placeholder: "Head artist — blank = you" });
 					document.getElementById("upNotForSale").checked = false;

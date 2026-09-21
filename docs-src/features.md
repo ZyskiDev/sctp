@@ -7,26 +7,42 @@ The Snailcraft Trading Post website and mod are a project made by maxolotled, wi
 ## Website features
 ### [Keep track of everything sold in Snailcraft](https://sctp.nl/)
 On the homepage, use a ton of filters to search for any item you may need, in the 25000+ item catalog
-### [Check statistics](https://sctp.nl/stats)
-Check the statistics per item or seller to see more info on them
+### [World & shop statistics](https://sctp.nl/stats)
+Check the statistics per item or seller, and log in to see your own shop's stats with hints on what to restock, what to reprice, and where someone undercuts you.
 ### [Item library](https://sctp.nl/items)
 Thanks to LadyMaledicte, we have a library of all vanilla and rare items!
-### [Litematica list searcher](https://sctp.nl/list)
+### [Search by material list](https://sctp.nl/list)
 Upload your Litematica material list, and get a list of shops to visit it, plus filter on price or efficiency
 ### [Report listings or sellers](https://sctp.nl/report)
 Report a listing or seller to have a SCTP moderator check it and take action. Not official SC!
 ### [View the roadmap](https://sctp.nl/roadmap)
 View the roadmap and suggest new features or report bugs.
-### Coming soon
-A marketplace for posting looking for/selling advertisements, and a page to view your own store's statistics
+### [Marketplace](https://sctp.nl/marketplace)
+Post looking-for and selling ads, take bids, and post or answer jobs.
+### [Mapart gallery](https://sctp.nl/mapart)
+Every mapart found around Snailcraft with its artist, where to buy it and an optional price. Search by image, report mistakes, see collabs (the head artist first) and commissions (built by / commissioned by), and artists can claim, edit and upload their own pieces.
+### [Collections](https://sctp.nl/collection)
+Tick off the rare items and mapart you own, per world, and see how far along you are. Collections are public by default (you can hide yours), and you can make a shareable picture of what you still need or what you own.
+### Public profiles
+Every player has a profile at sctp.nl/s/ff/yourname with their shop, mapart (with commission info), collection and marketplace history in one place.
+### Rare-dle (coming soon)
+A daily "guess the secret rare" game with points, streaks and leaderboards.
+### Image maker
+Make shareable pictures for Discord, X, Instagram, YouTube and more — 13 sizes and 12 styles — for mapart, rare items, collections, profiles and Rare-dle results.
+### Quality-of-life upgrades
+Hide any table column and bring it back from the Columns menu, filter and sort by price per single item in diamond-equivalent (or turn conversion off), "did you mean…?" suggestions, and a general price check on every rare item.
 
 ## Mod features
 ### Automatically scans all shop chests
 The mod automatically scans all shop chests within reach, takes the price, seller, and content, and uploads it to the trading post website. Scanned chests are marked, and won't be scanned again for a configurable amount of minutes.
 ### In-game item library and listings overview
 Most data from the website, like the item library and current listings, can be easily found and searched through in-game via the X-menu!
+### Mapart scanner
+The mod finds item-frame mapart near you, stitches multi-map pieces together and uploads them to the mapart gallery in the background — without freezing your game or spamming chat. Turn it on or off, and see what it found, from the Mapart Scanner button on the X-menu.
 ### Watchlist
-The mod allows you to keep a watchlist for rares, as well as set a max price, and will notify you in-game if the item is found on the SCTP!
+The mod allows you to keep a watchlist for rares, as well as set a max price, and will notify you in-game if the item is found on the SCTP! Marketplace listings are included, and there are quick price buttons when you set a limit.
+### Report from the game
+Spot a wrong listing? Hit the red [Report] button in a watchlist alert or the listings screen to send it to the moderators in one click.
 ### Sold item notifications
 The mod will alert you if it finds any items sold inside of your own shop when you walk through!
 ### New items at shop notifications

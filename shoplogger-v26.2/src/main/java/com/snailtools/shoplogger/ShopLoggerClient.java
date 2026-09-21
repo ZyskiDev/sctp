@@ -216,6 +216,7 @@ public class ShopLoggerClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			SilentScreenCoordinator.tickWatchdog();
 			ShopAutoScanner.getInstance().tick(client);
+			com.snailtools.shoplogger.mapart.MapartScanner.getInstance().tick(client);
 			ShopMarkerRenderer.getInstance().tick(client);
 			TeleportHighlight.getInstance().tick(client);
 			WorldDetector.getInstance().tick(client);

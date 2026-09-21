@@ -45,17 +45,31 @@
 		".col-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}" +
 		".col-item{position:relative;background:var(--panel,#1B2A20);border:1px solid var(--line,#33453A);border-radius:10px;padding:8px;text-align:center;font-size:12.5px;}" +
 		".col-item.own{border-color:var(--accent-dim,#87AE29);background:rgba(183,226,61,0.07);}" +
-		".col-item.editable{cursor:pointer;user-select:none;}" +
+		".col-item.editable,.col-item.editable *{cursor:pointer;-webkit-user-select:none;user-select:none;}" +
+		".col-item button.ck:hover{border-color:var(--accent-dim,#87AE29);}" +
 		".col-item .im{height:74px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;}" +
 		".col-item .im img{max-width:100%;max-height:74px;image-rendering:pixelated;}" +
 		".col-item.miss .im img{opacity:.55;filter:grayscale(.6);}" +
 		".col-item .nm{line-height:1.25;overflow-wrap:anywhere;}" +
 		".col-item .nm small{display:block;color:var(--muted,#8FA593);font-size:11px;margin-top:1px;}" +
-		".col-item .ck{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;border:1px solid var(--line,#33453A);background:var(--panel-alt,#22332A);font-size:12px;line-height:18px;color:transparent;}" +
+		".col-item .ck{padding:0;font-family:inherit;text-align:center;-webkit-user-select:none;user-select:none;position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;border:1px solid var(--line,#33453A);background:var(--panel-alt,#22332A);font-size:12px;line-height:18px;color:transparent;}" +
 		".col-item.own .ck{background:var(--accent,#B7E23D);border-color:transparent;color:var(--accent-ink,#16210F);font-weight:700;}" +
 		".col-more{display:block;margin:14px auto 0;background:transparent;border:1px solid var(--line,#33453A);color:var(--text,#EAEFE7);border-radius:9px;padding:9px 20px;cursor:pointer;font-family:inherit;}" +
 		".col-msg{color:var(--muted,#8FA593);font-size:13.5px;padding:10px 0;}" +
 		".col-msg.err{color:#E27D6B;}" +
+		".nc-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:flex-start;justify-content:center;z-index:400;padding:20px;box-sizing:border-box;overflow:auto;}" +
+		".nc-modal{background:var(--panel,#1B2A20);border:1px solid var(--line,#33453A);border-radius:14px;padding:20px;width:100%;max-width:880px;margin:auto;box-sizing:border-box;color:var(--text,#EAEFE7);font-family:inherit;}" +
+		".nc-modal h2{margin:0 0 4px;font-size:20px;font-family:var(--font-display,inherit);}" +
+		".nc-sub{color:var(--muted,#8FA593);font-size:13px;margin:0 0 14px;}" +
+		".nc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 12px;margin-bottom:14px;}" +
+		".nc-grid label{display:block;font-size:11.5px;color:var(--muted,#8FA593);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}" +
+		".nc-grid input,.nc-grid select{width:100%;box-sizing:border-box;background:var(--panel-alt,#22332A);border:1px solid var(--line,#33453A);color:var(--text,#EAEFE7);border-radius:8px;padding:8px 10px;font-size:13.5px;font-family:inherit;}" +
+		".nc-count{font-size:13px;color:var(--muted,#8FA593);margin:0 0 10px;}" +
+		".nc-out{text-align:center;}" +
+		".nc-out canvas{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line,#33453A);}" +
+		".nc-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;}" +
+		".nc-actions button,.nc-actions a{background:transparent;border:1px solid var(--line,#33453A);color:var(--text,#EAEFE7);border-radius:9px;padding:9px 16px;font-size:13.5px;cursor:pointer;font-family:inherit;text-decoration:none;}" +
+		".nc-actions .primary{background:var(--accent,#B7E23D);color:var(--accent-ink,#16210F);border-color:transparent;font-weight:700;}" +
 		".col-recent{display:flex;flex-wrap:wrap;gap:8px;}" +
 		".col-recent span{background:var(--panel-alt,#22332A);border:1px solid var(--line,#33453A);border-radius:999px;padding:3px 11px;font-size:12.5px;}";
 	document.head.appendChild(style);
@@ -203,7 +217,7 @@
 			var name = st.kind === "rare" ? x.name : x.title;
 			var sub = st.kind === "rare" ? (x.category || "") : (x.artist ? "by " + x.artist : "");
 			return '<div class="col-item ' + (own ? "own" : "miss") + (editable ? " editable" : "") + '" data-id="' + esc(x.id) + '" title="' + esc(name) + '">' +
-				'<span class="ck">&#10003;</span><div class="im"><img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"></div>' +
+				(editable ? '<button type="button" class="ck" title="' + (own ? "Owned — click to remove" : "Mark as owned") + '">&#10003;</button>' : '<span class="ck">&#10003;</span>') + '<div class="im"><img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"></div>' +
 				'<div class="nm">' + esc(name) + (sub ? "<small>" + esc(sub) + "</small>" : "") + "</div></div>";
 		}
 
@@ -233,7 +247,7 @@
 				'<div class="col-tools"><input type="search" id="colQ" placeholder="Search…" value="' + esc(st.q) + '">' +
 					'<select id="colCat"><option value="">All categories</option>' + cats.map(function (c) { return '<option value="' + esc(c) + '"' + (st.cat === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select>" +
 					'<select id="colStatus">' + [["all", "All"], ["owned", "Have"], ["missing", "Need"]].map(function (o) { return '<option value="' + o[0] + '"' + (st.status === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
-					(editable ? '<button type="button" id="colAll">Mark all matching as owned</button><button type="button" id="colNone">Unmark all matching</button>' : "") +
+					(editable ? '<button type="button" id="colAll">Mark all matching as owned</button><button type="button" id="colNone">Unmark all matching</button><button type="button" id="colShare" title="Make a picture of what you still need, to share on Discord">&#128444; Share what I still need</button>' : "") +
 				"</div>" +
 				'<div class="col-msg" id="colCount"></div>' +
 				'<div class="col-grid" id="colGrid"></div><div id="colMoreHost"></div><div class="col-msg err" id="colErr" hidden></div>' +
@@ -329,6 +343,9 @@
 				if (!confirm((own ? "Mark " : "Unmark ") + ids.length + " matching item" + (ids.length === 1 ? "" : "s") + (own ? " as owned" : " as not owned") + " in " + st.world + "? (This covers everything matching your current search/filters, not just what's on screen.)")) return;
 				setOwned(ids, own);
 			}
+			host.querySelector("#colShare").onclick = function () {
+				openNeedCard({ world: st.world, kind: st.kind, rare: rareList(), mapart: mapartList(), username: st.username, isOwned: function (k, id) { return isOwned(k, id); } });
+			};
 			host.querySelector("#colAll").onclick = function () { bulk(true); };
 			host.querySelector("#colNone").onclick = function () { bulk(false); };
 			host.querySelector("#colPrivate").onchange = function (e) {
@@ -343,6 +360,151 @@
 				if (navigator.clipboard) navigator.clipboard.writeText(link).then(function () { copy.textContent = "Copied!"; });
 			};
 		}
+	}
+
+	// ---------------- "what I still need" picture ----------------
+	// Builds a shareable PNG (for Discord etc.) of the items still missing from
+	// a collection, narrowed by any mix of release year/month, where it's
+	// obtained (e.g. "aquatic crate"), category and type/slot (e.g. "consumeable").
+	var NC_MAX_ITEMS = 300;
+
+	function uniqueSorted(list, key) {
+		var seen = {};
+		list.forEach(function (x) { var v = x[key]; if (v) seen[v] = true; });
+		return Object.keys(seen).sort(function (a, b) { return a.localeCompare(b); });
+	}
+	function releaseOptions(list) {
+		var years = {}, exact = {};
+		list.forEach(function (x) {
+			if (!x.releaseDate) return;
+			exact[x.releaseDate] = true;
+			var m = /(\d{4})/.exec(x.releaseDate); if (m) years[m[1]] = true;
+		});
+		function key(s) { var m = /([A-Za-z]{3})\w*\s+(\d{4})/.exec(s); var mo = m ? "JanFebMarAprMayJunJulAugSepOctNovDec".indexOf(m[1]) / 3 : 0; var y = /(\d{4})/.exec(s); return (y ? +y[1] : 0) * 12 + mo; }
+		var ys = Object.keys(years).sort(function (a, b) { return b - a; });
+		var ex = Object.keys(exact).filter(function (s) { return !/^\d{4}$/.test(s); }).sort(function (a, b) { return key(b) - key(a); });
+		return { years: ys, months: ex };
+	}
+
+	function loadImg(src, cors) {
+		return new Promise(function (resolve) {
+			var im = new Image();
+			if (cors) im.crossOrigin = "anonymous";
+			im.onload = function () { resolve(im); };
+			im.onerror = function () { resolve(null); };
+			im.src = src;
+		});
+	}
+
+	function openNeedCard(ctx) {
+		var isRare = ctx.kind === "rare";
+		var pool = (isRare ? ctx.rare : ctx.mapart);
+		var bg = document.createElement("div");
+		bg.className = "nc-bg";
+		var rel = releaseOptions(ctx.rare);
+		var filters;
+		if (isRare) {
+			filters =
+				'<div><label>Category</label><select id="ncCat"><option value="">Any</option>' + uniqueSorted(pool, "category").map(function (c) { return "<option>" + esc(c) + "</option>"; }).join("") + "</select></div>" +
+				'<div><label>Released</label><select id="ncRel"><option value="">Any time</option>' +
+					rel.years.map(function (y) { return '<option value="' + y + '">All of ' + y + "</option>"; }).join("") +
+					rel.months.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + "</option>"; }).join("") + "</select></div>" +
+				'<div><label>Obtained from</label><input id="ncFrom" list="ncFromList" placeholder="e.g. aquatic crate"><datalist id="ncFromList">' + uniqueSorted(pool, "obtainedFrom").map(function (v) { return '<option value="' + esc(v) + '">'; }).join("") + "</datalist></div>" +
+				'<div><label>Type / slot</label><input id="ncSlot" list="ncSlotList" placeholder="e.g. consumeable"><datalist id="ncSlotList">' + uniqueSorted(pool, "typeSlot").map(function (v) { return '<option value="' + esc(v) + '">'; }).join("") + "</datalist></div>";
+		} else {
+			var cats = {}; pool.forEach(function (m) { cats[m.category || "No category"] = true; });
+			filters =
+				'<div><label>Category</label><select id="ncCat"><option value="">Any</option>' + Object.keys(cats).sort().map(function (c) { return "<option>" + esc(c) + "</option>"; }).join("") + "</select></div>" +
+				'<div><label>Artist contains</label><input id="ncFrom" placeholder="e.g. Colrr"></div>' +
+				'<div><label>Size</label><select id="ncSize"><option value="">Any</option><option value="1">Single map</option><option value="2">Bigger than 1 map</option></select></div>';
+		}
+		bg.innerHTML =
+			'<div class="nc-modal"><h2>What I still need</h2>' +
+			'<p class="nc-sub">' + (isRare ? "Rare items" : "Mapart") + " in " + esc(ctx.world) + " that you don't own yet. Narrow it down, then download or copy the picture to share.</p>" +
+			'<div class="nc-grid"><div><label>Show</label><select id="ncMode"><option value="need">What I still need</option><option value="own">What I own (showcase)</option></select></div>' + filters + '<div style="grid-column:1/-1;"><label>Title on the picture</label><input id="ncTitle" maxlength="90"></div></div>' +
+			'<div id="ncStudio" style="margin:0 0 12px;"></div>' +
+			'<div class="nc-count" id="ncCount"></div><div class="nc-out" id="ncOut"></div>' +
+			'<div class="nc-actions"><button type="button" id="ncClose">Close</button><button type="button" id="ncCopy">Copy image</button><a id="ncDl" download="what-i-still-need.png" class="primary">Download PNG</a></div></div>';
+		document.body.appendChild(bg);
+		bg.addEventListener("click", function (e) { if (e.target === bg) bg.remove(); });
+		bg.querySelector("#ncClose").onclick = function () { bg.remove(); };
+		function q(s) { return bg.querySelector(s); }
+		var titleTouched = false, token = 0, lastCanvas = null;
+		q("#ncTitle").addEventListener("input", function () { titleTouched = true; schedule(); });
+
+		function selected() {
+			var cat = q("#ncCat").value;
+			var from = q("#ncFrom") ? q("#ncFrom").value.trim().toLowerCase() : "";
+			var relV = q("#ncRel") ? q("#ncRel").value : "";
+			var slot = q("#ncSlot") ? q("#ncSlot").value.trim().toLowerCase() : "";
+			var size = q("#ncSize") ? q("#ncSize").value : "";
+			return pool.filter(function (x) {
+				if (ctx.isOwned(ctx.kind, x.id) !== (q("#ncMode").value === "own")) return false;
+				if (isRare) {
+					if (cat && x.category !== cat) return false;
+					if (relV) { if (/^\d{4}$/.test(relV) ? String(x.releaseDate || "").indexOf(relV) === -1 : x.releaseDate !== relV) return false; }
+					if (from && String(x.obtainedFrom || "").toLowerCase().indexOf(from) === -1) return false;
+					if (slot && String(x.typeSlot || "").toLowerCase().indexOf(slot) === -1) return false;
+				} else {
+					if (cat && (x.category || "No category") !== cat) return false;
+					if (from && String(x.artist || "").toLowerCase().indexOf(from) === -1) return false;
+					if (size === "1" && x.width * x.height !== 1) return false;
+					if (size === "2" && x.width * x.height === 1) return false;
+				}
+				return true;
+			});
+		}
+		function autoTitle() {
+			var bits = [];
+			if (q("#ncRel") && q("#ncRel").value) bits.push(q("#ncRel").value);
+			if (q("#ncFrom") && q("#ncFrom").value.trim()) bits.push((isRare ? "" : "by ") + q("#ncFrom").value.trim());
+			if (q("#ncSlot") && q("#ncSlot").value.trim()) bits.push(q("#ncSlot").value.trim());
+			if (q("#ncCat").value) bits.push(q("#ncCat").value);
+			return (q("#ncMode").value === "own" ? "My collection" : "Still needed") + (bits.length ? ": " + bits.join(" \u00b7 ") : (isRare ? ": rare items" : ": mapart"));
+		}
+		var timer = null;
+		function schedule() { clearTimeout(timer); timer = setTimeout(draw, 250); }
+		bg.querySelectorAll(".nc-grid select, .nc-grid input").forEach(function (el) {
+			if (el.id !== "ncTitle") el.addEventListener("input", function () { if (!titleTouched) q("#ncTitle").value = autoTitle(); schedule(); });
+		});
+		q("#ncTitle").value = autoTitle();
+
+		var studio = null;
+		function draw() {
+			var own = q("#ncMode").value === "own";
+			var items = selected().sort(function (a, b) { return String(isRare ? a.name : a.title).localeCompare(String(isRare ? b.name : b.title)); });
+			q("#ncCount").textContent = items.length + (own ? " owned" : " still needed") + " out of " + pool.length + " in " + ctx.world;
+			var my = ++token;
+			if (!items.length) { q("#ncOut").innerHTML = '<div class="col-msg">Nothing matches' + (own ? "." : " \u2014 you own everything here!") + '</div>'; lastCanvas = null; return; }
+			if (!window.sctpShare) { q("#ncOut").innerHTML = '<div class="col-msg">The image maker failed to load \u2014 refresh the page.</div>'; return; }
+			var spec = {
+				type: "grid", eyebrow: (ctx.username ? ctx.username + "'s " : "") + (own ? "collection" : "wishlist") + " \u00b7 " + ctx.world,
+				title: q("#ncTitle").value, subtitle: items.length + (own ? " collected" : " to go"),
+				footerUrl: "sctp.nl/collection", gridAspect: isRare ? 0.86 : 1.0,
+				items: items.map(function (x) {
+					return isRare ? { name: x.name, imageUrl: x.texture, pixel: true }
+						: { name: x.title, imageUrl: API_BASE + "/mapart/image?id=" + encodeURIComponent(x.id) + "&v=" + encodeURIComponent(x.imageHash || ""), pixel: true };
+				})
+			};
+			var canvas = document.createElement("canvas");
+			window.sctpShare.render(canvas, spec, studio ? studio.get() : {}).then(function () {
+				if (my !== token) return;
+				lastCanvas = canvas;
+				q("#ncOut").innerHTML = ""; q("#ncOut").appendChild(canvas);
+				try { q("#ncDl").href = canvas.toDataURL("image/png"); q("#ncDl").textContent = "Download PNG"; } catch (e) { q("#ncDl").removeAttribute("href"); q("#ncDl").textContent = "Can't export (image blocked)"; }
+			});
+		}
+		if (window.sctpShare) studio = window.sctpShare.controls(q("#ncStudio"), schedule, { noLayout: true, textOverrides: false });
+		q("#ncMode").addEventListener("change", function () { if (!titleTouched) q("#ncTitle").value = autoTitle(); schedule(); });
+		q("#ncCopy").onclick = function () {
+			var b = this;
+			if (!lastCanvas) return;
+			lastCanvas.toBlob(function (blob) {
+				try { navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]).then(function () { b.textContent = "Copied!"; }, function () { b.textContent = "Copy failed"; }); }
+				catch (e) { b.textContent = "Copy not supported"; }
+			});
+		};
+		(document.fonts && document.fonts.load ? Promise.all([document.fonts.load("600 34px Fraunces"), document.fonts.load("600 13px Inter")]).catch(function () {}) : Promise.resolve()).then(draw);
 	}
 
 	window.sctpCollection = { mount: mount };

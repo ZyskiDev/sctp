@@ -1,0 +1,55 @@
+# Changelog
+
+## 2.0 (mod 2.0 + website, September 2026)
+
+Everything since mod 1.6 (released 14 Sep 2026).
+
+### Mod
+- **Four builds now ship:** Fabric 26.2, Fabric 26.3, NeoForge 26.2 and NeoForge 26.3. Fabric 1.21.11 and 26.1 stay unsupported (dropped in 1.6). Each Fabric jar now refuses to load in the wrong Minecraft version instead of crashing on startup.
+- **Mapart scanner (new, built in):** finds item-frame mapart near you, merges walls of maps into full pieces and uploads them to the mapart gallery.
+  - Stitching, PNG encoding and uploading all run on one low-priority background thread — the game thread only reads frames and hashes their pixels, so it never freezes.
+  - Nothing is ever printed to chat and there is no `/mapartworld` command: the world comes from the mod's own world detection, and it only scans once the world has been confirmed on the current connection.
+  - A "Mapart Scanner" button on the X-menu shows what it found (thumbnails and upload status), with an on/off switch and "Re-send nearby". Scanning defaults to ON.
+- **Advanced Settings screen:** chat scan log format (single/multiple lines), per-shop scan cooldown, teleport beam style, whether `/search` opens the GUI or chat, and "shop info on visit" (sends `/shops plot info` at most once an hour per shop).
+- **Settings screen** reorganised and simplified.
+- **Watchlist:** quick price buttons (1, 5, 10, 15, 20, 25, 32, 48 blocks) in item options; a "Search" button per row that jumps to the item's detail page; the watchlist screen keeps your search text and scroll position when you return from another screen; alerts now include marketplace listings with a clickable link to the listing on the website.
+- **In-game reporting:** a red [Report] button on watchlist alerts and in the listings list — one click, once per listing per session.
+- **Rare rentals:** optional Advanced setting (off by default) to also highlight rentable rares inside opened shulker boxes.
+- **Auto-scanner:** no longer silently right-clicks while you hold a name tag or a feather (so it can't redeem fly tokens).
+- Shop-visit alert fixes; proper names for music discs.
+
+### Website — main table and search
+- Hide any column with its × and bring it back from the "Columns ▾" menu (Report/Share always stay).
+- Price filter and sort now work per single item in diamond-equivalent, with "≈ x dia each" under prices. A **"Convert currencies to diamond-equivalent"** switch (on by default, remembered) is on the main table, item pages, seller pages and the material-list searcher; off uses the raw price in each listing's own currency.
+- "Did you mean…?" suggestions when a search finds 0–3 results.
+- General price-check value per world on every rare item page.
+- **Mapart of the day** on the home page.
+- Redesigned navigation: More ▾ (Roadmap, Search by material list, World/Shop statistics) and Info ▾ (FAQ, Installation, Features going straight to those docs pages); the Rare-dle button is shown greyed out as "coming soon".
+
+### Website — mapart
+- Mapart gallery (`/mapart`) with a page per piece; owners claim, edit, abandon and upload pieces (with a crop tool) from the management page, and can request takedowns that a head admin approves.
+- Automatic artist and title detection with nickname aliases; mapart also appears as gallery rows in the main listings table.
+- **New fields:** optional price; **collab artists** (a dropdown arrow adds more artist fields — the first is the head artist and is shown first); **"Was this a commission?"** (artist becomes "built by" plus a "commissioned by" field). Commission info (open/closed, prices and details, Discord) is entered on the management page and shown on the artist's profile.
+- **Search by image** (reverse image search) and near-duplicate detection on upload.
+- **Reports and moderation:** anyone can report wrong artist, wrong world, wrong category or an inappropriate image from any mapart listing. Reports go into the existing reports queue; holders of the new `manageMapart` permission see and resolve them and can edit artist/world/category directly.
+- New categories Seasonal and Advertisement; Fandom removed (its three pieces moved to Misc).
+
+### Website — collections, profiles, games
+- **Collections** (`/collection/`): tick off rare items and mapart per world, with full stats; public by default at `/collection/<username>` (private toggle). Ownership toggles on the item-library cards, the mapart catalog cards and both detail pages.
+- **Public profiles:** the seller page (`/s/ff/<name>`) is now a tabbed profile — Shop, Mapart (with commission info), Collection, Marketplace. "My Profile" and "My Collection" in the account menu.
+- **Rare-dle** (`/rare-dle/`, testing mode): a daily "guess the secret rare" game — login required, 8 tries, per-attribute feedback, a hint after 4 guesses, points and streaks, and Today / All-time / Streak leaderboards. While in testing mode you can reset the daily game or play unlimited random practice rounds (practice never counts toward points or leaderboards).
+- **Image maker:** shareable pictures in 13 formats (Discord, X, Instagram, story, YouTube, wallpaper, banners, custom…) and 12 styles with patterns, layouts and your own colours — for mapart of the day, mapart pages, rare item pages, profiles, the collection "still needed / owned" builder and Rare-dle results.
+
+### Website — shops and marketplace
+- **My Shop Statistics:** undercut alerts, "what to reprice" and "what to restock" hints.
+- **Marketplace:** jobs board (post, express interest, close), replies to offers, listing ids with share links and deep links, nicer sharing, and a new-feature nav highlight.
+- **Your store:** manual listings (up to 100) and store managers.
+- **Downloads:** redesigned download popup with a loader and version picker, including NeoForge.
+- Verification is now for mapart only, through single-use head-admin links; marketplace verification marks were removed.
+- New registration helpline docs page; docs Features page updated for 2.0.
+- Rare and vanilla catalogs: new 26.2 items, missing-item fixes, new rare textures; "Aquatica Crate Key" renamed "Aquatic Crate Key".
+
+### Backend
+- Migrations 0015–0027: marketplace jobs, listing ids, mapart (+ all-names, claim flags, uploads, takedowns), store managers, collections, mapart price, profiles/mapart-of-the-day/image-search, Rare-dle, Rare-dle practice.
+- New Worker endpoints for mapart reports and edits, collections, public profiles, commission info, mapart of the day, image search and its indexer, seller-shop stats hints, and Rare-dle.
+- Admin panel: mapart of the day (re-roll and promo image), image index builder, mapart takedowns, verification links.

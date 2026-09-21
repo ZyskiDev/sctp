@@ -253,6 +253,7 @@ public class ShopLoggerClient {
 
 		SilentScreenCoordinator.tickWatchdog();
 		ShopAutoScanner.getInstance().tick(client);
+			com.snailtools.shoplogger.mapart.MapartScanner.getInstance().tick(client);
 		ShopMarkerRenderer.getInstance().tick(client);
 		TeleportHighlight.getInstance().tick(client);
 		WorldDetector.getInstance().tick(client);

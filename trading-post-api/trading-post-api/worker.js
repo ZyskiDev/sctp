@@ -87,6 +87,12 @@
 //   POST /mapart/report                      (API_KEY, like POST /reports) body: {id, reason: "wrong_artist"|"wrong_world"|"wrong_category"|"inappropriate_image", details?} -> lands in the `reports` queue as listingKey "mapart:<id>", handled by "manageMapart"
 //   GET  /collection/mine, POST /collection/set {kind: "rare"|"mapart", world, ids[], owned}, POST /collection/privacy {private}   (any account) — personal collections, per world
 //   GET  /collection/public?username=        (public) -> {username, private, items?}
+//   GET  /raredle/state, POST /raredle/guess {itemId}, POST /raredle/reset + POST /raredle/practice/new + mode=practice on state/guess (testing mode only) (any account), GET /raredle/leaderboard (public) — the daily Rare-dle game; the answer never leaves the Worker until a game is finished
+//   GET  /profile?username=                  (public, cached 2m) -> mapart (as artist/commissioner/owner), commission info, collection summary, marketplace history
+//   POST /account/commission                 (verified account) body: {open, info?, discord?} — shown on the profile's Mapart tab
+//   GET  /mapart/of-the-day                  (public) one random piece per UTC day; POST /admin/mapart/otd/reroll ("manageMapart") body: {id?} picks another
+//   POST /mapart/search-image                (public) body: {hash} 64-hex difference hash from mapart-search.js -> closest pieces; POST /admin/mapart/build-index ("manageMapart") indexes not-yet-hashed pieces in small batches
+//   GET  /stats/mine now also returns hints: {restock[], reprice[], undercut[]}
 //   POST /mapart/submit                      (verified account) body: {title, world, width, height, png(base64, exactly width*128 x height*128), artist?, category?, whereToBuy?, notForSale?}
 //   POST /mapart/delete-own                  (verified account) body: {id} — only pieces the account uploaded itself
 //   POST /mapart/takedown | /mapart/takedown/cancel   (verified owner) body: {id, reason?} — asks a head admin to delete the piece for good and block re-uploads
@@ -755,6 +761,7 @@ async function handleGetAccountMe(request, env) {
 		username: a.username, isHeadAdmin: !!a.isHeadAdmin,
 		mcUsername: a.mcUsername || null, mcVerified: !!a.mcVerified,
 		contactDiscord: a.contactDiscord || null, contactTimezone: a.contactTimezone || null,
+		commission: { open: !!a.commissionOpen, info: a.commissionInfo || "", discord: a.commissionDiscord || "" },
 	});
 }
 
@@ -3053,6 +3060,7 @@ async function handleGetMyStats(request, env) {
 		de.inferredRevenue += r.inferredRevenueDiamonds;
 	}
 	const bestSellers = [...byItem.values()].filter((e) => e.inferredSold > 0).sort((a, b) => b.inferredSold - a.inferredSold).slice(0, 10);
+	const hints = await computeShopHints(env, sellerKey, rows, latestDate, dates.length).catch(() => ({ restock: [], reprice: [], undercut: [] }));
 	const trend = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-60);
 	const busiestDay = [...byDate.values()].sort((a, b) => b.inferredSold - a.inferredSold)[0] || null;
 
@@ -3062,7 +3070,7 @@ async function handleGetMyStats(request, env) {
 		activeListings, distinctItemsActive, currentStockValueDiamonds,
 		totalInferredSold, totalInferredRevenue,
 		recentInferredSold, recentInferredRevenue,
-		bestSellers, trend, busiestDay,
+		bestSellers, trend, busiestDay, hints,
 		trackingStartDate: dates[0], trackingDays: dates.length,
 	});
 }
@@ -3330,7 +3338,7 @@ function splitMapartArtists(artist) {
 // (the first one is the head artist — the one shown on the catalog until the
 // list is expanded). Accepts that string or an array of names; returns
 // {value} (null when empty) or {error}.
-const MAPART_MAX_ARTISTS = 8;
+const MAPART_MAX_COLLAB_ARTISTS = 8;
 const MAPART_MAX_ARTIST_NAME = 40;
 function cleanMapartArtist(input) {
 	const raw = Array.isArray(input) ? input : String(input == null ? "" : input).split("&");
@@ -3343,8 +3351,16 @@ function cleanMapartArtist(input) {
 		seen.add(n.toLowerCase());
 		names.push(n);
 	}
-	if (names.length > MAPART_MAX_ARTISTS) return { error: `A piece can list at most ${MAPART_MAX_ARTISTS} artists` };
+	if (names.length > MAPART_MAX_COLLAB_ARTISTS) return { error: `A piece can list at most ${MAPART_MAX_COLLAB_ARTISTS} artists` };
 	return { value: names.length ? names.join(" & ") : null };
+}
+
+// "Was this a commission?": when on, artist = built by, commissionedBy = who it was built for.
+function cleanCommission(on, by) {
+	if (!on) return { commissioned: 0, commissionedBy: null };
+	const name = String(by == null ? "" : by).replace(/&/g, " ").replace(/\s+/g, " ").trim().replace(/^\./, "");
+	if (name.length > MAPART_MAX_ARTIST_NAME) return { error: `The commissioner's name must be at most ${MAPART_MAX_ARTIST_NAME} characters` };
+	return { commissioned: 1, commissionedBy: name || null };
 }
 
 // Optional free-text price ("5 diamonds"); blank clears it.
@@ -3405,7 +3421,7 @@ function resolveMapartWhereToBuy(m) {
 function mapartPublic(m) {
 	return {
 		id: m.id, slug: m.slug, title: m.title, artist: m.artist || null,
-		whereToBuy: resolveMapartWhereToBuy(m), notForSale: !!m.notForSale, price: m.price || null,
+		whereToBuy: resolveMapartWhereToBuy(m), notForSale: !!m.notForSale, price: m.price || null, commissioned: !!m.commissioned, commissionedBy: m.commissionedBy || null,
 		category: m.category || null, world: m.world, width: m.width, height: m.height,
 		imageHash: m.imageHash || null, claimed: !!m.claimedByAccountId,
 		// "Verified by artist" shows when the piece's owner is a currently
@@ -3620,6 +3636,8 @@ async function processMapartGroup(env, world, g, knownNames) {
 		...partIds.map((mapId) => env.DB.prepare("INSERT OR REPLACE INTO mapartParts (world, mapId, mapartId) VALUES (?, ?, ?)").bind(world, mapId, id)),
 	]);
 	await env.SNAPSHOTS.put(`mapart/${id}.png`, pngBytes, { httpMetadata: { contentType: "image/png" } });
+	const scanHash = await phashOfPng(pngBytes, PHASH_MAX_INLINE_PIXELS);
+	if (scanHash) await env.DB.prepare("UPDATE maparts SET phash = ? WHERE id = ?").bind(scanHash, id).run();
 
 	// Auto-claim for a verified account whose MC username is the artist.
 	const fresh = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(id).first();
@@ -3719,7 +3737,7 @@ async function handleUpdateMapart(request, env) {
 	// category) directly, without going through the report queue.
 	const canManage = isHead || adminHasPermission(base.admin, "manageMapart");
 	if (!isHead && !owns && !canManage) return json({ error: "Claim this mapart first to edit it." }, 403);
-	if (!isHead && !owns && (body.title !== undefined || body.whereToBuy !== undefined || body.notForSale !== undefined || body.price !== undefined)) {
+	if (!isHead && !owns && (body.title !== undefined || body.whereToBuy !== undefined || body.notForSale !== undefined || body.price !== undefined || body.commissioned !== undefined || body.commissionedBy !== undefined)) {
 		return json({ error: "Mapart managers can only change the artist, world and category." }, 403);
 	}
 	if (body.world !== undefined && !canManage) return json({ error: "Only mapart managers can move a mapart to another world." }, 403);
@@ -3748,6 +3766,12 @@ async function handleUpdateMapart(request, env) {
 		const p = cleanMapartPrice(body.price);
 		if (p.error) return json({ error: p.error }, 400);
 		sets.push("price = ?"); vals.push(p.value);
+	}
+	if (body.commissioned !== undefined || body.commissionedBy !== undefined) {
+		const cm = cleanCommission(body.commissioned === undefined ? !!m.commissioned : body.commissioned, body.commissionedBy === undefined ? m.commissionedBy : body.commissionedBy);
+		if (cm.error) return json({ error: cm.error }, 400);
+		sets.push("commissioned = ?"); vals.push(cm.commissioned);
+		sets.push("commissionedBy = ?"); vals.push(cm.commissionedBy);
 	}
 	if (body.whereToBuy !== undefined) {
 		const w = String(body.whereToBuy || "").trim();
@@ -4232,6 +4256,8 @@ async function handleSubmitMapart(request, env) {
 	const artist = cleanedArtist.value || mc;
 	const cleanedPrice = cleanMapartPrice(body.price);
 	if (cleanedPrice.error) return json({ error: cleanedPrice.error }, 400);
+	const cleanedCommission = cleanCommission(body.commissioned, body.commissionedBy);
+	if (cleanedCommission.error) return json({ error: cleanedCommission.error }, 400);
 	const whereToBuy = String(body.whereToBuy || "").trim();
 	if (whereToBuy.length > 200) return json({ error: "whereToBuy must be at most 200 characters" }, 400);
 	const category = body.category ? String(body.category) : null;
@@ -4257,6 +4283,12 @@ async function handleSubmitMapart(request, env) {
 	}
 	const dup = await env.DB.prepare("SELECT title, slug FROM maparts WHERE imageHash = ? LIMIT 1").bind(imageHash).first();
 	if (dup) return json({ error: `That exact picture is already in the gallery as "${dup.title}".`, slug: dup.slug }, 409);
+	// Near-duplicates (a re-export, a screenshot of the same art, ...) count too.
+	const uploadHash = await phashOfPng(pngBytes, 0);
+	if (uploadHash && !body.allowSimilar) {
+		const [near] = await findSimilarMapart(env, uploadHash, 10, 1);
+		if (near) return json({ error: `That looks almost identical to "${near.title}" that's already in the gallery.`, slug: near.slug, similar: true }, 409);
+	}
 
 	const id = crypto.randomUUID();
 	let leadMapId = null;
@@ -4270,10 +4302,10 @@ async function handleSubmitMapart(request, env) {
 	const slug = await assignMapartSlug(env, id, title);
 	const now = new Date().toISOString();
 	await env.DB.prepare(
-		`INSERT INTO maparts (id, slug, world, leadMapId, rawName, allNames, title, artist, whereToBuy, notForSale, price, category, width, height, imageHash,
+		`INSERT INTO maparts (id, slug, world, leadMapId, rawName, allNames, title, artist, whereToBuy, notForSale, price, commissioned, commissionedBy, phash, category, width, height, imageHash,
 			claimedByAccountId, claimedAt, autoClaimBlocked, locked, claimedManually, ownerEdited, uploadedByAccountId, createdAt, updatedAt, lastSeen)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 1, 1, ?, ?, ?, ?)`
-	).bind(id, slug, world, leadMapId, title, JSON.stringify([title]), title, artist, whereToBuy || null, body.notForSale ? 1 : 0, cleanedPrice.value, category, width, height, imageHash,
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 1, 1, ?, ?, ?, ?)`
+	).bind(id, slug, world, leadMapId, title, JSON.stringify([title]), title, artist, whereToBuy || null, body.notForSale ? 1 : 0, cleanedPrice.value, cleanedCommission.commissioned, cleanedCommission.commissionedBy, uploadHash || null, category, width, height, imageHash,
 		auth.admin.id, now, auth.admin.id, now, now, now).run();
 	try {
 		await env.SNAPSHOTS.put(`mapart/${id}.png`, pngBytes, { httpMetadata: { contentType: "image/png" } });
@@ -4405,6 +4437,733 @@ async function handleGetPublicCollection(request, env) {
 	if (acct.collectionPrivate) return json({ username: acct.username, private: true });
 	const { results } = await env.DB.prepare("SELECT kind, itemId, world, addedAt FROM collectionItems WHERE accountId = ?").bind(acct.id).all();
 	return json({ username: acct.username, mcUsername: acct.mcUsername || null, private: false, items: results });
+}
+
+// ---------------- shop hints (restock / reprice / undercut) ----------------
+// Extra section of GET /stats/mine. Uses only the caller's own listings, the
+// current listings of the *same items* from other sellers, and the daily
+// per-item stats already tracked — nothing is written.
+function hintKeyFor(r) {
+	return String(r.baseItem || "").toLowerCase() + "|" + String(r.itemName || "").toLowerCase() + "|" + r.world;
+}
+
+async function computeShopHints(env, sellerKey, statRows, latestDate, trackingDays) {
+	const hints = { restock: [], reprice: [], undercut: [] };
+
+	// ---- market comparison: reprice + undercut
+	const { results: mine } = await env.DB.prepare(
+		"SELECT baseItem, itemName, price, currency, stackSize, world, position FROM listings WHERE lower(seller) = ?"
+	).bind(sellerKey).all();
+	const ownBest = new Map(); // key -> { r, each }
+	for (const r of mine) {
+		if (String(r.currency || "").toLowerCase() === "display") continue;
+		const each = priceInDiamonds(r) / (r.stackSize || 1);
+		const k = hintKeyFor(r);
+		const cur = ownBest.get(k);
+		if (!cur || each < cur.each) ownBest.set(k, { r, each });
+	}
+	if (ownBest.size) {
+		const bases = [...new Set([...ownBest.values()].map((o) => String(o.r.baseItem).toLowerCase()))];
+		const others = new Map(); // key -> [{each, seller}]
+		for (const chunk of chunkArray(bases, 80)) {
+			const { results } = await env.DB.prepare(
+				`SELECT baseItem, itemName, price, currency, stackSize, seller, world FROM listings WHERE lower(baseItem) IN (${chunk.map(() => "?").join(",")}) AND lower(seller) != ?`
+			).bind(...chunk, sellerKey).all();
+			for (const r of results) {
+				if (String(r.currency || "").toLowerCase() === "display") continue;
+				const k = hintKeyFor(r);
+				if (!ownBest.has(k)) continue;
+				if (!others.has(k)) others.set(k, []);
+				others.get(k).push({ each: priceInDiamonds(r) / (r.stackSize || 1), seller: r.seller });
+			}
+		}
+		for (const [k, own] of ownBest) {
+			const list = others.get(k);
+			if (!list || !list.length) continue;
+			const sorted = list.map((o) => o.each).sort((a, b) => a - b);
+			const median = sorted[Math.floor(sorted.length / 2)];
+			const cheapest = list.reduce((a, b) => (b.each < a.each ? b : a));
+			const base = { itemName: own.r.itemName, world: own.r.world, yourPrice: own.each, marketMedian: median, others: list.length };
+			if (cheapest.each < own.each * 0.98) {
+				hints.undercut.push({ ...base, cheapestPrice: cheapest.each, cheapestSeller: cheapest.seller, pctCheaper: Math.round((1 - cheapest.each / own.each) * 100) });
+			}
+			if (list.length >= 2 && median > 0) {
+				const ratio = own.each / median;
+				if (ratio > 1.3) hints.reprice.push({ ...base, direction: "high", pct: Math.round((ratio - 1) * 100) });
+				else if (ratio < 0.7) hints.reprice.push({ ...base, direction: "low", pct: Math.round((1 - ratio) * 100) });
+			}
+		}
+		hints.undercut.sort((a, b) => b.pctCheaper - a.pctCheaper);
+		hints.reprice.sort((a, b) => b.pct - a.pct);
+	}
+
+	// ---- restock: things that sell but are (nearly) gone
+	const windowDays = Math.max(1, Math.min(14, trackingDays));
+	const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+	const byItem = new Map();
+	for (const r of statRows) {
+		const k = r.itemKey + "|" + r.world;
+		let e = byItem.get(k);
+		if (!e) { e = { itemName: r.itemName, world: r.world, sold14: 0, latestStock: null }; byItem.set(k, e); }
+		if (r.date >= cutoff) e.sold14 += r.inferredSold;
+		if (r.date === latestDate) e.latestStock = r.totalStock;
+	}
+	for (const e of byItem.values()) {
+		if (e.sold14 <= 0) continue;
+		const perDay = e.sold14 / windowDays;
+		if (e.latestStock === null || e.latestStock === 0) {
+			hints.restock.push({ itemName: e.itemName, world: e.world, sold14: e.sold14, stock: 0, daysLeft: 0 });
+		} else {
+			const daysLeft = e.latestStock / perDay;
+			if (daysLeft < 4) hints.restock.push({ itemName: e.itemName, world: e.world, sold14: e.sold14, stock: e.latestStock, daysLeft: Math.round(daysLeft * 10) / 10 });
+		}
+	}
+	hints.restock.sort((a, b) => a.daysLeft - b.daysLeft || b.sold14 - a.sold14);
+	for (const k of Object.keys(hints)) hints[k] = hints[k].slice(0, 25);
+	return hints;
+}
+
+// ---------------- commission info + public profiles ----------------
+// Saved from the mapart management page; shown on the artist's profile.
+//   POST /account/commission  (verified account) body: {open, info?, discord?}
+async function handleSetCommissionInfo(request, env) {
+	const auth = await requireVerifiedAccount(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const info = String(body.info || "").trim();
+	const discord = String(body.discord || "").trim();
+	if (info.length > 1000) return json({ error: "Commission details must be at most 1000 characters" }, 400);
+	if (discord.length > 60) return json({ error: "Discord must be at most 60 characters" }, 400);
+	await env.DB.prepare("UPDATE admins SET commissionOpen = ?, commissionInfo = ?, commissionDiscord = ? WHERE id = ?")
+		.bind(body.open ? 1 : 0, info || null, discord || null, auth.admin.id).run();
+	return json({ ok: true });
+}
+
+// GET /profile?username=  (public) — one page's worth of everything about a
+// player: their mapart (as artist, commissioner or owner), commission info,
+// public collection summary and marketplace history. The shop listings
+// themselves come from the regular /listings feed on the client.
+async function handleGetProfile(request, env, ctx) {
+	return cachedGet(request, ctx, 120, async () => {
+		const raw = String(new URL(request.url).searchParams.get("username") || "").trim();
+		const name = raw.replace(/^\./, "");
+		if (!name) return { error: "username is required" };
+		const low = name.toLowerCase();
+		const acct = await env.DB.prepare(
+			"SELECT id, username, mcUsername, mcVerified, collectionPrivate, commissionOpen, commissionInfo, commissionDiscord FROM admins WHERE lower(username) = ? OR lower(replace(mcUsername, '.', '')) = ? ORDER BY (lower(username) = ?) DESC LIMIT 1"
+		).bind(low, low, low).first();
+
+		const artistName = acct && acct.mcUsername ? String(acct.mcUsername).replace(/^\./, "").toLowerCase() : low;
+		const { results: mapartRows } = await env.DB.prepare(
+			`SELECT m.*, a.mcVerified AS claimantVerified FROM maparts m LEFT JOIN admins a ON a.id = m.claimedByAccountId
+			 WHERE instr(' & ' || lower(m.artist) || ' & ', ' & ' || ? || ' & ') > 0 OR lower(m.commissionedBy) = ? OR (? != '' AND m.claimedByAccountId = ?)
+			 ORDER BY m.title COLLATE NOCASE`
+		).bind(artistName, artistName, acct ? acct.id : "", acct ? acct.id : "").all();
+		const mapart = mapartRows.map((m) => ({
+			...mapartPublic(m),
+			role: m.commissionedBy && m.commissionedBy.toLowerCase() === artistName ? "commissioner" : "artist",
+		}));
+
+		const out = { username: acct ? acct.username : name, hasAccount: !!acct, verified: !!(acct && acct.mcVerified), mapart };
+		if (acct) {
+			out.commission = { open: !!acct.commissionOpen, info: acct.commissionInfo || "", discord: acct.commissionDiscord || "" };
+			out.collection = { public: !acct.collectionPrivate };
+			if (!acct.collectionPrivate) {
+				const { results } = await env.DB.prepare("SELECT kind, world, COUNT(*) AS n FROM collectionItems WHERE accountId = ? GROUP BY kind, world").bind(acct.id).all();
+				out.collection.counts = results;
+			}
+			const { results: mk } = await env.DB.prepare(
+				`SELECT type, itemName, world, quantity, askingPrice, askingCurrency, budget, budgetCurrency, status, createdAt
+				 FROM marketplaceListings WHERE accountId = ? AND status IN ('active', 'fulfilled') ORDER BY createdAt DESC LIMIT 30`
+			).bind(acct.id).all();
+			out.marketplace = mk;
+		}
+		return out;
+	});
+}
+
+// ---------------- mapart of the day ----------------
+// One random piece per UTC day, picked lazily by the first visitor. Head
+// admins / mapart managers can re-roll it from the admin panel.
+//   GET  /mapart/of-the-day                (public)
+//   POST /admin/mapart/otd/reroll          ("manageMapart") body: {id?} -> picks a different random piece (or the given one)
+const MOTD_KEY = "mapartOfTheDay";
+
+async function pickRandomMapart(env, excludeId) {
+	const { results } = await env.DB.prepare("SELECT id FROM maparts WHERE id != ?").bind(excludeId || "").all();
+	if (!results.length) return null;
+	return results[Math.floor(Math.random() * results.length)].id;
+}
+
+async function getOrPickMapartOfTheDay(env) {
+	const today = new Date().toISOString().slice(0, 10);
+	const row = await env.DB.prepare("SELECT value FROM siteSettings WHERE key = ?").bind(MOTD_KEY).first();
+	let cur = null;
+	try { cur = row ? JSON.parse(row.value) : null; } catch (e) { cur = null; }
+	if (cur && cur.date === today && await env.DB.prepare("SELECT 1 AS x FROM maparts WHERE id = ?").bind(cur.id).first()) return cur;
+	const id = await pickRandomMapart(env, cur ? cur.id : "");
+	if (!id) return null;
+	cur = { date: today, id };
+	await env.DB.prepare("INSERT OR REPLACE INTO siteSettings (key, value) VALUES (?, ?)").bind(MOTD_KEY, JSON.stringify(cur)).run();
+	return cur;
+}
+
+async function loadMotdPayload(env, cur) {
+	const m = await env.DB.prepare(
+		"SELECT m.*, a.mcVerified AS claimantVerified FROM maparts m LEFT JOIN admins a ON a.id = m.claimedByAccountId WHERE m.id = ?"
+	).bind(cur.id).first();
+	return m ? { date: cur.date, mapart: mapartPublic(m) } : { error: "none" };
+}
+
+async function handleGetMapartOfTheDay(request, env, ctx) {
+	return cachedGet(request, ctx, 300, async () => {
+		const cur = await getOrPickMapartOfTheDay(env);
+		return cur ? loadMotdPayload(env, cur) : { error: "none" };
+	});
+}
+
+async function handleAdminRerollMapartOfTheDay(request, env) {
+	const auth = await requireAdminAuth(request, env, "manageMapart");
+	if (!auth.ok) return auth.response;
+	let body = {};
+	try { body = await request.json(); } catch (e) { /* no body is fine */ }
+	const today = new Date().toISOString().slice(0, 10);
+	const row = await env.DB.prepare("SELECT value FROM siteSettings WHERE key = ?").bind(MOTD_KEY).first();
+	let prev = null;
+	try { prev = row ? JSON.parse(row.value) : null; } catch (e) { /* ignore */ }
+	let id = null;
+	if (body.id) {
+		if (!(await env.DB.prepare("SELECT 1 AS x FROM maparts WHERE id = ?").bind(String(body.id)).first())) return json({ error: "Mapart not found" }, 404);
+		id = String(body.id);
+	} else {
+		id = await pickRandomMapart(env, prev ? prev.id : "");
+	}
+	if (!id) return json({ error: "No mapart to pick from" }, 404);
+	const cur = { date: today, id };
+	await env.DB.prepare("INSERT OR REPLACE INTO siteSettings (key, value) VALUES (?, ?)").bind(MOTD_KEY, JSON.stringify(cur)).run();
+	// The public endpoint is edge-cached; the site refetches within minutes.
+	return json({ ok: true, ...(await loadMotdPayload(env, cur)) });
+}
+
+// ---------------- reverse image search ----------------
+// Every piece gets a 256-bit difference hash of its picture (16 rows x 16
+// left-vs-right brightness comparisons over a 17x16 grid of averaged cells).
+// The browser computes the same hash for an uploaded picture
+// (mapart-search.js); the Hamming distance between two hashes says how
+// alike the pictures look, independent of size and small colour shifts.
+const PHASH_COLS = 17, PHASH_ROWS = 16;
+const PHASH_MAX_INLINE_PIXELS = 300000; // bigger pieces are indexed by the admin backfill, not inline
+
+async function inflateZlib(bytes) {
+	const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate"));
+	return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+// 8-bit, non-interlaced PNG -> {w, h, gray: Uint8Array(w*h)}; null for anything else.
+async function decodePngGray(bytes) {
+	if (bytes.length < 33 || bytes[0] !== 0x89 || bytes[1] !== 0x50) return null;
+	const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	let off = 8, w = 0, h = 0, depth = 0, ctype = -1, interlace = 0, plte = null;
+	const idat = [];
+	while (off + 12 <= bytes.length) {
+		const len = dv.getUint32(off);
+		const type = String.fromCharCode(bytes[off + 4], bytes[off + 5], bytes[off + 6], bytes[off + 7]);
+		const data = bytes.subarray(off + 8, off + 8 + len);
+		off += 12 + len;
+		if (type === "IHDR") { w = dv.getUint32(off - 12 - len + 8); h = dv.getUint32(off - 12 - len + 12); depth = data[8]; ctype = data[9]; interlace = data[12]; }
+		else if (type === "PLTE") plte = data;
+		else if (type === "IDAT") idat.push(data);
+		else if (type === "IEND") break;
+	}
+	const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[ctype];
+	if (!w || !h || depth !== 8 || interlace !== 0 || !channels || !idat.length) return null;
+	let total = 0;
+	for (const c of idat) total += c.length;
+	const joined = new Uint8Array(total);
+	let p = 0;
+	for (const c of idat) { joined.set(c, p); p += c.length; }
+	const raw = await inflateZlib(joined);
+	const stride = w * channels;
+	if (raw.length < h * (stride + 1)) return null;
+	const px = new Uint8Array(h * stride);
+	for (let y = 0; y < h; y++) {
+		const ft = raw[y * (stride + 1)];
+		const src = y * (stride + 1) + 1, dst = y * stride, up = dst - stride;
+		for (let i = 0; i < stride; i++) {
+			const x = raw[src + i];
+			const a = i >= channels ? px[dst + i - channels] : 0;
+			const b = y > 0 ? px[up + i] : 0;
+			const c = i >= channels && y > 0 ? px[up + i - channels] : 0;
+			let v;
+			if (ft === 0) v = x;
+			else if (ft === 1) v = x + a;
+			else if (ft === 2) v = x + b;
+			else if (ft === 3) v = x + ((a + b) >> 1);
+			else {
+				const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c);
+				v = x + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c);
+			}
+			px[dst + i] = v & 255;
+		}
+	}
+	const gray = new Uint8Array(w * h);
+	for (let i = 0, n = w * h; i < n; i++) {
+		const o = i * channels;
+		let g;
+		if (ctype === 0) g = px[o];
+		else if (ctype === 2) g = 0.299 * px[o] + 0.587 * px[o + 1] + 0.114 * px[o + 2];
+		else if (ctype === 3) { const pi = px[o] * 3; g = plte ? 0.299 * plte[pi] + 0.587 * plte[pi + 1] + 0.114 * plte[pi + 2] : px[o]; }
+		else if (ctype === 4) g = px[o] * px[o + 1] / 255;
+		else g = (0.299 * px[o] + 0.587 * px[o + 1] + 0.114 * px[o + 2]) * px[o + 3] / 255;
+		gray[i] = g;
+	}
+	return { w, h, gray };
+}
+
+// Same maths as mapart-search.js: average brightness into a 17x16 grid, then
+// one bit per left/right neighbour pair.
+function dHashFromGray(gray, w, h) {
+	const sum = new Float64Array(PHASH_COLS * PHASH_ROWS), cnt = new Uint32Array(PHASH_COLS * PHASH_ROWS);
+	for (let y = 0; y < h; y++) {
+		const cy = Math.min(PHASH_ROWS - 1, Math.floor(y * PHASH_ROWS / h));
+		for (let x = 0; x < w; x++) {
+			const cx = Math.min(PHASH_COLS - 1, Math.floor(x * PHASH_COLS / w));
+			const k = cy * PHASH_COLS + cx;
+			sum[k] += gray[y * w + x]; cnt[k]++;
+		}
+	}
+	let hex = "", nib = 0, nbits = 0;
+	for (let cy = 0; cy < PHASH_ROWS; cy++) {
+		for (let cx = 0; cx < PHASH_COLS - 1; cx++) {
+			const a = sum[cy * PHASH_COLS + cx] / (cnt[cy * PHASH_COLS + cx] || 1);
+			const b = sum[cy * PHASH_COLS + cx + 1] / (cnt[cy * PHASH_COLS + cx + 1] || 1);
+			nib = (nib << 1) | (a > b ? 1 : 0);
+			if (++nbits === 4) { hex += nib.toString(16); nib = 0; nbits = 0; }
+		}
+	}
+	return hex;
+}
+
+async function phashOfPng(pngBytes, maxPixels) {
+	try {
+		const img = await decodePngGray(pngBytes);
+		if (!img || (maxPixels && img.w * img.h > maxPixels)) return null;
+		return dHashFromGray(img.gray, img.w, img.h);
+	} catch (e) { return null; }
+}
+
+const POP4 = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
+function hexDistance(a, b) {
+	if (!a || !b || a.length !== b.length) return 256;
+	let d = 0;
+	for (let i = 0; i < a.length; i++) d += POP4[parseInt(a[i], 16) ^ parseInt(b[i], 16)];
+	return d;
+}
+
+let phashIndexCache = { at: 0, rows: [] };
+async function getPhashIndex(env) {
+	if (Date.now() - phashIndexCache.at < 5 * 60 * 1000) return phashIndexCache.rows;
+	const { results } = await env.DB.prepare(
+		"SELECT id, slug, title, artist, world, width, height, phash FROM maparts WHERE phash IS NOT NULL AND phash != ''"
+	).all();
+	phashIndexCache = { at: Date.now(), rows: results };
+	return results;
+}
+
+// Pieces whose picture is at most `maxDist` (of 256) bits away, closest first.
+async function findSimilarMapart(env, hash, maxDist, limit) {
+	const rows = await getPhashIndex(env);
+	const out = [];
+	for (const r of rows) {
+		const d = hexDistance(hash, r.phash);
+		if (d <= maxDist) out.push({ id: r.id, slug: r.slug, title: r.title, artist: r.artist, world: r.world, width: r.width, height: r.height, distance: d, similarity: Math.round((1 - d / 256) * 100) });
+	}
+	out.sort((a, b) => a.distance - b.distance);
+	return out.slice(0, limit);
+}
+
+// POST /mapart/search-image (public) body: {hash (64 hex chars, from mapart-search.js)}
+async function handleSearchMapartImage(request, env) {
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const hash = String(body.hash || "").toLowerCase();
+	if (!/^[0-9a-f]{64}$/.test(hash)) return json({ error: "hash must be 64 hex characters" }, 400);
+	return json({ matches: await findSimilarMapart(env, hash, 70, 12) });
+}
+
+// POST /admin/mapart/build-index ("manageMapart") body: {limit?} — indexes a few
+// not-yet-hashed pieces per call (the admin page loops until remaining = 0).
+async function handleAdminBuildMapartIndex(request, env) {
+	const auth = await requireAdminAuth(request, env, "manageMapart");
+	if (!auth.ok) return auth.response;
+	let body = {};
+	try { body = await request.json(); } catch (e) { /* defaults */ }
+	const limit = Math.min(15, Math.max(1, Math.floor(Number(body.limit) || 8)));
+	const { results } = await env.DB.prepare("SELECT id FROM maparts WHERE phash IS NULL LIMIT ?").bind(limit).all();
+	let done = 0, failed = 0;
+	for (const r of results) {
+		let hash = "";
+		try {
+			const obj = await env.SNAPSHOTS.get(`mapart/${r.id}.png`);
+			if (obj) hash = (await phashOfPng(new Uint8Array(await obj.arrayBuffer()), 0)) || "";
+		} catch (e) { hash = ""; }
+		await env.DB.prepare("UPDATE maparts SET phash = ? WHERE id = ?").bind(hash, r.id).run();
+		if (hash) done++; else failed++;
+	}
+	phashIndexCache = { at: 0, rows: [] };
+	const left = await env.DB.prepare("SELECT COUNT(*) AS c FROM maparts WHERE phash IS NULL").first();
+	const total = await env.DB.prepare("SELECT COUNT(*) AS c FROM maparts").first();
+	return json({ ok: true, indexed: done, failed, remaining: left.c, total: total.c });
+}
+
+// ---------------- Rare-dle ----------------
+// Daily guess-the-rare game (see 0026_raredle.sql). Login required to play. The
+// answer lives only here: the client sends a guess and gets back per-attribute
+// feedback; the answer is revealed only once the player's game is over.
+//   GET  /raredle/state                (any account) -> today's game: guesses + feedback, status, hint, stats (answer only when finished)
+//   POST /raredle/guess                (any account) body: {itemId}
+//   GET  /raredle/leaderboard          (public, cached 1 min) -> {date, daily: [...], allTime: [...], streaks: [...]}
+// TESTING MODE: while true, players can reset today's game and play it again as often as they like
+// (POST /raredle/reset). Set to false to go back to one game per account per day.
+const RAREDLE_TESTING = true;
+const RAREDLE_MAX_GUESSES = 8;
+const RAREDLE_BASE_POINTS = [1000, 800, 650, 500, 400, 300, 200, 120]; // by number of guesses used when won
+const RAREDLE_STREAK_BONUS = 25;        // per streak day, capped below
+const RAREDLE_STREAK_BONUS_CAP = 10;
+const RAREDLE_HINT_AFTER = 4;           // the item's effect text is revealed after this many guesses
+const RAREDLE_NO_REPEAT_DAYS = 90;
+const RAREDLE_CATALOG_URL = "https://sctp.nl/data/rare-items.json";
+
+let raredleCatalogCache = { at: 0, items: null, byId: null };
+async function getRareCatalog() {
+	if (raredleCatalogCache.items && Date.now() - raredleCatalogCache.at < 30 * 60 * 1000) return raredleCatalogCache;
+	const res = await fetch(RAREDLE_CATALOG_URL, { cf: { cacheTtl: 1800, cacheEverything: true } });
+	if (!res.ok) throw new Error("catalog unavailable");
+	const items = await res.json();
+	const byId = new Map(items.map((i) => [i.id, i]));
+	raredleCatalogCache = { at: Date.now(), items, byId };
+	return raredleCatalogCache;
+}
+
+function raredleToday() { return new Date().toISOString().slice(0, 10); }
+
+// "Feb 2026" -> [{y, m: 1}]; "2025" -> [{y, m: null}]; "Apr 2025 / Jan 2026" -> both; missing -> []
+function raredleReleases(s) {
+	const str = String(s == null ? "" : s).trim();
+	if (!str || str === "null") return [];
+	const out = [];
+	const re = /([A-Za-z]{3})[a-z]*\s+(\d{4})|(\d{4})/g;
+	let m;
+	while ((m = re.exec(str))) {
+		if (m[1]) {
+			const idx = "jan feb mar apr may jun jul aug sep oct nov dec".indexOf(m[1].toLowerCase());
+			out.push(idx >= 0 ? { y: +m[2], m: idx / 4 } : { y: +m[2], m: null });
+		} else out.push({ y: +m[3], m: null });
+	}
+	return out;
+}
+
+function raredleWords(s) {
+	return String(s == null ? "" : s).toLowerCase().replace(/wldcard/g, "wildcard")
+		.split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
+}
+function raredleParts(s) {
+	const v = String(s == null ? "" : s).trim();
+	if (!v || v.toLowerCase() === "null") return [];
+	return v.split(/[\/,&]| and /i).map((p) => p.toLowerCase().replace(/wldcard/g, "wildcard").replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+
+// state: correct (green) | close (yellow) | wrong (red) | none (grey, unknown); dir: the answer is "up" (later) / "down" (earlier)
+function raredleCompare(g, a) {
+	const out = [];
+	const eq = (x, y) => String(x || "").trim().toLowerCase() === String(y || "").trim().toLowerCase();
+
+	out.push({ k: "category", v: g.category || "?", s: !g.category || !a.category ? "none" : eq(g.category, a.category) ? "correct" : "wrong" });
+
+	const gr = raredleReleases(g.releaseDate), ar = raredleReleases(a.releaseDate);
+	let rel = { k: "released", v: g.releaseDate && g.releaseDate !== "null" ? g.releaseDate : "?", s: "none" };
+	if (gr.length && ar.length) {
+		if (eq(g.releaseDate, a.releaseDate)) rel.s = "correct";
+		else {
+			// closest pair of dates wins (a release can span several dates)
+			let best = null;
+			for (const x of gr) for (const y of ar) {
+				let d, exact;
+				if (x.m !== null && y.m !== null) { d = (y.y * 12 + y.m) - (x.y * 12 + x.m); exact = d === 0; }
+				else { d = (y.y - x.y) * 12; exact = d === 0 && x.m === null && y.m === null; }
+				const near = x.m !== null && y.m !== null ? Math.abs(d) <= 3 : Math.abs(d) <= 12;
+				const score = Math.abs(d);
+				if (!best || score < best.score) best = { score, d, exact, near };
+			}
+			rel.s = best.exact ? "correct" : best.near ? "close" : "wrong";
+			if (best.d !== 0) rel.d = best.d > 0 ? "up" : "down";
+		}
+	}
+	out.push(rel);
+
+	const gp = raredleParts(g.obtainedFrom), ap = raredleParts(a.obtainedFrom);
+	let src = "none";
+	if (gp.length && ap.length) {
+		if (gp.length === ap.length && gp.every((p) => ap.includes(p))) src = "correct";
+		else if (gp.some((p) => ap.includes(p))) src = "close";
+		else {
+			const gw = new Set(gp.flatMap(raredleWords));
+			src = ap.flatMap(raredleWords).some((w) => gw.has(w)) ? "close" : "wrong";
+		}
+	}
+	out.push({ k: "obtained", v: g.obtainedFrom && g.obtainedFrom !== "null" ? g.obtainedFrom : "?", s: src });
+
+	const gs = String(g.typeSlot || "").trim(), as = String(a.typeSlot || "").trim();
+	let slot = "none";
+	if (gs && as && gs !== "null" && as !== "null") {
+		if (eq(gs, as)) slot = "correct";
+		else {
+			const gw = new Set(raredleWords(gs));
+			slot = raredleWords(as).some((w) => gw.has(w)) ? "close" : "wrong";
+		}
+	}
+	out.push({ k: "slot", v: gs && gs !== "null" ? gs : "?", s: slot });
+
+	const gd = String(g.dyeable || "").trim(), ad = String(a.dyeable || "").trim();
+	out.push({ k: "dyeable", v: gd && gd !== "null" ? gd : "?", s: !gd || !ad || gd === "null" || ad === "null" ? "none" : eq(gd, ad) ? "correct" : "wrong" });
+
+	const gg = String(g.glowParticles || "").trim(), ag = String(a.glowParticles || "").trim();
+	let glow = "none";
+	if (gg && ag && gg !== "null" && ag !== "null") {
+		const gNone = eq(gg, "none"), aNone = eq(ag, "none");
+		glow = eq(gg, ag) ? "correct" : (!gNone && !aNone) ? "close" : "wrong";
+	}
+	out.push({ k: "particles", v: gg && gg !== "null" ? gg : "?", s: glow });
+	return out;
+}
+
+async function raredleAnswerFor(env, date) {
+	const row = await env.DB.prepare("SELECT itemId FROM raredleAnswers WHERE date = ?").bind(date).first();
+	if (row) return row.itemId;
+	const cat = await getRareCatalog();
+	const { results: recent } = await env.DB.prepare("SELECT itemId FROM raredleAnswers ORDER BY date DESC LIMIT ?").bind(RAREDLE_NO_REPEAT_DAYS).all();
+	const used = new Set(recent.map((r) => r.itemId));
+	// Only items with enough attributes to make for a fair puzzle.
+	let pool = cat.items.filter((i) => i.category && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null" && !used.has(i.id));
+	if (!pool.length) pool = cat.items.filter((i) => i.category && i.releaseDate && i.releaseDate !== "null");
+	const pick = pool[crypto.getRandomValues(new Uint32Array(1))[0] % pool.length].id;
+	await env.DB.prepare("INSERT OR IGNORE INTO raredleAnswers (date, itemId) VALUES (?, ?)").bind(date, pick).run();
+	const stored = await env.DB.prepare("SELECT itemId FROM raredleAnswers WHERE date = ?").bind(date).first();
+	return stored.itemId;
+}
+
+function computeRaredleStreaks(games, today) {
+	// games: [{date, status}] (finished only). A streak is consecutive days with a win.
+	const won = new Set(games.filter((g) => g.status === "won").map((g) => g.date));
+	const dayMs = 24 * 60 * 60 * 1000;
+	const shift = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * dayMs).toISOString().slice(0, 10);
+	let best = 0, run = 0, prev = null;
+	for (const d of [...won].sort()) {
+		run = prev && shift(prev, 1) === d ? run + 1 : 1;
+		if (run > best) best = run;
+		prev = d;
+	}
+	// current: ends today, or yesterday if today isn't played/finished yet
+	let cur = 0, d = won.has(today) ? today : shift(today, -1);
+	while (won.has(d)) { cur++; d = shift(d, -1); }
+	return { current: cur, best };
+}
+
+async function raredleStats(env, accountId, today) {
+	const { results } = await env.DB.prepare("SELECT date, status, guessCount, score FROM raredleGames WHERE accountId = ? AND status IN ('won','lost')").bind(accountId).all();
+	const wins = results.filter((r) => r.status === "won");
+	const streaks = computeRaredleStreaks(results, today);
+	return {
+		played: results.length, wins: wins.length,
+		winRate: results.length ? Math.round((wins.length / results.length) * 100) : 0,
+		avgGuesses: wins.length ? Math.round((wins.reduce((a, r) => a + r.guessCount, 0) / wins.length) * 10) / 10 : null,
+		points: results.reduce((a, r) => a + r.score, 0),
+		streak: streaks.current, bestStreak: streaks.best,
+	};
+}
+
+async function raredleStatePayload(env, admin) {
+	const today = raredleToday();
+	const cat = await getRareCatalog();
+	const answerId = await raredleAnswerFor(env, today);
+	const answer = cat.byId.get(answerId);
+	let game = await env.DB.prepare("SELECT * FROM raredleGames WHERE accountId = ? AND date = ?").bind(admin.id, today).first();
+	const ids = game ? JSON.parse(game.guesses) : [];
+	const guesses = ids.map((id) => {
+		const g = cat.byId.get(id);
+		return g ? { itemId: id, name: g.name, texture: g.texture, feedback: raredleCompare(g, answer) } : null;
+	}).filter(Boolean);
+	const status = game ? game.status : "playing";
+	const out = {
+		date: today, maxGuesses: RAREDLE_MAX_GUESSES, status, guesses, testing: RAREDLE_TESTING,
+		hint: guesses.length >= RAREDLE_HINT_AFTER || status !== "playing" ? (answer.effect || "") : null,
+		hintAfter: RAREDLE_HINT_AFTER,
+		score: game ? game.score : 0,
+		stats: await raredleStats(env, admin.id, today),
+	};
+	if (status !== "playing") out.answer = { id: answer.id, name: answer.name, texture: answer.texture, effect: answer.effect || "", category: answer.category, releaseDate: answer.releaseDate, obtainedFrom: answer.obtainedFrom };
+	return out;
+}
+
+async function handleRaredleState(request, env) {
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	try {
+		if (new URL(request.url).searchParams.get("mode") === "practice") {
+			if (!RAREDLE_TESTING) return json({ error: "Practice rounds are only available in testing mode." }, 403);
+			return json(await raredlePracticePayload(env, auth.admin, await getRareCatalog(), null));
+		}
+		return json(await raredleStatePayload(env, auth.admin));
+	} catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
+}
+
+// ---- practice rounds (testing mode): unlimited random rares, one open round per account,
+// never counted toward points, streaks or leaderboards.
+function raredlePracticePool(cat) {
+	const pool = cat.items.filter((i) => i.category && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null");
+	return pool.length ? pool : cat.items;
+}
+
+async function raredleNewPractice(env, accountId, cat) {
+	const pool = raredlePracticePool(cat);
+	const answerId = pool[crypto.getRandomValues(new Uint32Array(1))[0] % pool.length].id;
+	await env.DB.prepare("INSERT OR REPLACE INTO raredlePractice (accountId, answerId, guesses, status, guessCount, updatedAt) VALUES (?, ?, '[]', 'playing', 0, ?)")
+		.bind(accountId, answerId, new Date().toISOString()).run();
+	return env.DB.prepare("SELECT * FROM raredlePractice WHERE accountId = ?").bind(accountId).first();
+}
+
+async function raredlePracticePayload(env, admin, cat, row) {
+	if (!row) row = await env.DB.prepare("SELECT * FROM raredlePractice WHERE accountId = ?").bind(admin.id).first();
+	if (!row) row = await raredleNewPractice(env, admin.id, cat);
+	const answer = cat.byId.get(row.answerId);
+	const ids = JSON.parse(row.guesses);
+	const guesses = ids.map((id) => {
+		const g = cat.byId.get(id);
+		return g ? { itemId: id, name: g.name, texture: g.texture, feedback: raredleCompare(g, answer) } : null;
+	}).filter(Boolean);
+	const out = {
+		date: raredleToday(), mode: "practice", testing: RAREDLE_TESTING, maxGuesses: RAREDLE_MAX_GUESSES, status: row.status, guesses,
+		hint: guesses.length >= RAREDLE_HINT_AFTER || row.status !== "playing" ? (answer.effect || "") : null,
+		hintAfter: RAREDLE_HINT_AFTER, score: 0,
+		stats: await raredleStats(env, admin.id, raredleToday()),
+	};
+	if (row.status !== "playing") out.answer = { id: answer.id, name: answer.name, texture: answer.texture, effect: answer.effect || "", category: answer.category, releaseDate: answer.releaseDate, obtainedFrom: answer.obtainedFrom };
+	return out;
+}
+
+async function handleRaredlePracticeNew(request, env) {
+	if (!RAREDLE_TESTING) return json({ error: "Practice rounds are only available in testing mode." }, 403);
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	try {
+		const cat = await getRareCatalog();
+		const row = await raredleNewPractice(env, auth.admin.id, cat);
+		return json(await raredlePracticePayload(env, auth.admin, cat, row));
+	} catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
+}
+
+async function raredlePracticeGuess(env, admin, cat, itemId) {
+	const guess = cat.byId.get(itemId);
+	if (!guess) return json({ error: "Pick a rare from the list." }, 400);
+	let row = await env.DB.prepare("SELECT * FROM raredlePractice WHERE accountId = ?").bind(admin.id).first();
+	if (!row) row = await raredleNewPractice(env, admin.id, cat);
+	if (row.status !== "playing") return json({ error: "This practice round is over — start a new one." }, 409);
+	const ids = JSON.parse(row.guesses);
+	if (ids.includes(itemId)) return json({ error: "You already guessed that one." }, 409);
+	ids.push(itemId);
+	const status = itemId === row.answerId ? "won" : ids.length >= RAREDLE_MAX_GUESSES ? "lost" : "playing";
+	await env.DB.prepare("UPDATE raredlePractice SET guesses = ?, guessCount = ?, status = ?, updatedAt = ? WHERE accountId = ? AND guessCount = ? AND status = 'playing'")
+		.bind(JSON.stringify(ids), ids.length, status, new Date().toISOString(), admin.id, row.guessCount).run();
+	return json(await raredlePracticePayload(env, admin, cat, null));
+}
+
+// Testing mode only: throw away the caller's game for today so it can be played again.
+async function handleRaredleReset(request, env) {
+	if (!RAREDLE_TESTING) return json({ error: "Resetting is only available in testing mode." }, 403);
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	await env.DB.prepare("DELETE FROM raredleGames WHERE accountId = ? AND date = ?").bind(auth.admin.id, raredleToday()).run();
+	try { return json(await raredleStatePayload(env, auth.admin)); } catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
+}
+
+async function handleRaredleGuess(request, env) {
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const itemId = String(body.itemId || "");
+	let cat;
+	try { cat = await getRareCatalog(); } catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
+	if (body.mode === "practice") {
+		if (!RAREDLE_TESTING) return json({ error: "Practice rounds are only available in testing mode." }, 403);
+		return raredlePracticeGuess(env, auth.admin, cat, itemId);
+	}
+	const guess = cat.byId.get(itemId);
+	if (!guess) return json({ error: "Pick a rare from the list." }, 400);
+
+	const today = raredleToday();
+	const answerId = await raredleAnswerFor(env, today);
+	const answer = cat.byId.get(answerId);
+	let game = await env.DB.prepare("SELECT * FROM raredleGames WHERE accountId = ? AND date = ?").bind(auth.admin.id, today).first();
+	const now = new Date().toISOString();
+	if (!game) {
+		await env.DB.prepare("INSERT OR IGNORE INTO raredleGames (accountId, date, startedAt) VALUES (?, ?, ?)").bind(auth.admin.id, today, now).run();
+		game = await env.DB.prepare("SELECT * FROM raredleGames WHERE accountId = ? AND date = ?").bind(auth.admin.id, today).first();
+	}
+	if (game.status !== "playing") return json({ error: "You've already finished today's Rare-dle." }, 409);
+	const ids = JSON.parse(game.guesses);
+	if (ids.includes(itemId)) return json({ error: "You already guessed that one." }, 409);
+
+	ids.push(itemId);
+	let status = "playing", score = 0, finishedAt = null;
+	if (itemId === answerId) status = "won";
+	else if (ids.length >= RAREDLE_MAX_GUESSES) status = "lost";
+	if (status !== "playing") finishedAt = now;
+	if (status === "won") {
+		const { results } = await env.DB.prepare("SELECT date, status FROM raredleGames WHERE accountId = ? AND status IN ('won','lost') AND date != ?").bind(auth.admin.id, today).all();
+		const streak = computeRaredleStreaks([...results, { date: today, status: "won" }], today).current;
+		score = RAREDLE_BASE_POINTS[Math.min(ids.length, RAREDLE_MAX_GUESSES) - 1] + Math.min(streak, RAREDLE_STREAK_BONUS_CAP) * RAREDLE_STREAK_BONUS;
+	}
+	// The status = 'playing' guard makes a double-submit race harmless.
+	const res = await env.DB.prepare("UPDATE raredleGames SET guesses = ?, guessCount = ?, status = ?, score = ?, finishedAt = ? WHERE accountId = ? AND date = ? AND status = 'playing' AND guessCount = ?")
+		.bind(JSON.stringify(ids), ids.length, status, score, finishedAt, auth.admin.id, today, game.guessCount).run();
+	if (res.meta.changes === 0) return json({ error: "That guess didn't go through — try again." }, 409);
+	return json(await raredleStatePayload(env, auth.admin));
+}
+
+async function handleRaredleLeaderboard(request, env, ctx) {
+	return cachedGet(request, ctx, 60, async () => {
+		const today = raredleToday();
+		const { results } = await env.DB.prepare(
+			`SELECT g.accountId, a.username, g.date, g.status, g.guessCount, g.score, g.startedAt, g.finishedAt
+			 FROM raredleGames g JOIN admins a ON a.id = g.accountId WHERE g.status IN ('won','lost')`
+		).all();
+
+		const daily = results.filter((r) => r.date === today && r.status === "won")
+			.sort((x, y) => y.score - x.score || x.guessCount - y.guessCount || String(x.finishedAt).localeCompare(String(y.finishedAt)))
+			.slice(0, 25).map((r, i) => ({ rank: i + 1, username: r.username, guesses: r.guessCount, score: r.score }));
+
+		const byUser = new Map();
+		for (const r of results) {
+			let e = byUser.get(r.accountId);
+			if (!e) { e = { username: r.username, games: [] }; byUser.set(r.accountId, e); }
+			e.games.push(r);
+		}
+		const rows = [...byUser.values()].map((e) => {
+			const wins = e.games.filter((g) => g.status === "won");
+			const st = computeRaredleStreaks(e.games, today);
+			return {
+				username: e.username, points: e.games.reduce((a, g) => a + g.score, 0),
+				played: e.games.length, wins: wins.length,
+				avgGuesses: wins.length ? Math.round((wins.reduce((a, g) => a + g.guessCount, 0) / wins.length) * 10) / 10 : null,
+				streak: st.current, bestStreak: st.best,
+			};
+		});
+		const allTime = rows.slice().sort((a, b) => b.points - a.points || b.wins - a.wins).slice(0, 25).map((r, i) => ({ rank: i + 1, ...r }));
+		const streaks = rows.filter((r) => r.bestStreak > 0).sort((a, b) => b.streak - a.streak || b.bestStreak - a.bestStreak).slice(0, 25).map((r, i) => ({ rank: i + 1, username: r.username, streak: r.streak, bestStreak: r.bestStreak }));
+		return { date: today, daily, allTime, streaks, playersToday: results.filter((r) => r.date === today).length };
+	});
 }
 
 // ---------------- verification links ----------------
@@ -4610,6 +5369,17 @@ const ROUTES = [
 	["POST", "/store/listings/delete", handleStoreDeleteListing],
 	["POST", "/mapart/update", handleUpdateMapart],
 	["POST", "/mapart/report", handleSubmitMapartReport],
+	["GET", "/mapart/of-the-day", handleGetMapartOfTheDay],
+	["POST", "/admin/mapart/otd/reroll", handleAdminRerollMapartOfTheDay],
+	["POST", "/mapart/search-image", handleSearchMapartImage],
+	["POST", "/admin/mapart/build-index", handleAdminBuildMapartIndex],
+	["POST", "/account/commission", handleSetCommissionInfo],
+	["GET", "/profile", handleGetProfile],
+	["GET", "/raredle/state", handleRaredleState],
+	["POST", "/raredle/guess", handleRaredleGuess],
+	["POST", "/raredle/reset", handleRaredleReset],
+	["POST", "/raredle/practice/new", handleRaredlePracticeNew],
+	["GET", "/raredle/leaderboard", handleRaredleLeaderboard],
 	["GET", "/collection/mine", handleGetMyCollection],
 	["POST", "/collection/set", handleSetCollectionItems],
 	["POST", "/collection/privacy", handleSetCollectionPrivacy],
