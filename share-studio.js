@@ -133,28 +133,36 @@
 		if (b > 0) { g.lineWidth = b; g.strokeStyle = opts.stroke || st.line; path(); g.stroke(); }
 	}
 
-	// Wraps text into at most maxLines lines that fit maxW; shrinks the font until it fits.
+	function wrapWords(g, text, maxW) {
+		var words = String(text || "").split(/\s+/).filter(Boolean), lines = [], line = "", ok = true;
+		for (var i = 0; i < words.length; i++) {
+			var t = line ? line + " " + words[i] : words[i];
+			if (g.measureText(t).width > maxW && line) { lines.push(line); line = words[i]; }
+			else line = t;
+			if (g.measureText(words[i]).width > maxW) ok = false; // a single word wider than the box
+		}
+		if (line) lines.push(line);
+		return { lines: lines, ok: ok };
+	}
+	// Wraps text into at most maxLines lines that fit maxW. The font shrinks first (down to a much smaller
+	// floor than minSize), then one extra line is allowed, and only after all that is anything cut off.
 	function fitText(g, text, fontFamily, weight, maxW, maxLines, startSize, minSize) {
 		text = String(text || "");
-		for (var size = startSize; size >= minSize; size -= 2) {
-			g.font = weight + " " + size + "px " + fontFamily;
-			var words = text.split(" "), lines = [], line = "";
-			var ok = true;
-			for (var i = 0; i < words.length; i++) {
-				var t = line ? line + " " + words[i] : words[i];
-				if (g.measureText(t).width > maxW && line) { lines.push(line); line = words[i]; if (g.measureText(line).width > maxW) ok = false; }
-				else line = t;
+		function attempt(lo, lineCap) {
+			for (var size = Math.max(startSize, lo); size >= lo; size -= 2) {
+				g.font = weight + " " + size + "px " + fontFamily;
+				var w = wrapWords(g, text, maxW);
+				if (w.ok && w.lines.length <= lineCap) return { size: size, lines: w.lines, lh: Math.round(size * 1.16) };
 			}
-			if (line) lines.push(line);
-			if (ok && lines.length <= maxLines) return { size: size, lines: lines, lh: Math.round(size * 1.14) };
+			return null;
 		}
-		g.font = weight + " " + minSize + "px " + fontFamily;
-		var all = text.split(" "), out = [], cur = "";
-		all.forEach(function (w) { var t = cur ? cur + " " + w : w; if (g.measureText(t).width > maxW && cur) { out.push(cur); cur = w; } else cur = t; });
-		if (cur) out.push(cur);
-		var cut = out.slice(0, maxLines);
-		if (out.length > maxLines) cut[maxLines - 1] = cut[maxLines - 1].replace(/\s*\S*$/, "") + "…";
-		return { size: minSize, lines: cut, lh: Math.round(minSize * 1.14) };
+		var floor = Math.max(9, Math.round(minSize * 0.6));
+		var res = attempt(minSize, maxLines) || attempt(floor, maxLines) || attempt(floor, maxLines + 1);
+		if (res) return res;
+		g.font = weight + " " + floor + "px " + fontFamily;
+		var all = wrapWords(g, text, maxW).lines, cap = maxLines + 1, cut = all.slice(0, cap);
+		if (all.length > cap) cut[cap - 1] = cut[cap - 1].replace(/\s*\S*$/, "") + "\u2026";
+		return { size: floor, lines: cut, lh: Math.round(floor * 1.16) };
 	}
 	function textBlock(g, fit, x, y, color, align) {
 		g.fillStyle = color; g.textAlign = align || "left"; g.textBaseline = "alphabetic";
@@ -209,32 +217,58 @@
 		var details = spec.details || [];
 		var eyebrow = spec.eyebrow || "";
 
-		function textAt(x, y, w, hAvail, align) {
+		// Lays the text column out inside hAvail: every block gets a share of the height and shrinks to fit it,
+		// so long titles / effect texts get smaller instead of being cut off. draw=false only measures.
+		function textAt(x, y, w, hAvail, align, draw) {
 			var cx = align === "center" ? x + w / 2 : x, cy = y;
-			var es = Math.max(14, Math.round(Math.min(W, H) / 32));
-			if (eyebrow) { g.fillStyle = accent; g.font = "700 " + es + "px " + st.body; g.textAlign = align; g.fillText(eyebrow.toUpperCase().split("").join(st.display === MONO ? "" : " "), cx, cy + es); cy += es * 2.2; }
-			var startSize = Math.round(Math.min(hAvail * 0.3, w / 6, Math.min(W, H) / 7)), maxLines = Math.max(2, Math.floor(hAvail / 130));
-			var tf = fitText(g, title, st.display, st.display === HEAVY ? "400" : "700", w, Math.min(4, maxLines + 1), Math.max(startSize, 32), 24);
-			fitFont(g, tf, st.display === HEAVY ? "400" : "700", st.display);
-			cy = textBlock(g, tf, cx, cy + tf.size * 0.95, st.text, align);
-			cy += 10;
-			if (sub) {
-				var ss = Math.max(16, Math.round(tf.size * 0.42));
-				var sf = fitText(g, sub, st.body, "500", w, 2, ss, 14); fitFont(g, sf, "500", st.body);
-				cy = textBlock(g, sf, cx, cy + sf.size, st.muted, align) + 6;
+			var wt = st.display === HEAVY ? "400" : "700";
+			var es = Math.max(12, Math.round(Math.min(W, H) / 34));
+			if (eyebrow) {
+				if (draw) { g.fillStyle = accent; g.font = "700 " + es + "px " + st.body; g.textAlign = align; g.fillText(eyebrow.toUpperCase(), cx, cy + es); }
+				cy += es * 2;
 			}
-			var ds = Math.max(14, Math.round(tf.size * 0.34));
-			details.slice(0, 4).forEach(function (d) {
-				g.font = "500 " + ds + "px " + st.body; g.fillStyle = st.muted; g.textAlign = align;
-				var lines = fitText(g, d, st.body, "500", w, 2, ds, 12); fitFont(g, lines, "500", st.body);
-				cy = textBlock(g, lines, cx, cy + lines.size + 4, st.muted, align);
+			var left = hAvail - (cy - y);
+			var tStart = Math.round(Math.min(left * 0.34, w / 5, Math.min(W, H) / 6));
+			var tf = fitText(g, title, st.display, wt, w, 6, Math.max(tStart, 22), 18);
+			// title may take at most 42% of what is left
+			while (tf.lines.length * tf.lh > left * 0.42 && tf.size > 14) { tStart = tf.size - 2; tf = fitText(g, title, st.display, wt, w, 8, Math.max(tStart, 14), 12); if (tf.size <= 14) break; }
+			fitFont(g, tf, wt, st.display);
+			if (draw) cy = textBlock(g, tf, cx, cy + tf.size * 0.95, st.text, align); else cy += tf.size * 0.95 + (tf.lines.length - 1) * tf.lh + Math.round(tf.size * 0.3);
+			cy += 8;
+			left = hAvail - (cy - y);
+			if (sub) {
+				var sf = fitText(g, sub, st.body, "500", w, 4, Math.max(14, Math.round(tf.size * 0.42)), 12);
+				while (sf.lines.length * sf.lh > left * 0.28 && sf.size > 11) sf = fitText(g, sub, st.body, "500", w, 6, sf.size - 2, 10);
+				fitFont(g, sf, "500", st.body);
+				if (draw) cy = textBlock(g, sf, cx, cy + sf.size, st.muted, align) + 8; else cy += sf.size + (sf.lines.length - 1) * sf.lh + Math.round(sf.size * 0.3) + 8;
+			}
+			left = hAvail - (cy - y) - (spec.stat ? tf.size * 1.4 : 0);
+			var dl = details.filter(Boolean).slice(0, 6);
+			var totalLen = dl.reduce(function (a, d) { return a + String(d).length; }, 0) || 1;
+			dl.forEach(function (d) {
+				// long texts get more of the height than short ones, so they stay readable
+				var share = Math.max(30, left * (0.4 / dl.length + 0.6 * String(d).length / totalLen) - 6);
+				var ds = Math.max(13, Math.round(tf.size * 0.36));
+				var lines = fitText(g, d, st.body, "500", w, 6, ds, 11);
+				while (lines.lines.length * lines.lh > share && lines.size > 10) lines = fitText(g, d, st.body, "500", w, 10, lines.size - 1, 9);
+				fitFont(g, lines, "500", st.body);
+				if (draw) { g.textAlign = align; cy = textBlock(g, lines, cx, cy + lines.size + 4, st.muted, align) + 2; } else cy += lines.size + 4 + (lines.lines.length - 1) * lines.lh + Math.round(lines.size * 0.3) + 2;
 			});
 			if (spec.stat) {
-				var big = Math.round(tf.size * 1.2);
-				g.font = "700 " + big + "px " + st.display; g.fillStyle = accent; g.textAlign = align;
-				g.fillText(spec.stat, cx, Math.min(y + hAvail - 4, cy + big * 1.05));
-				if (spec.statLabel) { g.font = "500 " + ds + "px " + st.body; g.fillStyle = st.muted; g.fillText(spec.statLabel, cx + (align === "center" ? 0 : g.measureText(spec.stat).width + 14), Math.min(y + hAvail - 4, cy + big * 1.05)); }
+				var big = Math.round(tf.size * 1.1);
+				if (draw) {
+					g.font = "700 " + big + "px " + st.display; g.fillStyle = accent; g.textAlign = align;
+					g.fillText(spec.stat, cx, Math.min(y + hAvail - 4, cy + big * 1.05));
+					if (spec.statLabel) { g.font = "500 " + Math.max(13, Math.round(big * 0.34)) + "px " + st.body; g.fillStyle = st.muted; g.fillText(spec.statLabel, cx + (align === "center" ? 0 : g.measureText(spec.stat).width + 14), Math.min(y + hAvail - 4, cy + big * 1.05)); }
+				}
+				cy += big * 1.15;
 			}
+			return cy;
+		}
+		// vertically centres the measured text column inside its box
+		function placeText(x, y, w, hAvail, align) {
+			var used = textAt(x, y, w, hAvail, align, false) - y;
+			textAt(x, y + Math.max(0, (hAvail - used) / 2), w, hAvail, align, true);
 		}
 
 		var areaY = pad, areaH = H - pad * 2 - footH;
@@ -263,14 +297,14 @@
 			var side = Math.min(picW, picH);
 			drawPicture(g, img, (W - side) / 2, areaY, side, picH, spec.pixel, st, true);
 			g.textAlign = "center";
-			textAt(pad, areaY + picH + pad * 0.7, W - pad * 2, areaH - picH - pad * 0.7, "center");
+			placeText(pad, areaY + picH + pad * 0.7, W - pad * 2, areaH - picH - pad * 0.7, "center");
 		} else {
 			var picSide = Math.min(areaH - 28, Math.round((W - pad * 2) * 0.42));
 			var picX = layout === "right" ? W - pad - picSide - 14 : pad + 14;
 			var textX = layout === "right" ? pad : pad + picSide + 28 + 40;
 			var textW = W - pad * 2 - picSide - 28 - 40;
 			drawPicture(g, img, picX, areaY + (areaH - picSide) / 2, picSide, picSide, spec.pixel, st, true);
-			textAt(textX, areaY + Math.max(0, (areaH - Math.min(areaH, 460)) / 2), textW, Math.min(areaH, 460), "left");
+			placeText(textX, areaY, textW, areaH, "left");
 		}
 		footer(g, W, H, spec, o, st, accent, pad);
 	}
@@ -320,7 +354,7 @@
 			var im = imgs[i], ih = (best.ch - m * 2) * 0.55, iw = best.cw - m * 2 - 14;
 			if (im) { var sc = Math.min(iw / im.width, ih / im.height); if (!items[i].pixel) sc = Math.min(sc, 99); else if (im.width < 64) sc = Math.min(sc, Math.max(1, Math.floor(iw / im.width))); g.imageSmoothingEnabled = !items[i].pixel; g.drawImage(im, cx + best.cw / 2 - im.width * sc / 2, cy + m + 7 + (ih - im.height * sc) / 2, im.width * sc, im.height * sc); }
 			var nf = Math.max(9, Math.round(best.cw / 12));
-			var name = fitText(g, items[i].name, st.body, "600", best.cw - m * 2 - 12, 2, nf, 8); fitFont(g, name, "600", st.body);
+			var name = fitText(g, items[i].name, st.body, "600", best.cw - m * 2 - 12, 3, nf, 8); fitFont(g, name, "600", st.body);
 			textBlock(g, name, cx + best.cw / 2, cy + m + 7 + ih + name.size + 4, st.text, "center");
 		}
 		var by = y + best.rows * best.ch;
@@ -433,7 +467,7 @@
 			var ry = by + i * (rowH + gap) + (wide ? Math.max(0, (bh - bullets.length * (rowH + gap) + gap) / 2) : 0);
 			box(g, bx, ry, bw, rowH, st, { noShadow: false });
 			g.fillStyle = accent; g.fillRect(bx + rowH * 0.22, ry + rowH * 0.3, rowH * 0.4, rowH * 0.4);
-			var f = fitText(g, t, st.body, "600", bw - rowH * 1.1, 2, fs, 11); fitFont(g, f, "600", st.body);
+			var f = fitText(g, t, st.body, "600", bw - rowH * 1.1, Math.max(2, Math.floor(rowH / (fs * 1.25))), fs, 10); fitFont(g, f, "600", st.body);
 			var ty = ry + rowH / 2 - ((f.lines.length - 1) * f.lh) / 2 + f.size * 0.35;
 			textBlock(g, f, bx + rowH * 0.9, ty, st.text, "left");
 		});
