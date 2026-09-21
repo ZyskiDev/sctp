@@ -375,7 +375,7 @@
 	.col-menu button:hover{background:var(--panel-alt);}
 	.col-menu .cm-empty{padding:6px 10px;font-size:12.5px;color:var(--muted);}
 	/* ---- featured strip: mapart of the day | Rare-dle | marketplace ---- */
-	.promo-strip{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,0.8fr) minmax(0,1.05fr);gap:16px;margin:0 0 22px;align-items:stretch;}
+	.promo-strip{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,0.8fr) minmax(0,1.05fr);gap:16px;margin:24px 0 22px;align-items:stretch;}
 	.promo-card{position:relative;border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:18px 20px;min-height:250px;overflow:hidden;display:flex;flex-direction:column;}
 	.promo-kicker{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
 	.promo-title{font-family:var(--font-display);font-weight:600;font-size:23px;line-height:1.2;margin:0 0 8px;color:var(--text);}
@@ -637,6 +637,18 @@
 </header>
 
 <div class="wrap">
+	<section class="promo-strip" id="promoStrip" aria-label="Featured">
+		<article class="promo-card promo-motd" id="motd"><div class="promo-loading">Loading today's mapart…</div></article>
+		<article class="promo-card promo-raredle" id="promoRaredle" aria-label="Rare-dle (coming soon)"><span class="promo-soon">&#127919; Rare-dle &middot; coming soon</span></article>
+		<article class="promo-card promo-market" id="promoMarket">
+			<div class="promo-kicker">&#128722; Marketplace</div>
+			<h2 class="promo-title">Buy, sell &amp; trade with other players</h2>
+			<p class="promo-text">Post what you're selling or looking for, take bids, and find people for jobs &mdash; all in one place.</p>
+			<div class="promo-stat" id="promoMarketStat" hidden></div>
+			<div class="promo-actions"><a class="promo-btn primary" href="/marketplace/">Browse the marketplace &rarr;</a><a class="promo-btn" href="/marketplace/#mine">Post a listing</a></div>
+		</article>
+	</section>
+
 	<div class="search-band">
 		<div class="search-box">
 			<input id="searchInput" type="text" placeholder="Search an item, base item, or seller — e.g. diamond, netherite, Steve…" autocomplete="off">
@@ -662,18 +674,6 @@
 	<div class="stats-band" id="statsBand">
 		<span>loading listings…</span>
 	</div>
-
-	<section class="promo-strip" id="promoStrip" aria-label="Featured">
-		<article class="promo-card promo-motd" id="motd"><div class="promo-loading">Loading today's mapart…</div></article>
-		<article class="promo-card promo-raredle" id="promoRaredle" aria-label="Rare-dle (coming soon)"><span class="promo-soon">&#127919; Rare-dle &middot; coming soon</span></article>
-		<article class="promo-card promo-market" id="promoMarket">
-			<div class="promo-kicker">&#128722; Marketplace</div>
-			<h2 class="promo-title">Buy, sell &amp; trade with other players</h2>
-			<p class="promo-text">Post what you're selling or looking for, take bids, and find people for jobs &mdash; all in one place.</p>
-			<div class="promo-stat" id="promoMarketStat" hidden></div>
-			<div class="promo-actions"><a class="promo-btn primary" href="/marketplace/">Browse the marketplace &rarr;</a><a class="promo-btn" href="/marketplace/#mine">Post a listing</a></div>
-		</article>
-	</section>
 
 	<div class="layout">
 		<aside class="filters">
