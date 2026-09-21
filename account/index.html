@@ -51,6 +51,11 @@
 	.verified{color:var(--accent);}
 	.empty{color:var(--muted);font-size:13.5px;padding:8px 0;}
 	.login-cta{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;text-align:center;color:var(--muted);font-size:13.5px;}
+	.wrap.wide{max-width:1040px;}
+	.acct-tabs{display:flex;gap:8px;margin-bottom:22px;border-bottom:1px solid var(--line);}
+	.acct-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:inherit;font-weight:600;font-size:14.5px;padding:8px 14px;cursor:pointer;margin-bottom:-1px;}
+	.acct-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+	.acct-tab:hover{color:var(--text);}
 	[hidden]{display:none!important;}
 </style>
 </head>
@@ -73,6 +78,7 @@
 
 <script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
+<script src="/collection.js" defer></script>
 <script>
 (function(){
 	"use strict";
@@ -114,6 +120,9 @@
 	function render(data){
 		var host = document.getElementById("accountContent");
 		host.innerHTML =
+			'<div class="acct-tabs"><button type="button" class="acct-tab" data-tab="settings">Settings</button><button type="button" class="acct-tab" data-tab="collections">Collections</button></div>' +
+			'<div id="tabCollections" hidden></div>' +
+			'<div id="tabSettings">' +
 			'<section>' +
 				'<h2>Minecraft account</h2>' +
 				'<p class="lede">Linked and verified by a head admin — you can\'t edit this yourself.</p>' +
@@ -142,7 +151,26 @@
 					'<button type="button" class="btn" id="acSavePw">Change password</button>' +
 					'<p class="err" id="acPwErr" hidden></p><p class="ok" id="acPwOk" hidden>Password changed — please log in again.</p>' +
 				'</div>' +
-			'</section>';
+			'</section>' +
+			'</div>';
+
+		var collectionMounted = false;
+		function showTab(which){
+			var isCol = which === "collections";
+			document.getElementById("tabSettings").hidden = isCol;
+			document.getElementById("tabCollections").hidden = !isCol;
+			document.querySelectorAll(".acct-tab").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab") === which); });
+			document.querySelector("main.wrap").classList.toggle("wide", isCol);
+			try { history.replaceState(null, "", isCol ? "#collections" : location.pathname); } catch(e){}
+			if(isCol && !collectionMounted && window.sctpCollection){
+				collectionMounted = true;
+				window.sctpCollection.mount(document.getElementById("tabCollections"), { editable: true });
+			}
+		}
+		document.querySelectorAll(".acct-tab").forEach(function(b){
+			b.addEventListener("click", function(){ showTab(b.getAttribute("data-tab")); });
+		});
+		showTab(location.hash === "#collections" ? "collections" : "settings");
 
 		document.getElementById("acDiscord").value = data.contactDiscord || "";
 		document.getElementById("acTimezone").value = data.contactTimezone || "";

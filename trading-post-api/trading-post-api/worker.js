@@ -83,14 +83,18 @@
 //   POST /mapart/upload                      (API_KEY) body: {world, maps:[{leadMapId, rawName, width, height, partMapIds, png(base64)}]}
 //   GET  /mapart/mine                        (verified account) -> its claimed maparts
 //   POST /mapart/claim | /mapart/abandon     (verified account) body: {id}
-//   POST /mapart/update                      (owner or head admin) body: {id, title?, artist?, whereToBuy?, notForSale?, category?}
+//   POST /mapart/update                      (owner, head admin, or "manageMapart") body: {id, title?, artist?, whereToBuy?, notForSale?, category?, world?} — "manageMapart" holders may only touch artist/world/category
+//   POST /mapart/report                      (API_KEY, like POST /reports) body: {id, reason: "wrong_artist"|"wrong_world"|"wrong_category"|"inappropriate_image", details?} -> lands in the `reports` queue as listingKey "mapart:<id>", handled by "manageMapart"
+//   GET  /collection/mine, POST /collection/set {kind: "rare"|"mapart", world, ids[], owned}, POST /collection/privacy {private}   (any account) — personal collections, per world
+//   GET  /collection/public?username=        (public) -> {username, private, items?}
 //   POST /mapart/submit                      (verified account) body: {title, world, width, height, png(base64, exactly width*128 x height*128), artist?, category?, whereToBuy?, notForSale?}
 //   POST /mapart/delete-own                  (verified account) body: {id} — only pieces the account uploaded itself
 //   POST /mapart/takedown | /mapart/takedown/cancel   (verified owner) body: {id, reason?} — asks a head admin to delete the piece for good and block re-uploads
 //   GET  /admin/mapart/takedowns, POST /admin/mapart/takedowns/resolve {id, action: approve|deny}   (head admin only)
 //   GET  /store/listings                     (verified account) -> {seller, manual[], scanned[] (read-only), scannedTotal, manualCap}
 //   POST /store/listings/add | /update | /delete   (verified account; manual listings of its own MC username only, max 100)
-//   GET  /admin/mapart, POST /admin/mapart/delete {id}, POST /admin/mapart/assign {id, username}   (head admin only)
+//   POST /admin/mapart/delete {id}           (head admin or "manageMapart"; also the "approve" of an inappropriate_image report)
+//   GET  /admin/mapart, POST /admin/mapart/assign {id, username}   (head admin only)
 //   POST /admin/mapart/rederive  (head admin only) re-runs artist/title detection on unclaimed, unedited pieces
 // Verification links — single-use, expiring, head-admin generated:
 //   POST /admin/verification-links/create {mcUsername, days?}, GET /admin/verification-links, POST /admin/verification-links/revoke {token}   (head admin only)
@@ -440,7 +444,7 @@ async function getBlockedSellerSet(env, sellers) {
 // accounts existed — see requireAnyAdmin.
 const ADMIN_PERMISSION_BUCKETS = new Set([
 	"reports", "sharedShopRequests", "faq", "worldMap", "manualListings", "blockedSellers", "marketplaceListings", "updateNotice",
-	"suggestions", "bugReports", "playerReports",
+	"suggestions", "bugReports", "playerReports", "manageMapart",
 ]);
 
 // Ranks bids for a seller's convenience using the shared CURRENCY_VALUE
@@ -515,6 +519,17 @@ async function requireAdminAuth(request, env, permission) {
 	try { perms = JSON.parse(base.admin.permissions || "[]"); } catch (e) { /* treat as no permissions */ }
 	if (!perms.includes(permission)) return { ok: false, response: json({ error: "Forbidden" }, 403) };
 	return base;
+}
+
+/** Passes if the account holds at least one of `permissions` (head admins always pass). Adds `perms` (the account's own list) so callers can tell which one(s) matched. */
+async function requireAnyPermission(request, env, permissions) {
+	const base = await requireAnyAdmin(request, env);
+	if (!base.ok) return base;
+	let perms = [];
+	try { perms = JSON.parse(base.admin.permissions || "[]"); } catch (e) { /* treat as no permissions */ }
+	if (base.admin.isHeadAdmin) return { ...base, perms: [...permissions] };
+	if (!permissions.some((p) => perms.includes(p))) return { ok: false, response: json({ error: "Forbidden" }, 403) };
+	return { ...base, perms };
 }
 
 async function handleAdminLogin(request, env) {
@@ -1890,10 +1905,14 @@ async function handleGetWorldMap(request, env, ctx) {
 }
 
 async function handleListReports(request, env) {
-	const auth = await requireAdminAuth(request, env, "reports");
+	const auth = await requireAnyPermission(request, env, ["reports", "manageMapart"]);
 	if (!auth.ok) return auth.response;
+	// Mapart reports share this queue but only "manageMapart" holders can act on
+	// them, listing reports only "reports" holders — each sees just their own.
+	const seeListing = auth.perms.includes("reports"), seeMapart = auth.perms.includes("manageMapart");
 	try {
-		const { results } = await env.DB.prepare("SELECT * FROM reports ORDER BY createdAt").all();
+		const { results: all } = await env.DB.prepare("SELECT * FROM reports ORDER BY createdAt").all();
+		const results = all.filter((r) => (isMapartReportKey(r.listingKey) ? seeMapart : seeListing));
 		const data = results.map((r) => ({
 			id: r.id, listingKey: r.listingKey,
 			listing: r.listingJson ? JSON.parse(r.listingJson) : null,
@@ -1922,7 +1941,7 @@ async function handleListSharedShopRequests(request, env) {
 }
 
 async function handleResolveReport(request, env) {
-	const auth = await requireAdminAuth(request, env, "reports");
+	const auth = await requireAnyPermission(request, env, ["reports", "manageMapart"]);
 	if (!auth.ok) return auth.response;
 
 	let body;
@@ -1936,9 +1955,6 @@ async function handleResolveReport(request, env) {
 	const action = String(body.action || "");
 	if (!id) return json({ error: "id is required" }, 400);
 	if (!["approve", "deny", "edit"].includes(action)) return json({ error: "Invalid action" }, 400);
-	if (action === "edit" && !EDITABLE_LISTING_FIELDS.has(String(body.field || ""))) {
-		return json({ error: "Invalid or missing field for edit" }, 400);
-	}
 
 	let reportRow;
 	try {
@@ -1947,6 +1963,15 @@ async function handleResolveReport(request, env) {
 		return json({ error: String(e) }, 502);
 	}
 	if (!reportRow) return json({ error: "Report not found" }, 404);
+
+	const isMapart = isMapartReportKey(reportRow.listingKey);
+	if (!auth.perms.includes(isMapart ? "manageMapart" : "reports")) return json({ error: "Forbidden" }, 403);
+	if (action === "edit") {
+		const okField = isMapart ? MAPART_REPORT_EDIT_FIELDS.has(String(body.field || "")) : EDITABLE_LISTING_FIELDS.has(String(body.field || ""));
+		if (!okField) return json({ error: "Invalid or missing field for edit" }, 400);
+	}
+	if (reportRow.status !== "pending") return json({ error: "That report was already resolved." }, 409);
+	if (isMapart) return resolveMapartReport(env, reportRow, action, body, auth.admin);
 
 	const newStatus = action === "edit" ? "edited" : action === "approve" ? "approved" : "denied";
 	const resolvedAt = new Date().toISOString();
@@ -3080,7 +3105,7 @@ async function handleAdminSnapshots(request, env) {
 
 // ---------------- mapart ----------------
 
-const MAPART_CATEGORIES = ["Pets", "Anime", "Art", "Memes", "Photography", "Letters", "Fandom", "Misc", "Flags"];
+const MAPART_CATEGORIES = ["Pets", "Anime", "Art", "Memes", "Photography", "Letters", "Seasonal", "Advertisement", "Misc", "Flags"];
 const MAPART_WORLDS = ["Firefly", "Honeybee"];
 const MAPART_MAX_PNG_BYTES = 4 * 1024 * 1024;
 const MAPART_MAX_GROUPS_PER_UPLOAD = 40;
@@ -3661,10 +3686,26 @@ async function handleUpdateMapart(request, env) {
 	const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(String(body.id || "")).first();
 	if (!m) return json({ error: "Mapart not found" }, 404);
 	const owns = base.admin.mcVerified && m.claimedByAccountId === base.admin.id;
-	if (!base.admin.isHeadAdmin && !owns) return json({ error: "Claim this mapart first to edit it." }, 403);
+	const isHead = !!base.admin.isHeadAdmin;
+	// "manageMapart" holders fix what mapart reports are about (artist, world,
+	// category) directly, without going through the report queue.
+	const canManage = isHead || adminHasPermission(base.admin, "manageMapart");
+	if (!isHead && !owns && !canManage) return json({ error: "Claim this mapart first to edit it." }, 403);
+	if (!isHead && !owns && (body.title !== undefined || body.whereToBuy !== undefined || body.notForSale !== undefined)) {
+		return json({ error: "Mapart managers can only change the artist, world and category." }, 403);
+	}
+	if (body.world !== undefined && !canManage) return json({ error: "Only mapart managers can move a mapart to another world." }, 403);
 
 	const sets = [], vals = [];
 	let newTitle = null;
+	if (body.world !== undefined && String(body.world) !== m.world) {
+		const moved = await moveMapartToWorld(env, m, String(body.world));
+		if (!moved.ok) return json({ error: moved.error }, moved.status);
+		if (Object.keys(body).every((k) => k === "id" || k === "world")) {
+			const fresh = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(m.id).first();
+			return json({ ok: true, mapart: mapartForOwner(fresh) });
+		}
+	}
 	if (body.title !== undefined) {
 		const t = String(body.title).trim();
 		if (!t || t.length > 100) return json({ error: "title must be 1-100 characters" }, 400);
@@ -3698,6 +3739,111 @@ async function handleUpdateMapart(request, env) {
 	return json({ ok: true, mapart: mapartForOwner(fresh) });
 }
 
+// ---------------- mapart reports + direct edits ----------------
+// Public reports about a catalogued mapart land in the same `reports` table
+// as listing reports (listingKey "mapart:<id>", listingJson = a snapshot so
+// the queue still reads fine after the piece is edited or deleted). Only
+// "manageMapart" holders see and resolve them.
+const MAPART_REPORT_REASONS = new Set(["wrong_artist", "wrong_world", "wrong_category", "inappropriate_image"]);
+const MAPART_REPORT_EDIT_FIELDS = new Set(["artist", "world", "category"]);
+
+function isMapartReportKey(key) {
+	return String(key || "").startsWith("mapart:");
+}
+
+function adminHasPermission(admin, permission) {
+	if (admin.isHeadAdmin) return true;
+	try { return JSON.parse(admin.permissions || "[]").includes(permission); } catch (e) { return false; }
+}
+
+// Moves a piece to the other world. The (world, leadMapId) uniqueness and the
+// per-map (world, mapId) parts table both have to stay clear of collisions.
+async function moveMapartToWorld(env, m, world) {
+	if (!MAPART_WORLDS.includes(world)) return { ok: false, status: 400, error: "world must be Firefly or Honeybee" };
+	if (world === m.world) return { ok: true };
+	const clash = await env.DB.prepare("SELECT slug FROM maparts WHERE world = ? AND leadMapId = ? AND id != ?").bind(world, m.leadMapId, m.id).first();
+	const partClash = await env.DB.prepare(
+		"SELECT p.mapId FROM mapartParts p WHERE p.world = ? AND p.mapId IN (SELECT mapId FROM mapartParts WHERE mapartId = ?) AND p.mapartId != ? LIMIT 1"
+	).bind(world, m.id, m.id).first();
+	if (clash || partClash) {
+		return { ok: false, status: 409, error: `${world} already has a mapart with the same map${clash ? ` (${clash.slug})` : ""} — delete or merge that one first.` };
+	}
+	await env.DB.batch([
+		env.DB.prepare("UPDATE maparts SET world = ?, updatedAt = ? WHERE id = ?").bind(world, new Date().toISOString(), m.id),
+		env.DB.prepare("UPDATE mapartParts SET world = ? WHERE mapartId = ?").bind(world, m.id),
+	]);
+	return { ok: true };
+}
+
+// POST /mapart/report — anyone (same shared site key as POST /reports).
+// body: {id (mapart id), reason, details?}. One open report per piece + reason.
+async function handleSubmitMapartReport(request, env) {
+	if (!isAuthorized(request, env.API_KEY)) return json({ error: "Unauthorized" }, 401);
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const reason = String(body.reason || "").trim();
+	if (!MAPART_REPORT_REASONS.has(reason)) return json({ error: "Invalid reason" }, 400);
+	const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(String(body.id || "")).first();
+	if (!m) return json({ error: "Mapart not found" }, 404);
+	const listingKey = "mapart:" + m.id;
+	const dup = await env.DB.prepare("SELECT id FROM reports WHERE listingKey = ? AND reason = ? AND status = 'pending'").bind(listingKey, reason).first();
+	if (dup) return json({ ok: true, id: dup.id, alreadyReported: true });
+	const snapshot = {
+		mapart: true, id: m.id, slug: m.slug, itemName: m.title, seller: m.artist || "Unknown artist",
+		world: m.world, category: m.category || null, width: m.width, height: m.height,
+	};
+	const id = crypto.randomUUID();
+	await env.DB.prepare(
+		"INSERT INTO reports (id, listingKey, listingJson, reason, details, status, createdAt, resolvedAt) VALUES (?, ?, ?, ?, ?, 'pending', ?, NULL)"
+	).bind(id, listingKey, JSON.stringify(snapshot), reason, String(body.details || "").slice(0, 500), new Date().toISOString()).run();
+	return json({ ok: true, id });
+}
+
+// Resolves a mapart report for handleResolveReport (permission already checked).
+//   deny    -> dismissed
+//   approve -> the piece is deleted (and blocked from re-scans, like the admin delete)
+//   edit    -> body.field (artist|world|category) is set to body.value, no other change
+async function resolveMapartReport(env, report, action, body, admin) {
+	const mapartId = report.listingKey.slice("mapart:".length);
+	const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(mapartId).first();
+	const now = new Date().toISOString();
+	let changed = false;
+	if (action !== "deny") {
+		if (!m) return json({ error: "That mapart no longer exists — dismiss the report." }, 404);
+		if (action === "approve") {
+			await env.DB.prepare("INSERT OR REPLACE INTO mapartBlocked (world, leadMapId, blockedAt) VALUES (?, ?, ?)").bind(m.world, m.leadMapId, now).run();
+			await deleteMapartRow(env, m.id);
+			changed = true;
+		} else {
+			const res = await editMapartField(env, m, String(body.field), body.value);
+			if (!res.ok) return json({ error: res.error }, res.status);
+			changed = true;
+		}
+	}
+	const newStatus = action === "edit" ? "edited" : action === "approve" ? "approved" : "denied";
+	await env.DB.prepare("UPDATE reports SET status = ?, resolvedAt = ? WHERE id = ?").bind(newStatus, now, report.id).run();
+	return json({ ok: true, listingChanged: changed, resolvedBy: admin ? admin.username : null });
+}
+
+// Single-field edit shared by the report queue (same rules as /mapart/update).
+async function editMapartField(env, m, field, value) {
+	if (field === "world") return moveMapartToWorld(env, m, String(value || ""));
+	const now = new Date().toISOString();
+	if (field === "artist") {
+		const a = String(value || "").trim();
+		if (a.length > 40) return { ok: false, status: 400, error: "artist must be at most 40 characters" };
+		await env.DB.prepare("UPDATE maparts SET artist = ?, locked = 1, updatedAt = ? WHERE id = ?").bind(a || null, now, m.id).run();
+		return { ok: true };
+	}
+	if (field === "category") {
+		const c = value ? String(value) : null;
+		if (c !== null && !MAPART_CATEGORIES.includes(c)) return { ok: false, status: 400, error: "Unknown category (" + MAPART_CATEGORIES.join(", ") + ")" };
+		await env.DB.prepare("UPDATE maparts SET category = ?, updatedAt = ? WHERE id = ?").bind(c, now, m.id).run();
+		return { ok: true };
+	}
+	return { ok: false, status: 400, error: "Invalid field" };
+}
+
 async function handleAdminListMapart(request, env) {
 	const auth = await requireAdminAuth(request, env, null);
 	if (!auth.ok) return auth.response;
@@ -3709,7 +3855,7 @@ async function handleAdminListMapart(request, env) {
 
 // Deleting also blocks the piece from being re-created by later scans.
 async function handleAdminDeleteMapart(request, env) {
-	const auth = await requireAdminAuth(request, env, null);
+	const auth = await requireAdminAuth(request, env, "manageMapart");
 	if (!auth.ok) return auth.response;
 	let body;
 	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
@@ -4139,6 +4285,93 @@ async function getMapartGalleryRows(env) {
 	});
 }
 
+// ---------------- collections ----------------
+// An account ticks off the rare items and mapart it owns, per world. Public by
+// default (anyone can open /collection/<username>); admins.collectionPrivate hides it.
+//   GET  /collection/mine              (any account) -> {private, items:[{kind, itemId, world}]}
+//   POST /collection/set               (any account) body: {kind: "rare"|"mapart", world, ids: [...], owned: bool}
+//   POST /collection/privacy           (any account) body: {private: bool}
+//   GET  /collection/public?username=  (public) -> {username, private, items?} (items left out when private)
+const COLLECTION_KINDS = new Set(["rare", "mapart"]);
+const COLLECTION_MAX_ITEMS = 10000;
+const COLLECTION_MAX_IDS_PER_CALL = 2000;
+
+async function handleGetMyCollection(request, env) {
+	const base = await requireAnyAdmin(request, env);
+	if (!base.ok) return base.response;
+	const { results } = await env.DB.prepare("SELECT kind, itemId, world, addedAt FROM collectionItems WHERE accountId = ?").bind(base.admin.id).all();
+	return json({ username: base.admin.username, private: !!base.admin.collectionPrivate, items: results });
+}
+
+async function handleSetCollectionItems(request, env) {
+	const base = await requireAnyAdmin(request, env);
+	if (!base.ok) return base.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const kind = String(body.kind || "");
+	if (!COLLECTION_KINDS.has(kind)) return json({ error: "kind must be rare or mapart" }, 400);
+	const world = String(body.world || "");
+	if (!MAPART_WORLDS.includes(world)) return json({ error: "world must be Firefly or Honeybee" }, 400);
+	if (!Array.isArray(body.ids) || body.ids.length === 0 || body.ids.length > COLLECTION_MAX_IDS_PER_CALL) {
+		return json({ error: `ids must be a list of 1-${COLLECTION_MAX_IDS_PER_CALL} items` }, 400);
+	}
+	let ids = [...new Set(body.ids.map((x) => String(x || "")))];
+	const idOk = kind === "rare" ? (x) => /^rare-[A-Za-z0-9_.-]{1,120}$/.test(x) : (x) => /^[0-9a-f-]{36}$/.test(x);
+	if (!ids.every(idOk)) return json({ error: "Invalid item id" }, 400);
+	const accountId = base.admin.id;
+
+	if (!body.owned) {
+		const stmts = [];
+		for (const chunk of chunkArray(ids, 80)) {
+			stmts.push(env.DB.prepare(
+				`DELETE FROM collectionItems WHERE accountId = ? AND kind = ? AND world = ? AND itemId IN (${chunk.map(() => "?").join(",")})`
+			).bind(accountId, kind, world, ...chunk));
+		}
+		for (const c of chunkArray(stmts, 90)) await env.DB.batch(c);
+		return json({ ok: true });
+	}
+
+	if (kind === "mapart") {
+		// Only real pieces in the requested world count.
+		const known = new Set();
+		for (const chunk of chunkArray(ids, 80)) {
+			const { results } = await env.DB.prepare(
+				`SELECT id FROM maparts WHERE world = ? AND id IN (${chunk.map(() => "?").join(",")})`
+			).bind(world, ...chunk).all();
+			for (const r of results) known.add(r.id);
+		}
+		ids = ids.filter((x) => known.has(x));
+		if (!ids.length) return json({ error: "None of those mapart exist in " + world }, 404);
+	}
+	const have = await env.DB.prepare("SELECT COUNT(*) AS c FROM collectionItems WHERE accountId = ?").bind(accountId).first();
+	if (have.c + ids.length > COLLECTION_MAX_ITEMS) return json({ error: "Your collection is full." }, 400);
+	const now = new Date().toISOString();
+	const stmts = ids.map((id) => env.DB.prepare(
+		"INSERT OR IGNORE INTO collectionItems (accountId, kind, itemId, world, addedAt) VALUES (?, ?, ?, ?, ?)"
+	).bind(accountId, kind, id, world, now));
+	for (const c of chunkArray(stmts, 90)) await env.DB.batch(c);
+	return json({ ok: true });
+}
+
+async function handleSetCollectionPrivacy(request, env) {
+	const base = await requireAnyAdmin(request, env);
+	if (!base.ok) return base.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	await env.DB.prepare("UPDATE admins SET collectionPrivate = ? WHERE id = ?").bind(body.private ? 1 : 0, base.admin.id).run();
+	return json({ ok: true, private: !!body.private });
+}
+
+async function handleGetPublicCollection(request, env) {
+	const username = String(new URL(request.url).searchParams.get("username") || "").trim().toLowerCase();
+	if (!username) return json({ error: "username is required" }, 400);
+	const acct = await env.DB.prepare("SELECT id, username, mcUsername, collectionPrivate FROM admins WHERE lower(username) = ?").bind(username).first();
+	if (!acct) return json({ error: "No account with that name" }, 404);
+	if (acct.collectionPrivate) return json({ username: acct.username, private: true });
+	const { results } = await env.DB.prepare("SELECT kind, itemId, world, addedAt FROM collectionItems WHERE accountId = ?").bind(acct.id).all();
+	return json({ username: acct.username, mcUsername: acct.mcUsername || null, private: false, items: results });
+}
+
 // ---------------- verification links ----------------
 
 // Head admin: body {mcUsername, days?} -> {token, url, expiresAt}
@@ -4341,6 +4574,11 @@ const ROUTES = [
 	["POST", "/store/listings/update", handleStoreUpdateListing],
 	["POST", "/store/listings/delete", handleStoreDeleteListing],
 	["POST", "/mapart/update", handleUpdateMapart],
+	["POST", "/mapart/report", handleSubmitMapartReport],
+	["GET", "/collection/mine", handleGetMyCollection],
+	["POST", "/collection/set", handleSetCollectionItems],
+	["POST", "/collection/privacy", handleSetCollectionPrivacy],
+	["GET", "/collection/public", handleGetPublicCollection],
 	["GET", "/admin/mapart", handleAdminListMapart],
 	["POST", "/admin/mapart/delete", handleAdminDeleteMapart],
 	["POST", "/admin/mapart/assign", handleAdminAssignMapart],

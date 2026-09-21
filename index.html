@@ -11,6 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
+<script src="/mapart-report.js" defer></script>
 <style>
 	:root{
 		--bg:#101B14;
@@ -1795,7 +1796,7 @@
 				'<td>'+availableSinceCell(r)+'</td>'+
 				'<td><div class="action-btns">'+
 					(r.id ? '<button class="share-btn" type="button" data-row-idx="'+idx+'">Share</button>' : '')+
-					(r.mapartGallery ? '' : canRemoveListings()
+					(r.mapartGallery ? '<button class="report-btn mapart-report-btn" type="button" data-row-idx="'+idx+'">'+(window.sctpMapartReport ? window.sctpMapartReport.label() : 'Report')+'</button>' : canRemoveListings()
 						? '<button class="report-btn remove-btn" type="button" data-row-idx="'+idx+'">Remove</button>'
 						: '<button class="report-btn" type="button" data-row-idx="'+idx+'">Report</button>')+
 					'</div></td>'+
@@ -1818,7 +1819,14 @@
 		area.querySelectorAll(".report-btn").forEach(function(btn){
 			btn.addEventListener("click", function(){
 				var row = pageRows[Number(btn.getAttribute("data-row-idx"))];
-				if(canRemoveListings()) removeListingDirect(row, btn);
+				if(row.mapartGallery){
+					window.sctpMapartReport.open({ id: row.mapart.id, slug: row.mapart.slug, title: row.mapart.title, artist: row.mapartArtist, world: row.world }, function(kind){
+						if(kind === "removed"){ var i = allListings.indexOf(row); if(i !== -1) allListings.splice(i, 1); showToast("Mapart removed."); applyFilters(true); }
+						else if(kind === "edited") showToast("Saved — the table refreshes with the next data update.");
+						else showToast("Report sent — thanks for flagging it.");
+					});
+				}
+				else if(canRemoveListings()) removeListingDirect(row, btn);
 				else openReport(row);
 			});
 		});

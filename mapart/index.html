@@ -61,6 +61,11 @@
 		background:#0C140F;display:flex;align-items:center;justify-content:center;
 		height:260px;padding:12px;border-bottom:1px solid var(--line);
 	}
+	.mapart-img{position:relative;}
+	.mapart-flag{position:absolute;top:8px;right:8px;background:rgba(16,27,20,0.85);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:3px 10px;font-size:11.5px;font-family:inherit;cursor:pointer;opacity:0;transition:opacity .12s;}
+	.mapart-card:hover .mapart-flag,.mapart-flag:focus{opacity:1;}
+	@media (hover:none){.mapart-flag{opacity:.85;}}
+	.mapart-flag:hover{color:var(--warn);border-color:var(--warn);}
 	.mapart-img img{max-width:100%;max-height:100%;image-rendering:pixelated;display:block;border-radius:4px;box-shadow:0 6px 22px rgba(0,0,0,0.5);}
 	.mapart-info{padding:12px 14px 14px;display:flex;flex-direction:column;gap:4px;}
 	.mapart-title{font-family:var(--font-display);font-weight:600;font-size:17px;line-height:1.25;}
@@ -122,12 +127,13 @@
 
 <script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
+<script src="/mapart-report.js" defer></script>
 <script>
 (function(){
 	"use strict";
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
-	var CATEGORIES = ["Pets","Anime","Art","Memes","Photography","Letters","Fandom","Misc","Flags"];
+	var CATEGORIES = ["Pets","Anime","Art","Memes","Photography","Letters","Seasonal","Advertisement","Misc","Flags"];
 	var all = [];
 
 	function esc(s){
@@ -158,7 +164,7 @@
 		document.getElementById("grid").innerHTML = rows.map(function(m){
 			var buy = m.notForSale ? "Not for sale" : (m.whereToBuy ? "Buy: " + m.whereToBuy : "");
 			return '<a class="mapart-card" href="/mapart/' + encodeURIComponent(m.slug) + '">' +
-				'<div class="mapart-img"><img src="' + esc(imageUrl(m)) + '" alt="' + esc(m.title) + '" loading="lazy"></div>' +
+				'<div class="mapart-img"><img src="' + esc(imageUrl(m)) + '" alt="' + esc(m.title) + '" loading="lazy"><button type="button" class="mapart-flag" data-flag="' + esc(m.id) + '">' + (window.sctpMapartReport ? window.sctpMapartReport.label() : 'Report') + '</button></div>' +
 				'<div class="mapart-info">' +
 					'<div class="mapart-title">' + esc(m.title) + '</div>' +
 					'<div class="mapart-artist">' + (m.artist ? 'by ' + esc(m.artist) : 'Unknown artist') + '</div>' +
@@ -173,6 +179,21 @@
 			'</a>';
 		}).join("");
 	}
+
+	// The whole card is a link, so the flag button swallows its own click.
+	document.getElementById("grid").addEventListener("click", function(e){
+		var b = e.target.closest ? e.target.closest("[data-flag]") : null;
+		if(!b) return;
+		e.preventDefault(); e.stopPropagation();
+		var m = all.filter(function(x){ return x.id === b.getAttribute("data-flag"); })[0];
+		if(!m || !window.sctpMapartReport) return;
+		window.sctpMapartReport.open(m, function(kind){
+			if(kind === "removed") all = all.filter(function(x){ return x.id !== m.id; });
+			else if(kind === "edited") setTimeout(function(){ location.reload(); }, 800);
+			render();
+		});
+	});
+	window.sctpOnAccountChange = render;
 
 	["search"].forEach(function(id){ document.getElementById(id).addEventListener("input", render); });
 	catSel.addEventListener("change", render);
