@@ -143,9 +143,35 @@ function removeBackground(im, grey) {
 	return removed;
 }
 
+// Grey the slot showed through *holes* in an item (key rings, glass cases, map-frame centres) isn't connected
+// to the border. Clear enclosed blobs of the exact slot grey when they're big enough not to be real art.
+const HOLE_MIN = (() => { const a = process.argv.find((x) => x.startsWith("--hole-min=")); return a ? Number(a.split("=")[1]) : 8; })();
+function removeHoles(im, grey) {
+	const { w, h, rgba } = im, seen = new Uint8Array(w * h);
+	const isG = (i) => rgba[i + 3] > 200 && Math.abs(rgba[i] - grey) <= 1 && Math.abs(rgba[i + 1] - grey) <= 1 && Math.abs(rgba[i + 2] - grey) <= 1;
+	let removed = 0;
+	for (let p = 0; p < w * h; p++) {
+		if (seen[p] || !isG(p * 4)) continue;
+		const comp = [p]; seen[p] = 1;
+		for (let k = 0; k < comp.length; k++) {
+			const x = comp[k] % w, y = (comp[k] / w) | 0;
+			for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+				const X = x + dx, Y = y + dy;
+				if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
+				const r = Y * w + X;
+				if (!seen[r] && isG(r * 4)) { seen[r] = 1; comp.push(r); }
+			}
+		}
+		if (comp.length < HOLE_MIN) continue;
+		for (const q of comp) { const i = q * 4; rgba[i] = rgba[i + 1] = rgba[i + 2] = rgba[i + 3] = 0; }
+		removed += comp.length;
+	}
+	return removed;
+}
+
 const items = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "rare-items.json"), "utf8"));
 const files = [...new Set(items.map((i) => i.texture).filter(Boolean))];
-let changed = 0, skipped = 0, already = 0, missing = 0, unsupported = [];
+let holeTextures = 0, changed = 0, skipped = 0, already = 0, missing = 0, unsupported = [];
 const report = [];
 for (const t of files) {
 	const file = path.join(ROOT, t);
@@ -154,16 +180,19 @@ for (const t of files) {
 	try { im = readPng(file); } catch (e) { im = null; }
 	if (!im) { unsupported.push(t); continue; }
 	const grey = findBackground(im);
-	if (grey === null) { already++; continue; }
-	const removed = removeBackground(im, grey);
-	if (!removed) { skipped++; continue; }
-	report.push([t, grey, removed, im.w * im.h]);
+	const removed = grey !== null ? removeBackground(im, grey) : 0;
+	const holes = removeHoles(im, grey !== null ? grey : 139);
+	if (grey === null && !holes) { already++; continue; }
+	if (!removed && !holes) { skipped++; continue; }
+	if (holes) holeTextures++;
+	report.push([t, grey, removed + holes, im.w * im.h]);
 	if (APPLY) writePng(file, im);
 	changed++;
 }
 report.sort((a, b) => b[2] - a[2]);
 console.log((APPLY ? "APPLIED" : "DRY RUN") + " — textures checked: " + files.length);
 console.log("  with a grey background " + (APPLY ? "cleaned" : "to clean") + ": " + changed);
+console.log("  of those, with enclosed holes cleared: " + holeTextures);
 console.log("  already transparent / no flat grey border: " + already);
 console.log("  nothing removable: " + skipped + ", file missing: " + missing + ", unsupported format: " + unsupported.length);
 if (unsupported.length) console.log("  unsupported: " + unsupported.slice(0, 10).join(", "));
