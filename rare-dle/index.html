@@ -46,6 +46,12 @@
 	.sg img{width:28px;height:28px;image-rendering:pixelated;flex:0 0 auto;}
 	.sg .cat{margin-left:auto;color:var(--muted);font-size:12px;}
 	.sg.on,.sg:hover{background:var(--panel-alt);}
+	.pixel-hint{display:flex;gap:16px;align-items:center;background:rgba(217,150,43,0.10);border:1px solid rgba(217,150,43,0.45);border-radius:10px;padding:10px 14px;margin-bottom:14px;}
+	.pixel-hint canvas{width:112px;height:112px;image-rendering:pixelated;border-radius:6px;border:1px solid var(--line);background:repeating-conic-gradient(#2b3a30 0 25%,#1b2a20 0 50%) 0 0/16px 16px;flex:0 0 auto;}
+	.pixel-hint .ph-title{font-weight:700;color:var(--near);font-size:14px;}
+	.pixel-hint .ph-sub{color:var(--muted);font-size:12.5px;margin-top:2px;}
+	.nopeek{font-size:12.5px;color:var(--muted);margin:0 0 12px;}
+	.nopeek.lost{color:var(--warn);}
 	.hint{background:rgba(217,150,43,0.10);border:1px solid rgba(217,150,43,0.45);border-radius:10px;padding:10px 14px;font-size:13.5px;margin-bottom:14px;}
 	.hint b{color:var(--near);}
 	.hint-locked{color:var(--muted);font-size:12.5px;margin-bottom:14px;}
@@ -135,8 +141,12 @@
 				<div class="suggest" id="suggest" hidden></div>
 			</div>
 			<p class="err" id="gErr"></p>
-			<div class="hint" id="hintBox" hidden></div>
+			<div class="pixel-hint" id="pixelBox" hidden>
+				<canvas id="pixelCanvas" width="2" height="2" aria-label="Pixel hint"></canvas>
+				<div><div class="ph-title" id="pixelTitle"></div><div class="ph-sub" id="pixelSub"></div></div>
+			</div>
 			<div class="hint-locked" id="hintLocked"></div>
+			<div class="nopeek" id="noPeek" hidden></div>
 			<div class="grid-wrap"><div class="gtable" id="gtable"></div></div>
 			<div class="legend"><span><i style="background:var(--good)"></i>match</span><span><i style="background:var(--near)"></i>close / partly</span><span><i style="background:var(--bad)"></i>no match</span><span>&#9650; answer is later &nbsp; &#9660; answer is earlier</span></div>
 		</div>
@@ -163,9 +173,9 @@
 				<li><b>Category, type/slot, dyeable, particles</b>: green when they match. Type/slot and particles turn orange when they only partly match.</li>
 				<li><b>Released</b>: green for the same date, orange when it's within about 3 months (or the same year), with an arrow telling you whether the secret rare came later &#9650; or earlier &#9660;.</li>
 				<li><b>Obtained from</b>: green for the same source, orange when it's the same kind (e.g. another crate).</li>
-				<li>After 4 guesses you get the rare's effect text as a hint.</li>
+				<li><b>Pixel hint</b>: after 4 guesses you see the rare's icon as a 2&times;2 picture, then 3&times;3 after 5, 4&times;4 after 6 and 8&times;8 after 7.</li>
 			</ul>
-			<p><b>Scoring:</b> fewer guesses = more points (1000 down to 120), plus a bonus of 25 points per day of win streak (up to 10 days). A missed day or a loss resets your streak.</p>
+			<p><b>Scoring:</b> fewer guesses = more points (1000 down to 120), plus a bonus of 25 points per day of win streak (up to 10 days). A missed day or a loss resets your streak. <b>No-peek bonus:</b> +125 points if you don't open the Rare Items pages (the rare list or a rare's detail page) while your game is in progress.</p>
 		</details>
 	</div>
 </main>
@@ -219,9 +229,10 @@
 		$("pips").innerHTML = pips;
 		$("gStreak").textContent = st.stats.streak;
 		$("guessBox").hidden = done;
-		$("hintBox").hidden = st.hint == null;
-		if(st.hint != null) $("hintBox").innerHTML = "<b>Hint &mdash; effect:</b> " + esc(st.hint || "This rare has no listed effect.");
-		$("hintLocked").textContent = st.hint == null ? "A hint (the item's effect) unlocks after " + st.hintAfter + " guesses." : "";
+		renderPixelHint(st);
+		renderNoPeek(st);
+		// the Rare Items pages only cost you the bonus while a daily game is in progress
+		try { if(mode === "daily" && st.status === "playing") localStorage.setItem("sctp_raredle_active", st.date); else if(localStorage.getItem("sctp_raredle_active") === st.date) localStorage.removeItem("sctp_raredle_active"); } catch(e){}
 
 		// grid: header + one row per possible guess
 		var html = '<div class="gh">Item</div>' + COLS.map(function(c){ return '<div class="gh">' + c[1] + '</div>'; }).join("");
@@ -240,6 +251,33 @@
 		$("gtable").innerHTML = html;
 		renderResult(); renderStats();
 		if(!done) $("guessInput").focus();
+	}
+
+	function renderPixelHint(st){
+		var ph = st.pixelHint, box = $("pixelBox");
+		box.hidden = !ph;
+		if(ph){
+			var c = $("pixelCanvas"), ctx = c.getContext("2d");
+			c.width = ph.size; c.height = ph.size;
+			ctx.clearRect(0, 0, ph.size, ph.size);
+			if(ph.cells) ph.cells.forEach(function(col, i){ if(col){ ctx.fillStyle = col; ctx.fillRect(i % ph.size, Math.floor(i / ph.size), 1, 1); } });
+			$("pixelTitle").textContent = "Pixel hint \u2014 " + ph.size + "\u00d7" + ph.size;
+			$("pixelSub").textContent = ph.cells ? "The secret rare's icon, squashed down to " + ph.size * ph.size + " pixels." : "No picture available for this rare today.";
+		}
+		var next = (st.pixelSteps || []).filter(function(s){ return st.guesses.length < s[0]; })[0];
+		$("hintLocked").textContent = st.status !== "playing" ? "" : next
+			? "Pixel hint: " + next[1] + "\u00d7" + next[1] + " unlocks after " + next[0] + " guesses" + (ph ? " (a sharper picture)." : ".")
+			: "";
+	}
+	function renderNoPeek(st){
+		var el = $("noPeek");
+		if(!st.noPeek || mode !== "daily"){ el.hidden = true; return; }
+		el.hidden = false;
+		el.className = "nopeek" + (st.noPeek.lost ? " lost" : "");
+		if(st.status !== "playing") el.textContent = st.noPeek.lost ? "\uD83D\uDE48 You opened the Rare Items pages, so no no-peek bonus this time." : "\uD83D\uDD76\uFE0F No-peek bonus earned: +" + st.noPeek.bonus + " points.";
+		else el.textContent = st.noPeek.lost
+			? "\uD83D\uDE48 You peeked at the Rare Items pages \u2014 the +" + st.noPeek.bonus + " no-peek bonus is gone for today."
+			: "\uD83D\uDD76\uFE0F No-peek bonus: +" + st.noPeek.bonus + " points if you stay off the Rare Items pages until you finish.";
 	}
 
 	function renderResult(){
@@ -312,6 +350,9 @@
 	});
 
 	// ---------------- guessing ----------------
+	function peekedToday(){
+		try { return !!state && localStorage.getItem("sctp_raredle_peek") === state.date; } catch(e){ return false; }
+	}
 	function guessedIds(){ var m = {}; state.guesses.forEach(function(g){ m[g.itemId] = true; }); return m; }
 	function updateSuggest(){
 		var q = $("guessInput").value.trim().toLowerCase(), box = $("suggest");
@@ -337,7 +378,7 @@
 		if(busy || !item) return;
 		busy = true; $("gErr").textContent = "";
 		$("guessInput").value = ""; $("suggest").hidden = true;
-		api("/raredle/guess", { method: "POST", body: JSON.stringify({ itemId: item.id, mode: mode }) }).then(function(r){
+		api("/raredle/guess", { method: "POST", body: JSON.stringify({ itemId: item.id, mode: mode, peeked: peekedToday() }) }).then(function(r){
 			busy = false;
 			if(!r.ok){ $("gErr").textContent = r.data.error || "Couldn't submit that guess."; if(r.status === 409) loadGame(); return; }
 			state = r.data; renderGame();

@@ -38,7 +38,7 @@ Everything since mod 1.6 (released 14 Sep 2026).
 ### Website — collections, profiles, games
 - **Collections** (`/collection/`): tick off rare items and mapart per world, with full stats; public by default at `/collection/<username>` (private toggle). Ownership toggles on the item-library cards, the mapart catalog cards and both detail pages.
 - **Public profiles:** the seller page (`/s/ff/<name>`) is now a tabbed profile — Shop, Mapart (with commission info), Collection, Marketplace. "My Profile" and "My Collection" in the account menu.
-- **Rare-dle** (`/rare-dle/`, testing mode): a daily "guess the secret rare" game — login required, 8 tries, per-attribute feedback, a hint after 4 guesses, points and streaks, and Today / All-time / Streak leaderboards. While in testing mode you can reset the daily game or play unlimited random practice rounds (practice never counts toward points or leaderboards).
+- **Rare-dle** (`/rare-dle/`, testing mode): a daily "guess the secret rare" game — login required, 8 tries, per-attribute feedback, a pixel hint of the rare's icon that sharpens from 2×2 (after 4 guesses) to 3×3, 4×4 and 8×8, points and streaks, a +125 "no peek" bonus for not opening the Rare Items pages during the game, and Today / All-time / Streak leaderboards. While in testing mode you can reset the daily game or play unlimited random practice rounds (practice never counts toward points or leaderboards).
 - **Marketing studio (admin panel):** 13 ready-made templates (announcement, big statement, what's-new list, live "by the numbers", mapart and rare spotlights, mapart/rare collections, marketplace promo, mod release, Rare-dle teaser, event/giveaway, player shoutout, today's mapart) that open in the image maker, which can also download every size or every style in one go.
 - **Home page:** a featured strip with a bigger mapart of the day, a slot reserved for Rare-dle, and a marketplace card with the live listing count.
 - **Image maker:** shareable pictures in 13 formats (Discord, X, Instagram, story, YouTube, wallpaper, banners, custom…) and 12 styles with patterns, layouts and your own colours — for mapart of the day, mapart pages, rare item pages, profiles, the collection "still needed / owned" builder and Rare-dle results.
@@ -53,6 +53,6 @@ Everything since mod 1.6 (released 14 Sep 2026).
 - Rare and vanilla catalogs: new 26.2 items, missing-item fixes, new rare textures; "Aquatica Crate Key" renamed "Aquatic Crate Key".
 
 ### Backend
-- Migrations 0015–0027: marketplace jobs, listing ids, mapart (+ all-names, claim flags, uploads, takedowns), store managers, collections, mapart price, profiles/mapart-of-the-day/image-search, Rare-dle, Rare-dle practice.
+- Migrations 0015–0028: marketplace jobs, listing ids, mapart (+ all-names, claim flags, uploads, takedowns), store managers, collections, mapart price, profiles/mapart-of-the-day/image-search, Rare-dle, Rare-dle practice, Rare-dle no-peek flag.
 - New Worker endpoints for mapart reports and edits, collections, public profiles, commission info, mapart of the day, image search and its indexer, seller-shop stats hints, and Rare-dle.
 - Admin panel: mapart of the day (re-roll and promo image), image index builder, mapart takedowns, verification links.

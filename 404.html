@@ -1584,6 +1584,7 @@
 			if(!catalogEntry){
 				catalogEntry = rareCatalog.filter(function(it){ return it.id === slug; })[0] || null;
 				isRare = !!catalogEntry;
+				if(isRare){ try { var __d = new Date().toISOString().slice(0, 10); if (localStorage.getItem("sctp_raredle_active") === __d) localStorage.setItem("sctp_raredle_peek", __d); } catch (e) {} }
 			}
 			if(!catalogEntry){
 				document.getElementById("app").innerHTML =

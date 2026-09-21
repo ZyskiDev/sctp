@@ -151,6 +151,7 @@
 			<select id="fReleaseDate"><option value="">Release: any</option></select>
 			<select id="fTypeSlot"><option value="">Type/Slot: any</option></select>
 			<select id="fDyeable"><option value="">Dyeable: any</option></select>
+			<select id="fParticles"><option value="">Particles: any</option><option value="__has">Has particles (any)</option><option value="__none">No particles</option></select>
 			<button type="button" class="rare-filters-reset" id="fRareReset">Reset filters</button>
 		</div>
 		<div id="rareWorldPicker"></div>
@@ -226,6 +227,7 @@
 		{ id: "fReleaseDate", key: "releaseDate" },
 		{ id: "fTypeSlot", key: "typeSlot" },
 		{ id: "fDyeable", key: "dyeable" },
+		{ id: "fParticles", key: "glowParticles" },
 	];
 
 	var MONTHS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
@@ -255,6 +257,7 @@
 				var v = it[f.key];
 				if(!v) return;
 				var vKey = v.toLowerCase();
+				if(f.key === "glowParticles" && vKey === "none") return;
 				if(!seen[vKey]){ seen[vKey] = v; values.push(v); }
 			});
 			if(f.key === "releaseDate") values.sort(function(a,b){ return releaseSortKey(a) - releaseSortKey(b); });
@@ -282,6 +285,13 @@
 			}
 			for(var i = 0; i < RARE_FILTER_FIELDS.length; i++){
 				var f = RARE_FILTER_FIELDS[i];
+				if(f.key === "glowParticles" && active[f.key]){
+					var gp = String(it.glowParticles || "").toLowerCase();
+					if(active[f.key] === "__has"){ if(!gp || gp === "none") return false; }
+					else if(active[f.key] === "__none"){ if(gp && gp !== "none") return false; }
+					else if(gp !== active[f.key]) return false;
+					continue;
+				}
 				if(active[f.key] && (!it[f.key] || it[f.key].toLowerCase() !== active[f.key])) return false;
 			}
 			return true;
@@ -330,7 +340,11 @@
 		document.getElementById("tabRare").classList.toggle("active", !isVanilla);
 		document.getElementById("vanillaPane").hidden = !isVanilla;
 		document.getElementById("rarePane").hidden = isVanilla;
-		if(!isVanilla) loadRareItems();
+		if(!isVanilla){
+			// opening the rare list mid-game forfeits Rare-dle's no-peek bonus
+			try { var __d = new Date().toISOString().slice(0, 10); if (localStorage.getItem("sctp_raredle_active") === __d) localStorage.setItem("sctp_raredle_peek", __d); } catch (e) {}
+			loadRareItems();
+		}
 	}
 	document.getElementById("tabVanilla").addEventListener("click", function(){ switchTab("vanilla"); });
 	document.getElementById("tabRare").addEventListener("click", function(){ switchTab("rare"); });

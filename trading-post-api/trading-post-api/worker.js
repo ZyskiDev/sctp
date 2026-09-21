@@ -4723,6 +4723,107 @@ async function decodePngGray(bytes) {
 
 // Same maths as mapart-search.js: average brightness into a 17x16 grid, then
 // one bit per left/right neighbour pair.
+// 8-bit non-interlaced PNG -> {w, h, rgba: Uint8Array(w*h*4)}; null for anything else.
+async function decodePngRgba(bytes) {
+	if (bytes.length < 33 || bytes[0] !== 0x89 || bytes[1] !== 0x50) return null;
+	const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	let off = 8, w = 0, h = 0, depth = 0, ctype = -1, interlace = 0, plte = null, trns = null;
+	const idat = [];
+	while (off + 12 <= bytes.length) {
+		const len = dv.getUint32(off);
+		const type = String.fromCharCode(bytes[off + 4], bytes[off + 5], bytes[off + 6], bytes[off + 7]);
+		const data = bytes.subarray(off + 8, off + 8 + len);
+		off += 12 + len;
+		if (type === "IHDR") { w = dv.getUint32(off - 12 - len + 8); h = dv.getUint32(off - 12 - len + 12); depth = data[8]; ctype = data[9]; interlace = data[12]; }
+		else if (type === "PLTE") plte = data;
+		else if (type === "tRNS") trns = data;
+		else if (type === "IDAT") idat.push(data);
+		else if (type === "IEND") break;
+	}
+	const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[ctype];
+	if (!w || !h || depth !== 8 || interlace !== 0 || !channels || !idat.length) return null;
+	let total = 0;
+	for (const c of idat) total += c.length;
+	const joined = new Uint8Array(total);
+	let p = 0;
+	for (const c of idat) { joined.set(c, p); p += c.length; }
+	const raw = await inflateZlib(joined);
+	const stride = w * channels;
+	if (raw.length < h * (stride + 1)) return null;
+	const px = new Uint8Array(h * stride);
+	for (let y = 0; y < h; y++) {
+		const ft = raw[y * (stride + 1)];
+		const src = y * (stride + 1) + 1, dst = y * stride, up = dst - stride;
+		for (let i = 0; i < stride; i++) {
+			const x = raw[src + i];
+			const a = i >= channels ? px[dst + i - channels] : 0;
+			const b = y > 0 ? px[up + i] : 0;
+			const c = i >= channels && y > 0 ? px[up + i - channels] : 0;
+			let v;
+			if (ft === 0) v = x;
+			else if (ft === 1) v = x + a;
+			else if (ft === 2) v = x + b;
+			else if (ft === 3) v = x + ((a + b) >> 1);
+			else {
+				const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c);
+				v = x + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c);
+			}
+			px[dst + i] = v & 255;
+		}
+	}
+	const rgba = new Uint8Array(w * h * 4);
+	for (let i = 0, n = w * h; i < n; i++) {
+		const o = i * channels, q = i * 4;
+		if (ctype === 0) { rgba[q] = rgba[q + 1] = rgba[q + 2] = px[o]; rgba[q + 3] = 255; }
+		else if (ctype === 2) { rgba[q] = px[o]; rgba[q + 1] = px[o + 1]; rgba[q + 2] = px[o + 2]; rgba[q + 3] = 255; }
+		else if (ctype === 3) { const pi = px[o] * 3; rgba[q] = plte ? plte[pi] : 0; rgba[q + 1] = plte ? plte[pi + 1] : 0; rgba[q + 2] = plte ? plte[pi + 2] : 0; rgba[q + 3] = trns && px[o] < trns.length ? trns[px[o]] : 255; }
+		else if (ctype === 4) { rgba[q] = rgba[q + 1] = rgba[q + 2] = px[o]; rgba[q + 3] = px[o + 1]; }
+		else { rgba[q] = px[o]; rgba[q + 1] = px[o + 1]; rgba[q + 2] = px[o + 2]; rgba[q + 3] = px[o + 3]; }
+	}
+	return { w, h, rgba };
+}
+
+// Average an image down to an n x n grid of "#rrggbb" (alpha-weighted; "" where mostly transparent).
+function pixelGridFromRgba(img, n) {
+	const cells = [];
+	for (let cy = 0; cy < n; cy++) {
+		for (let cx = 0; cx < n; cx++) {
+			const x0 = Math.floor((cx * img.w) / n), x1 = Math.max(x0 + 1, Math.floor(((cx + 1) * img.w) / n));
+			const y0 = Math.floor((cy * img.h) / n), y1 = Math.max(y0 + 1, Math.floor(((cy + 1) * img.h) / n));
+			let r = 0, g = 0, b = 0, a = 0, count = 0;
+			for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+				const i = (y * img.w + x) * 4, al = img.rgba[i + 3];
+				r += img.rgba[i] * al; g += img.rgba[i + 1] * al; b += img.rgba[i + 2] * al; a += al; count++;
+			}
+			if (!a || a / (count * 255) < 0.2) { cells.push(""); continue; }
+			const h2 = (v) => Math.round(v / a).toString(16).padStart(2, "0");
+			cells.push("#" + h2(r) + h2(g) + h2(b));
+		}
+	}
+	return cells;
+}
+
+const raredleTextureCache = new Map();
+async function raredleTexture(item) {
+	if (raredleTextureCache.has(item.id)) return raredleTextureCache.get(item.id);
+	let img = null;
+	try {
+		const res = await fetch("https://sctp.nl" + item.texture, { cf: { cacheTtl: 86400, cacheEverything: true } });
+		if (res.ok) img = await decodePngRgba(new Uint8Array(await res.arrayBuffer()));
+	} catch (e) { img = null; }
+	if (img) { if (raredleTextureCache.size > 400) raredleTextureCache.clear(); raredleTextureCache.set(item.id, img); }
+	return img;
+}
+
+// The pixel hint for a game that has used `guessCount` guesses (null while still locked).
+async function raredlePixelHint(answer, guessCount) {
+	const step = RAREDLE_PIXEL_STEPS.find(([g]) => guessCount >= g);
+	if (!step) return null;
+	const img = await raredleTexture(answer);
+	if (!img) return { size: step[1], cells: null };
+	return { size: step[1], cells: pixelGridFromRgba(img, step[1]) };
+}
+
 function dHashFromGray(gray, w, h) {
 	const sum = new Float64Array(PHASH_COLS * PHASH_ROWS), cnt = new Uint32Array(PHASH_COLS * PHASH_ROWS);
 	for (let y = 0; y < h; y++) {
@@ -4831,7 +4932,10 @@ const RAREDLE_MAX_GUESSES = 8;
 const RAREDLE_BASE_POINTS = [1000, 800, 650, 500, 400, 300, 200, 120]; // by number of guesses used when won
 const RAREDLE_STREAK_BONUS = 25;        // per streak day, capped below
 const RAREDLE_STREAK_BONUS_CAP = 10;
-const RAREDLE_HINT_AFTER = 4;           // the item's effect text is revealed after this many guesses
+// Pixel hint: a blurred-down version of the rare's icon that sharpens as guesses are used —
+// after guess 4 a 2x2 grid, 3x3 after 5, 4x4 after 6, 8x8 after 7.
+const RAREDLE_PIXEL_STEPS = [[7, 8], [6, 4], [5, 3], [4, 2]]; // [guesses used, grid size], highest first
+const RAREDLE_NO_PEEK_BONUS = 125;      // extra points for not opening the Rare Items pages during the game
 const RAREDLE_NO_REPEAT_DAYS = 90;
 const RAREDLE_CATALOG_URL = "https://sctp.nl/data/rare-items.json";
 
@@ -4945,7 +5049,7 @@ async function raredleAnswerFor(env, date) {
 	const { results: recent } = await env.DB.prepare("SELECT itemId FROM raredleAnswers ORDER BY date DESC LIMIT ?").bind(RAREDLE_NO_REPEAT_DAYS).all();
 	const used = new Set(recent.map((r) => r.itemId));
 	// Only items with enough attributes to make for a fair puzzle.
-	let pool = cat.items.filter((i) => i.category && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null" && !used.has(i.id));
+	let pool = cat.items.filter((i) => i.texture && i.category && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null" && !used.has(i.id));
 	if (!pool.length) pool = cat.items.filter((i) => i.category && i.releaseDate && i.releaseDate !== "null");
 	const pick = pool[crypto.getRandomValues(new Uint32Array(1))[0] % pool.length].id;
 	await env.DB.prepare("INSERT OR IGNORE INTO raredleAnswers (date, itemId) VALUES (?, ?)").bind(date, pick).run();
@@ -4997,8 +5101,9 @@ async function raredleStatePayload(env, admin) {
 	const status = game ? game.status : "playing";
 	const out = {
 		date: today, maxGuesses: RAREDLE_MAX_GUESSES, status, guesses, testing: RAREDLE_TESTING,
-		hint: guesses.length >= RAREDLE_HINT_AFTER || status !== "playing" ? (answer.effect || "") : null,
-		hintAfter: RAREDLE_HINT_AFTER,
+		pixelHint: status === "playing" ? await raredlePixelHint(answer, guesses.length) : null,
+		pixelSteps: RAREDLE_PIXEL_STEPS.slice().reverse(),
+		noPeek: { bonus: RAREDLE_NO_PEEK_BONUS, lost: !!(game && game.usedRares) },
 		score: game ? game.score : 0,
 		stats: await raredleStats(env, admin.id, today),
 	};
@@ -5021,7 +5126,7 @@ async function handleRaredleState(request, env) {
 // ---- practice rounds (testing mode): unlimited random rares, one open round per account,
 // never counted toward points, streaks or leaderboards.
 function raredlePracticePool(cat) {
-	const pool = cat.items.filter((i) => i.category && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null");
+	const pool = cat.items.filter((i) => i.texture && i.category && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null");
 	return pool.length ? pool : cat.items;
 }
 
@@ -5044,8 +5149,9 @@ async function raredlePracticePayload(env, admin, cat, row) {
 	}).filter(Boolean);
 	const out = {
 		date: raredleToday(), mode: "practice", testing: RAREDLE_TESTING, maxGuesses: RAREDLE_MAX_GUESSES, status: row.status, guesses,
-		hint: guesses.length >= RAREDLE_HINT_AFTER || row.status !== "playing" ? (answer.effect || "") : null,
-		hintAfter: RAREDLE_HINT_AFTER, score: 0,
+		pixelHint: row.status === "playing" ? await raredlePixelHint(answer, guesses.length) : null,
+		pixelSteps: RAREDLE_PIXEL_STEPS.slice().reverse(),
+		noPeek: null, score: 0,
 		stats: await raredleStats(env, admin.id, raredleToday()),
 	};
 	if (row.status !== "playing") out.answer = { id: answer.id, name: answer.name, texture: answer.texture, effect: answer.effect || "", category: answer.category, releaseDate: answer.releaseDate, obtainedFrom: answer.obtainedFrom };
@@ -5112,6 +5218,8 @@ async function handleRaredleGuess(request, env) {
 		game = await env.DB.prepare("SELECT * FROM raredleGames WHERE accountId = ? AND date = ?").bind(auth.admin.id, today).first();
 	}
 	if (game.status !== "playing") return json({ error: "You've already finished today's Rare-dle." }, 409);
+	// The site tells us when the player opened a Rare Items page during this game. Once seen it sticks.
+	const usedRares = game.usedRares || body.peeked === true ? 1 : 0;
 	const ids = JSON.parse(game.guesses);
 	if (ids.includes(itemId)) return json({ error: "You already guessed that one." }, 409);
 
@@ -5123,11 +5231,11 @@ async function handleRaredleGuess(request, env) {
 	if (status === "won") {
 		const { results } = await env.DB.prepare("SELECT date, status FROM raredleGames WHERE accountId = ? AND status IN ('won','lost') AND date != ?").bind(auth.admin.id, today).all();
 		const streak = computeRaredleStreaks([...results, { date: today, status: "won" }], today).current;
-		score = RAREDLE_BASE_POINTS[Math.min(ids.length, RAREDLE_MAX_GUESSES) - 1] + Math.min(streak, RAREDLE_STREAK_BONUS_CAP) * RAREDLE_STREAK_BONUS;
+		score = RAREDLE_BASE_POINTS[Math.min(ids.length, RAREDLE_MAX_GUESSES) - 1] + Math.min(streak, RAREDLE_STREAK_BONUS_CAP) * RAREDLE_STREAK_BONUS + (usedRares ? 0 : RAREDLE_NO_PEEK_BONUS);
 	}
 	// The status = 'playing' guard makes a double-submit race harmless.
-	const res = await env.DB.prepare("UPDATE raredleGames SET guesses = ?, guessCount = ?, status = ?, score = ?, finishedAt = ? WHERE accountId = ? AND date = ? AND status = 'playing' AND guessCount = ?")
-		.bind(JSON.stringify(ids), ids.length, status, score, finishedAt, auth.admin.id, today, game.guessCount).run();
+	const res = await env.DB.prepare("UPDATE raredleGames SET guesses = ?, guessCount = ?, status = ?, score = ?, finishedAt = ?, usedRares = ? WHERE accountId = ? AND date = ? AND status = 'playing' AND guessCount = ?")
+		.bind(JSON.stringify(ids), ids.length, status, score, finishedAt, usedRares, auth.admin.id, today, game.guessCount).run();
 	if (res.meta.changes === 0) return json({ error: "That guess didn't go through — try again." }, 409);
 	return json(await raredleStatePayload(env, auth.admin));
 }
