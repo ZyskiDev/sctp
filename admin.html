@@ -1232,9 +1232,10 @@
 					'<div class="meta">' + esc(m.world) + ' &middot; ' + m.width + '&times;' + m.height + ' &middot; lead map #' + m.leadMapId + ' &middot; raw name: ' + esc(m.rawName || '—') + '</div>' +
 					'<div class="meta">' + (m.claimedByUsername ? 'claimed by <strong>' + esc(m.claimedByUsername) + '</strong>' : 'unclaimed') + ' &middot; <a href="/mapart/' + encodeURIComponent(m.slug) + '" target="_blank" rel="noopener">view page</a></div>' +
 					'<label>Title</label><input type="text" data-f="title" maxlength="100" value="' + esc(m.title) + '" ' + f + '>' +
-					'<label>Artist / seller</label><input type="text" data-f="artist" maxlength="40" value="' + esc(m.artist || '') + '" ' + f + '>' +
+					'<label>Artist(s) / seller (collab: "Head & Second & Third" — first is the head artist)</label><input type="text" data-f="artist" maxlength="200" value="' + esc(m.artist || '') + '" ' + f + '>' +
 					'<label>Category</label><select data-f="category" ' + f + '><option value="">No category</option>' + MAPART_CATEGORIES.map(function(c){ return '<option value="' + c + '"' + (m.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join("") + '</select>' +
 					'<label>Where to buy (blank = default /shop artist)</label><input type="text" data-f="whereToBuy" maxlength="200" value="' + esc(m.whereToBuyCustom || '') + '" ' + f + '>' +
+					'<label>Price (optional)</label><input type="text" data-f="price" maxlength="60" value="' + esc(m.price || '') + '" ' + f + '>' +
 					'<label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" data-f="notForSale"' + (m.notForSale ? ' checked' : '') + '> Not for sale</label>' +
 					'<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">' +
 						'<button type="button" class="mp-save" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;">Save</button>' +
@@ -1321,7 +1322,7 @@
 		try {
 			if(t.classList.contains("mp-save")){
 				status.textContent = "Saving…";
-				await api("/mapart/update", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, title: val("title"), artist: val("artist"), category: val("category") || null, whereToBuy: val("whereToBuy"), notForSale: val("notForSale") }) });
+				await api("/mapart/update", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id:id, title: val("title"), artist: val("artist"), price: val("price"), category: val("category") || null, whereToBuy: val("whereToBuy"), notForSale: val("notForSale") }) });
 				await refreshMapartAdmin();
 			} else if(t.classList.contains("mp-assign")){
 				var u = val("assign").trim();

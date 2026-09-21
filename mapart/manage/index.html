@@ -140,10 +140,11 @@
 							<div class="size-row"><input type="number" id="upW" min="1" max="10" value="1"> <span>wide &times;</span> <input type="number" id="upH" min="1" max="10" value="1"> <span>tall</span></div>
 						</div>
 						<div class="field full"><label>Title</label><input type="text" id="upTitle" maxlength="100" placeholder="Name of the mapart"></div>
-						<div class="field"><label>Artist</label><input type="text" id="upArtist" maxlength="40" placeholder="Leave blank for yourself"></div>
+						<div class="field full"><label>Artist(s) &mdash; use the arrow for collabs</label><div id="upArtistHost"></div></div>
 						<div class="field"><label>World</label><select id="upWorld"><option value="Firefly">Firefly</option><option value="Honeybee">Honeybee</option></select></div>
 						<div class="field"><label>Category</label><select id="upCategory"></select></div>
 						<div class="field"><label>Where to buy</label><input type="text" id="upWhere" maxlength="200" placeholder="Blank = /shop artist"></div>
+						<div class="field"><label>Price (optional)</label><input type="text" id="upPrice" maxlength="60" placeholder="e.g. 5 diamonds"></div>
 						<div class="field full"><label class="check"><input type="checkbox" id="upNotForSale"> Not for sale (hides where-to-buy)</label></div>
 						<div class="field full"><label class="check"><input type="checkbox" id="upSmooth" checked> Smooth resize (turn off for pixel art so edges stay sharp)</label></div>
 					</div>
@@ -171,6 +172,7 @@
 
 <script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
+<script src="/artist-field.js" defer></script>
 <script>
 (function(){
 	"use strict";
@@ -239,10 +241,11 @@
 					'<div class="card-title">' + esc(m.title) + ' <span style="color:var(--muted);font-size:12px;font-weight:400;">(' + esc(m.world) + ', ' + m.width + '&times;' + m.height + ')</span></div>' +
 					'<div class="form-grid">' +
 						'<div class="field"><label>Title</label><input type="text" data-f="title" maxlength="100" value="' + esc(m.title) + '"></div>' +
-						'<div class="field"><label>Artist / seller</label><input type="text" data-f="artist" maxlength="40" value="' + esc(m.artist || "") + '" placeholder="Minecraft username"></div>' +
+						'<div class="field full"><label>Artist(s) / seller &mdash; use the arrow for collabs</label><div data-artist-host></div></div>' +
 						'<div class="field"><label>Category</label><select data-f="category"><option value="">No category</option>' +
 							CATEGORIES.map(function(c){ return '<option value="' + c + '"' + (m.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join("") + '</select></div>' +
 						'<div class="field"><label>Where to buy</label><input type="text" data-f="whereToBuy" maxlength="200" value="' + esc(m.whereToBuyCustom || "") + '" placeholder="' + esc(m.artist ? "/shop " + m.artist : "e.g. /shop Steve") + '"></div>' +
+						'<div class="field"><label>Price (optional)</label><input type="text" data-f="price" maxlength="60" value="' + esc(m.price || "") + '" placeholder="e.g. 5 diamonds"></div>' +
 						'<div class="field full"><label class="check"><input type="checkbox" data-f="notForSale"' + (m.notForSale ? ' checked' : '') + '> Not for sale (hides where-to-buy)</label></div>' +
 					'</div>' +
 					'<div class="actions">' +
@@ -264,13 +267,16 @@
 
 		host.querySelectorAll(".mine-card").forEach(function(card){
 			var id = card.getAttribute("data-id");
+			var cardMapart = mine.filter(function(x){ return x.id === id; })[0] || {};
+			var artistField = window.sctpArtistField.create(card.querySelector("[data-artist-host]"), { value: cardMapart.artist || "" });
 			var status = card.querySelector('[data-role="status"]');
 			function setStatus(t, err){ status.textContent = t; status.className = "status" + (err ? " err" : ""); }
 			card.querySelector('[data-act="save"]').addEventListener("click", function(){
 				var body = {
 					id: id,
 					title: card.querySelector('[data-f="title"]').value,
-					artist: card.querySelector('[data-f="artist"]').value,
+					artist: artistField.getValue(),
+					price: card.querySelector('[data-f="price"]').value,
 					category: card.querySelector('[data-f="category"]').value || null,
 					whereToBuy: card.querySelector('[data-f="whereToBuy"]').value,
 					notForSale: card.querySelector('[data-f="notForSale"]').checked
@@ -393,6 +399,11 @@
 	var upCanvas = document.getElementById("cropCanvas");
 	var upCtx = upCanvas.getContext("2d");
 	var upCatSel = document.getElementById("upCategory");
+	var upArtistField = null;
+	(function mountUpArtist(){
+		if(window.sctpArtistField) upArtistField = window.sctpArtistField.create(document.getElementById("upArtistHost"), { placeholder: "Head artist — blank = you" });
+		else setTimeout(mountUpArtist, 50);
+	})();
 	upCatSel.innerHTML = '<option value="">No category</option>' + CATEGORIES.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join("");
 
 	function upGrid(){
@@ -510,7 +521,8 @@
 				var b64 = String(fr.result).split(",")[1] || "";
 				authFetch("/mapart/submit", { method: "POST", body: JSON.stringify({
 					title: title,
-					artist: document.getElementById("upArtist").value.trim(),
+					artist: upArtistField.getValue(),
+					price: document.getElementById("upPrice").value.trim(),
 					world: document.getElementById("upWorld").value,
 					category: upCatSel.value || null,
 					whereToBuy: document.getElementById("upWhere").value.trim(),
@@ -523,7 +535,8 @@
 					upImg = null;
 					document.getElementById("cropBox").hidden = true;
 					document.getElementById("upFile").value = "";
-					["upTitle", "upArtist", "upWhere"].forEach(function(id){ document.getElementById(id).value = ""; });
+					["upTitle", "upWhere", "upPrice"].forEach(function(id){ document.getElementById(id).value = ""; });
+					upArtistField = window.sctpArtistField.create(document.getElementById("upArtistHost"), { placeholder: "Head artist — blank = you" });
 					document.getElementById("upNotForSale").checked = false;
 					btn.disabled = true;
 					loadAll();

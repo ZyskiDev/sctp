@@ -1,5 +1,5 @@
 // Shared collection view: the checklist + stats for one account's rare items
-// and mapart. Editable on the account page (Collections tab), read-only on the
+// and mapart. Editable on /collection/ (My Collection), read-only on the
 // public /collection/<username> page — shared like account-widget.js since
 // both need the identical UI.
 //
@@ -203,7 +203,7 @@
 			var name = st.kind === "rare" ? x.name : x.title;
 			var sub = st.kind === "rare" ? (x.category || "") : (x.artist ? "by " + x.artist : "");
 			return '<div class="col-item ' + (own ? "own" : "miss") + (editable ? " editable" : "") + '" data-id="' + esc(x.id) + '" title="' + esc(name) + '">' +
-				'<span class="ck">&#10003;</span><div class="im"><img src="' + esc(img) + '" alt="" loading="lazy"></div>' +
+				'<span class="ck">&#10003;</span><div class="im"><img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"></div>' +
 				'<div class="nm">' + esc(name) + (sub ? "<small>" + esc(sub) + "</small>" : "") + "</div></div>";
 		}
 
@@ -233,7 +233,7 @@
 				'<div class="col-tools"><input type="search" id="colQ" placeholder="Search…" value="' + esc(st.q) + '">' +
 					'<select id="colCat"><option value="">All categories</option>' + cats.map(function (c) { return '<option value="' + esc(c) + '"' + (st.cat === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select>" +
 					'<select id="colStatus">' + [["all", "All"], ["owned", "Have"], ["missing", "Need"]].map(function (o) { return '<option value="' + o[0] + '"' + (st.status === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
-					(editable ? '<button type="button" id="colAll">Mark shown as owned</button><button type="button" id="colNone">Unmark shown</button>' : "") +
+					(editable ? '<button type="button" id="colAll">Mark all matching as owned</button><button type="button" id="colNone">Unmark all matching</button>' : "") +
 				"</div>" +
 				'<div class="col-msg" id="colCount"></div>' +
 				'<div class="col-grid" id="colGrid"></div><div id="colMoreHost"></div><div class="col-msg err" id="colErr" hidden></div>' +
@@ -248,16 +248,19 @@
 			grid.innerHTML = list.slice(0, st.shown).map(itemHtml).join("");
 			host.querySelector("#colCount").textContent = list.length + " " + (st.kind === "rare" ? "rare item" : "mapart") + (list.length === 1 ? "" : "s") + (list.length > st.shown ? " (showing " + st.shown + ")" : "");
 			var more = host.querySelector("#colMoreHost");
-			more.innerHTML = list.length > st.shown ? '<button type="button" class="col-more" id="colMore">Show more</button>' : "";
+			more.innerHTML = list.length > st.shown
+				? '<button type="button" class="col-more" id="colMore">Show more</button><button type="button" class="col-more" id="colAllShown" style="margin-top:8px;">Show all ' + list.length + "</button>" : "";
 			var mb = host.querySelector("#colMore");
 			if (mb) mb.onclick = function () { st.shown += PAGE; paintGrid(); };
+			var ma = host.querySelector("#colAllShown");
+			if (ma) ma.onclick = function () { st.shown = list.length; paintGrid(); };
 		}
 
 		function refreshStats() { host.querySelector("#colStats").innerHTML = statsHtml(); }
 		function showErr(t) { var e = host.querySelector("#colErr"); e.textContent = t; e.hidden = !t; }
 
 		// Optimistic: flip locally, tell the server, roll back if it refuses.
-		function setOwned(ids, own) {
+		function setOwned(ids, own, inPlace) {
 			var kind = st.kind, world = st.world, now = new Date().toISOString();
 			var before = {};
 			ids.forEach(function (id) {
@@ -266,6 +269,7 @@
 				if (own) st.owned[k] = st.owned[k] || now; else delete st.owned[k];
 			});
 			showErr("");
+			if (inPlace) { paintOwnedState(ids, kind, world); refreshStats(); }
 			var chunks = [];
 			for (var i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
 			return chunks.reduce(function (p, chunk) {
@@ -284,7 +288,21 @@
 					});
 				}
 				refreshStats();
-				paintGrid();
+				if (inPlace && ok) paintOwnedState(ids, kind, world); else paintGrid();
+			});
+		}
+		// Flip just the touched cards so the grid doesn't reshuffle under the cursor
+		// (e.g. an item vanishing from a "Need" filter the moment you tick it).
+		function paintOwnedState(ids, kind, world) {
+			if (kind !== st.kind || world !== st.world) return;
+			var want = {};
+			ids.forEach(function (id) { want[id] = true; });
+			host.querySelectorAll(".col-item").forEach(function (el) {
+				var id = el.getAttribute("data-id");
+				if (!want[id]) return;
+				var own = isOwned(kind, id);
+				el.classList.toggle("own", own);
+				el.classList.toggle("miss", !own);
 			});
 		}
 
@@ -303,12 +321,12 @@
 				var el = e.target.closest ? e.target.closest(".col-item") : null;
 				if (!el) return;
 				var id = el.getAttribute("data-id");
-				setOwned([id], !isOwned(st.kind, id));
+				setOwned([id], !isOwned(st.kind, id), true);
 			};
 			function bulk(own) {
 				var ids = filtered().filter(function (x) { return isOwned(st.kind, x.id) !== own; }).map(function (x) { return x.id; });
 				if (!ids.length) return;
-				if (!confirm((own ? "Mark " : "Unmark ") + ids.length + " item" + (ids.length === 1 ? "" : "s") + (own ? " as owned" : " as not owned") + " in " + st.world + "?")) return;
+				if (!confirm((own ? "Mark " : "Unmark ") + ids.length + " matching item" + (ids.length === 1 ? "" : "s") + (own ? " as owned" : " as not owned") + " in " + st.world + "? (This covers everything matching your current search/filters, not just what's on screen.)")) return;
 				setOwned(ids, own);
 			}
 			host.querySelector("#colAll").onclick = function () { bulk(true); };

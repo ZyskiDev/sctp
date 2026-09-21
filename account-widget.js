@@ -85,6 +85,7 @@
 		var html = '<a href="/marketplace/#mine">My Marketplace</a>';
 		html += '<a href="/stats/mine/">My Shop Statistics</a>';
 		html += '<a href="/mapart/manage/">Mapart Management</a>';
+		html += '<a href="/collection/">My Collection</a>';
 		html += '<a href="/store/manage/">Manage my store</a>';
 		html += '<a href="/account/">Account Settings</a>';
 		if (isAdmin) html += '<a href="/admin.html">Admin Panel</a>';

@@ -3326,6 +3326,34 @@ function splitMapartArtists(artist) {
 	return String(artist || "").split(" & ").map((s) => s.trim().replace(/^\./, "")).filter(Boolean);
 }
 
+// Collabs: a piece can list several artists, stored as "Head & Second & Third"
+// (the first one is the head artist — the one shown on the catalog until the
+// list is expanded). Accepts that string or an array of names; returns
+// {value} (null when empty) or {error}.
+const MAPART_MAX_ARTISTS = 8;
+const MAPART_MAX_ARTIST_NAME = 40;
+function cleanMapartArtist(input) {
+	const raw = Array.isArray(input) ? input : String(input == null ? "" : input).split("&");
+	const names = [], seen = new Set();
+	for (const r of raw) {
+		const n = String(r || "").replace(/&/g, " ").replace(/\s+/g, " ").trim();
+		if (!n) continue;
+		if (n.length > MAPART_MAX_ARTIST_NAME) return { error: `Each artist name must be at most ${MAPART_MAX_ARTIST_NAME} characters` };
+		if (seen.has(n.toLowerCase())) continue;
+		seen.add(n.toLowerCase());
+		names.push(n);
+	}
+	if (names.length > MAPART_MAX_ARTISTS) return { error: `A piece can list at most ${MAPART_MAX_ARTISTS} artists` };
+	return { value: names.length ? names.join(" & ") : null };
+}
+
+// Optional free-text price ("5 diamonds"); blank clears it.
+function cleanMapartPrice(input) {
+	const p = String(input == null ? "" : input).trim();
+	if (p.length > 60) return { error: "price must be at most 60 characters" };
+	return { value: p || null };
+}
+
 // One name's title: symbols dropped, credited names removed, and every
 // number gone (part markers like 1x1 / 1/6 / 0_0, ordinals, and stray
 // digits inside words).
@@ -3377,7 +3405,7 @@ function resolveMapartWhereToBuy(m) {
 function mapartPublic(m) {
 	return {
 		id: m.id, slug: m.slug, title: m.title, artist: m.artist || null,
-		whereToBuy: resolveMapartWhereToBuy(m), notForSale: !!m.notForSale,
+		whereToBuy: resolveMapartWhereToBuy(m), notForSale: !!m.notForSale, price: m.price || null,
 		category: m.category || null, world: m.world, width: m.width, height: m.height,
 		imageHash: m.imageHash || null, claimed: !!m.claimedByAccountId,
 		// "Verified by artist" shows when the piece's owner is a currently
@@ -3691,7 +3719,7 @@ async function handleUpdateMapart(request, env) {
 	// category) directly, without going through the report queue.
 	const canManage = isHead || adminHasPermission(base.admin, "manageMapart");
 	if (!isHead && !owns && !canManage) return json({ error: "Claim this mapart first to edit it." }, 403);
-	if (!isHead && !owns && (body.title !== undefined || body.whereToBuy !== undefined || body.notForSale !== undefined)) {
+	if (!isHead && !owns && (body.title !== undefined || body.whereToBuy !== undefined || body.notForSale !== undefined || body.price !== undefined)) {
 		return json({ error: "Mapart managers can only change the artist, world and category." }, 403);
 	}
 	if (body.world !== undefined && !canManage) return json({ error: "Only mapart managers can move a mapart to another world." }, 403);
@@ -3712,9 +3740,14 @@ async function handleUpdateMapart(request, env) {
 		sets.push("title = ?"); vals.push(t); newTitle = t;
 	}
 	if (body.artist !== undefined) {
-		const a = String(body.artist || "").trim();
-		if (a.length > 40) return json({ error: "artist must be at most 40 characters" }, 400);
-		sets.push("artist = ?"); vals.push(a || null);
+		const a = cleanMapartArtist(body.artist);
+		if (a.error) return json({ error: a.error }, 400);
+		sets.push("artist = ?"); vals.push(a.value);
+	}
+	if (body.price !== undefined) {
+		const p = cleanMapartPrice(body.price);
+		if (p.error) return json({ error: p.error }, 400);
+		sets.push("price = ?"); vals.push(p.value);
 	}
 	if (body.whereToBuy !== undefined) {
 		const w = String(body.whereToBuy || "").trim();
@@ -3830,9 +3863,9 @@ async function editMapartField(env, m, field, value) {
 	if (field === "world") return moveMapartToWorld(env, m, String(value || ""));
 	const now = new Date().toISOString();
 	if (field === "artist") {
-		const a = String(value || "").trim();
-		if (a.length > 40) return { ok: false, status: 400, error: "artist must be at most 40 characters" };
-		await env.DB.prepare("UPDATE maparts SET artist = ?, locked = 1, updatedAt = ? WHERE id = ?").bind(a || null, now, m.id).run();
+		const a = cleanMapartArtist(value);
+		if (a.error) return { ok: false, status: 400, error: a.error };
+		await env.DB.prepare("UPDATE maparts SET artist = ?, locked = 1, updatedAt = ? WHERE id = ?").bind(a.value, now, m.id).run();
 		return { ok: true };
 	}
 	if (field === "category") {
@@ -4194,9 +4227,11 @@ async function handleSubmitMapart(request, env) {
 	const title = String(body.title || "").trim();
 	if (!title || title.length > 100) return json({ error: "title must be 1-100 characters" }, 400);
 	const mc = String(auth.admin.mcUsername || "").replace(/^\./, "");
-	let artist = body.artist === undefined ? mc : String(body.artist || "").trim();
-	if (!artist) artist = mc;
-	if (artist.length > 40) return json({ error: "artist must be at most 40 characters" }, 400);
+	const cleanedArtist = cleanMapartArtist(body.artist === undefined ? mc : body.artist);
+	if (cleanedArtist.error) return json({ error: cleanedArtist.error }, 400);
+	const artist = cleanedArtist.value || mc;
+	const cleanedPrice = cleanMapartPrice(body.price);
+	if (cleanedPrice.error) return json({ error: cleanedPrice.error }, 400);
 	const whereToBuy = String(body.whereToBuy || "").trim();
 	if (whereToBuy.length > 200) return json({ error: "whereToBuy must be at most 200 characters" }, 400);
 	const category = body.category ? String(body.category) : null;
@@ -4235,10 +4270,10 @@ async function handleSubmitMapart(request, env) {
 	const slug = await assignMapartSlug(env, id, title);
 	const now = new Date().toISOString();
 	await env.DB.prepare(
-		`INSERT INTO maparts (id, slug, world, leadMapId, rawName, allNames, title, artist, whereToBuy, notForSale, category, width, height, imageHash,
+		`INSERT INTO maparts (id, slug, world, leadMapId, rawName, allNames, title, artist, whereToBuy, notForSale, price, category, width, height, imageHash,
 			claimedByAccountId, claimedAt, autoClaimBlocked, locked, claimedManually, ownerEdited, uploadedByAccountId, createdAt, updatedAt, lastSeen)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 1, 1, ?, ?, ?, ?)`
-	).bind(id, slug, world, leadMapId, title, JSON.stringify([title]), title, artist, whereToBuy || null, body.notForSale ? 1 : 0, category, width, height, imageHash,
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 1, 1, ?, ?, ?, ?)`
+	).bind(id, slug, world, leadMapId, title, JSON.stringify([title]), title, artist, whereToBuy || null, body.notForSale ? 1 : 0, cleanedPrice.value, category, width, height, imageHash,
 		auth.admin.id, now, auth.admin.id, now, now, now).run();
 	try {
 		await env.SNAPSHOTS.put(`mapart/${id}.png`, pngBytes, { httpMetadata: { contentType: "image/png" } });
@@ -4275,7 +4310,7 @@ async function getMapartGalleryRows(env) {
 		return {
 			id: m.id, itemName: m.title, baseItem: "minecraft:filled_map",
 			bulk: false, bundled: false, mixedContents: false,
-			price: 0, priceLabel: "Gallery", stackSize: 1, amount: 1, stacksInStock: 1, currency: "display",
+			price: 0, priceLabel: m.price || "Gallery", stackSize: 1, amount: 1, stacksInStock: 1, currency: "display",
 			seller: artists[0] || "Unknown artist", world: m.world,
 			position: m.notForSale ? "Not for sale" : (buy || "Mapart gallery"),
 			lastSeen: m.lastSeen, availableSince: m.createdAt,

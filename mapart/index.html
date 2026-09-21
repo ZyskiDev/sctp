@@ -53,7 +53,7 @@
 
 	.mapart-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));gap:16px;}
 	.mapart-card{
-		display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+		position:relative;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;
 		overflow:hidden;text-decoration:none;color:var(--text);transition:border-color .12s ease, transform .12s ease;
 	}
 	.mapart-card:hover{border-color:var(--accent-dim);transform:translateY(-3px);}
@@ -62,7 +62,7 @@
 		height:260px;padding:12px;border-bottom:1px solid var(--line);
 	}
 	.mapart-img{position:relative;}
-	.mapart-flag{position:absolute;top:8px;right:8px;background:rgba(16,27,20,0.85);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:3px 10px;font-size:11.5px;font-family:inherit;cursor:pointer;opacity:0;transition:opacity .12s;}
+	.mapart-flag{position:absolute;top:8px;left:8px;background:rgba(16,27,20,0.85);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:3px 10px;font-size:11.5px;font-family:inherit;cursor:pointer;opacity:0;transition:opacity .12s;}
 	.mapart-card:hover .mapart-flag,.mapart-flag:focus{opacity:1;}
 	@media (hover:none){.mapart-flag{opacity:.85;}}
 	.mapart-flag:hover{color:var(--warn);border-color:var(--warn);}
@@ -75,6 +75,13 @@
 	.pill.cat{color:var(--info);border-color:rgba(140,147,232,0.4);}
 	.pill.nocat{font-style:italic;}
 	.pill.ok{color:var(--accent);border-color:rgba(183,226,61,0.45);}
+	.artist-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 4px;font-family:inherit;line-height:1;vertical-align:baseline;}
+	.artist-toggle:hover{color:var(--accent);}
+	.artist-toggle .arr{display:inline-block;transition:transform .12s;}
+	.artist-toggle.open .arr{transform:rotate(180deg);}
+	.artist-list{margin:2px 0 0;padding:6px 10px;background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;font-size:12.5px;color:var(--shell);}
+	.artist-list div+div{margin-top:2px;}
+	.artist-list .head{color:var(--accent);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;margin-left:6px;}
 	.mapart-buy{color:var(--muted);font-size:12.5px;margin-top:6px;font-family:var(--font-mono);overflow-wrap:anywhere;}
 
 	.empty-state{padding:60px 24px;text-align:center;color:var(--muted);}
@@ -128,6 +135,7 @@
 <script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
 <script src="/mapart-report.js" defer></script>
+<script src="/collection-toggle.js" defer></script>
 <script>
 (function(){
 	"use strict";
@@ -148,6 +156,17 @@
 		CATEGORIES.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join("") +
 		'<option value="__none">No category</option>';
 
+	// Collabs are stored as "Head & Second & Third": the card shows the head
+	// artist, and an arrow drops down the full list.
+	function artistList(m){ return String(m.artist || "").split(" & ").map(function(s){ return s.trim(); }).filter(Boolean); }
+	function artistHtml(m){
+		var names = artistList(m);
+		if(!names.length) return 'Unknown artist';
+		if(names.length === 1) return 'by ' + esc(names[0]);
+		return 'by ' + esc(names[0]) + ' <button type="button" class="artist-toggle" data-artists title="Show all ' + names.length + ' artists" aria-expanded="false"><span class="arr">&#9662;</span> +' + (names.length - 1) + '</button>' +
+			'<div class="artist-list" hidden>' + names.map(function(n, i){ return '<div>' + esc(n) + (i === 0 ? '<span class="head">head artist</span>' : '') + '</div>'; }).join("") + '</div>';
+	}
+
 	function render(){
 		var q = document.getElementById("search").value.trim().toLowerCase();
 		var cat = catSel.value;
@@ -163,11 +182,13 @@
 		document.getElementById("empty").hidden = rows.length > 0;
 		document.getElementById("grid").innerHTML = rows.map(function(m){
 			var buy = m.notForSale ? "Not for sale" : (m.whereToBuy ? "Buy: " + m.whereToBuy : "");
+			if(m.price) buy = (buy ? buy + " · " : "") + "Price: " + m.price;
 			return '<a class="mapart-card" href="/mapart/' + encodeURIComponent(m.slug) + '">' +
+				(window.sctpCol ? window.sctpCol.circle("mapart", m.id, m.world) : '') +
 				'<div class="mapart-img"><img src="' + esc(imageUrl(m)) + '" alt="' + esc(m.title) + '" loading="lazy"><button type="button" class="mapart-flag" data-flag="' + esc(m.id) + '">' + (window.sctpMapartReport ? window.sctpMapartReport.label() : 'Report') + '</button></div>' +
 				'<div class="mapart-info">' +
 					'<div class="mapart-title">' + esc(m.title) + '</div>' +
-					'<div class="mapart-artist">' + (m.artist ? 'by ' + esc(m.artist) : 'Unknown artist') + '</div>' +
+					'<div class="mapart-artist">' + artistHtml(m) + '</div>' +
 					'<div class="mapart-meta">' +
 						(m.category ? '<span class="pill cat">' + esc(m.category) + '</span>' : '<span class="pill nocat">no category</span>') +
 						'<span class="pill">' + esc(m.world) + '</span>' +
@@ -182,6 +203,15 @@
 
 	// The whole card is a link, so the flag button swallows its own click.
 	document.getElementById("grid").addEventListener("click", function(e){
+		var tg = e.target.closest ? e.target.closest("[data-artists]") : null;
+		if(tg){
+			e.preventDefault(); e.stopPropagation();
+			var list = tg.parentNode.querySelector(".artist-list");
+			list.hidden = !list.hidden;
+			tg.classList.toggle("open", !list.hidden);
+			tg.setAttribute("aria-expanded", String(!list.hidden));
+			return;
+		}
 		var b = e.target.closest ? e.target.closest("[data-flag]") : null;
 		if(!b) return;
 		e.preventDefault(); e.stopPropagation();
@@ -193,7 +223,10 @@
 			render();
 		});
 	});
-	window.sctpOnAccountChange = render;
+	window.sctpOnAccountChange = function(){
+		if(window.sctpCol) window.sctpCol.reload();
+		if(window.sctpCol) window.sctpCol.ready(render); else render();
+	};
 
 	["search"].forEach(function(id){ document.getElementById(id).addEventListener("input", render); });
 	catSel.addEventListener("change", render);
@@ -201,7 +234,7 @@
 
 	fetch(API_BASE + "/mapart").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }).then(function(rows){
 		all = rows;
-		render();
+		if(window.sctpCol){ window.sctpCol.bind(document.getElementById("grid")); window.sctpCol.ready(render); } else render();
 	});
 })();
 </script>

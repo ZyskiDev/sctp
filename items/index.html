@@ -83,7 +83,7 @@
 		display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:10px;
 	}
 	.item-card{
-		display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
+		position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
 		background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 8px 12px;
 		text-decoration:none;color:var(--text);transition:border-color .12s ease, transform .12s ease;
 	}
@@ -153,6 +153,7 @@
 			<select id="fDyeable"><option value="">Dyeable: any</option></select>
 			<button type="button" class="rare-filters-reset" id="fRareReset">Reset filters</button>
 		</div>
+		<div id="rareWorldPicker"></div>
 		<p class="item-count" id="rareCount"></p>
 		<div class="item-grid" id="rareGrid"></div>
 	</div>
@@ -164,6 +165,7 @@
 
 <script src="/site-nav.js" defer></script>
 <script src="/account-widget.js" defer></script>
+<script src="/collection-toggle.js" defer></script>
 <script>
 (function(){
 	"use strict";
@@ -238,6 +240,7 @@
 		document.getElementById("rareCount").textContent = items.length + " item" + (items.length === 1 ? "" : "s");
 		document.getElementById("rareGrid").innerHTML = items.map(function(it){
 			return '<a class="item-card" href="/items/' + esc(it.id) + '">' +
+				(window.sctpCol ? window.sctpCol.circle("rare", it.id, window.sctpCol.world()) : "") +
 				'<img src="' + esc(it.texture) + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'' + PLACEHOLDER_ICON_JS + '\';">' +
 				'<span>' + esc(it.name) + '<br><span class="cat-pill">' + esc(it.category) + '</span></span>' +
 			'</a>';
@@ -296,7 +299,19 @@
 			allRareItems = [];
 		}
 		populateRareFilters();
-		renderRareGrid(allRareItems);
+		// Ownership toggles on the cards: load what the account owns first so the
+		// circles render in the right state, then keep them in sync.
+		if(window.sctpCol){
+			window.sctpCol.bind(document.getElementById("rareGrid"));
+			window.sctpCol.worldPicker(document.getElementById("rareWorldPicker"), applyRareFilters);
+			window.sctpCol.ready(applyRareFilters);
+		} else renderRareGrid(allRareItems);
+		window.sctpOnAccountChange = function(){
+			if(!window.sctpCol) return;
+			window.sctpCol.reload();
+			window.sctpCol.worldPicker(document.getElementById("rareWorldPicker"), applyRareFilters);
+			window.sctpCol.ready(applyRareFilters);
+		};
 	}
 
 	document.getElementById("rareSearch").addEventListener("input", applyRareFilters);

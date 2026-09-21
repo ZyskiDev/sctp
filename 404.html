@@ -213,6 +213,16 @@
 	.mapart-detail h1{font-family:var(--font-display);font-weight:600;font-size:34px;margin:0 0 6px;line-height:1.15;}
 	.mapart-detail .by{color:var(--shell);font-size:16px;margin:0 0 14px;}
 	.mapart-detail .by a{color:var(--shell);}
+	.artist-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;font-family:inherit;line-height:1;}
+	.artist-toggle:hover{color:var(--accent);}
+	.artist-toggle .arr{display:inline-block;transition:transform .12s;}
+	.artist-toggle.open .arr{transform:rotate(180deg);}
+	.artist-list{margin:6px 0 0;padding:8px 12px;background:var(--panel-alt);border:1px solid var(--line);border-radius:10px;font-size:14px;display:inline-block;min-width:200px;}
+	.artist-list[hidden]{display:none;}
+	.artist-list{display:block;width:max-content;}
+	.artist-list .al-row{display:block;}
+	.artist-list .al-row+.al-row{margin-top:4px;}
+	.artist-list .head{color:var(--accent);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;margin-left:8px;}
 	.mapart-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
 	.mapart-pill{display:inline-block;font-size:12px;font-family:var(--font-mono);color:var(--muted);background:var(--panel-alt);border:1px solid var(--line);border-radius:999px;padding:3px 10px;}
 	.mapart-pill.cat{color:var(--info);border-color:rgba(140,147,232,0.4);}
@@ -252,6 +262,7 @@
 <script src="/account-widget.js" defer></script>
 <script src="/mapart-report.js" defer></script>
 <script src="/collection.js" defer></script>
+<script src="/collection-toggle.js" defer></script>
 <script>
 (function(){
 	"use strict";
@@ -627,9 +638,14 @@
 				var img = API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || "");
 				// Two-artist pieces are stored as "A & B" — link each to their own shop page.
 				var worldSlug = m.world === "Honeybee" ? "hb" : "ff";
-				var artistsHtml = m.artist ? m.artist.split(" & ").map(function(a){
-					return '<a href="/s/' + worldSlug + '/' + encodeURIComponent(a) + '">' + esc(a) + '</a>';
-				}).join(" &amp; ") : "";
+				// Collabs: "Head & Second & …" — the head artist shows first, an arrow expands the full list.
+				var artistNames = m.artist ? m.artist.split(" & ").map(function(a){ return a.trim(); }).filter(Boolean) : [];
+				function artistLink(a){ return '<a href="/s/' + worldSlug + '/' + encodeURIComponent(a) + '">' + esc(a) + '</a>'; }
+				var artistsHtml = artistNames.length ? artistLink(artistNames[0]) : "";
+				if(artistNames.length > 1){
+					artistsHtml += ' <button type="button" class="artist-toggle" id="artistToggle" aria-expanded="false" title="Show all ' + artistNames.length + ' artists"><span class="arr">&#9662;</span> +' + (artistNames.length - 1) + '</button>' +
+						'<span class="artist-list" id="artistList" hidden>' + artistNames.map(function(a, i){ return '<span class="al-row">' + artistLink(a) + (i === 0 ? '<span class="head">head artist</span>' : '') + '</span>'; }).join("") + '</span>';
+				}
 				var buy = m.notForSale ? "Not for sale" : (m.whereToBuy || "");
 				app.innerHTML =
 					'<p style="margin:18px 0 0;"><a href="/mapart/">&larr; All mapart</a></p>' +
@@ -646,16 +662,24 @@
 							'</div>' +
 							'<dl class="mapart-facts">' +
 								'<dt>Where to buy</dt><dd>' + (buy ? esc(buy) : '<span style="color:var(--muted);">Unknown</span>') + '</dd>' +
+								(m.price ? '<dt>Price</dt><dd>' + esc(m.price) + '</dd>' : '') +
 								'<dt>World</dt><dd>' + esc(m.world) + '</dd>' +
 								'<dt>Size</dt><dd>' + m.width + ' &times; ' + m.height + (m.width * m.height > 1 ? ' maps' : ' map') + '</dd>' +
 							'</dl>' +
 							'<button type="button" class="share-item-btn" style="margin-left:0;" data-share-url="' + esc(location.origin + "/mapart/" + encodeURIComponent(m.slug)) + '">Share</button> ' +
-							'<button type="button" class="share-item-btn" id="mapartCollectBtn" style="margin-left:0;" hidden></button> ' +
+							'<span id="mapartCollectHost"></span> ' +
 							'<button type="button" class="report-player-btn" id="mapartReportBtn">Report</button>' +
-							'<p id="mapartCollectNote" style="color:var(--muted);font-size:12.5px;margin:10px 0 0;" hidden></p>' +
+							
 							(m.claimed ? '' : '<p style="color:var(--muted);font-size:13px;margin-top:18px;">Is this yours? Log in and use <strong>Mapart Management</strong> in the account menu to claim it.</p>') +
 						'</div>' +
 					'</div>';
+				var at = document.getElementById("artistToggle");
+				if(at) at.addEventListener("click", function(){
+					var list = document.getElementById("artistList");
+					list.hidden = !list.hidden;
+					at.classList.toggle("open", !list.hidden);
+					at.setAttribute("aria-expanded", String(!list.hidden));
+				});
 				wireMapartButtons(m);
 				document.getElementById("mapartFrame").addEventListener("click", function(){
 					var ov = document.createElement("div");
@@ -695,42 +719,19 @@
 			});
 		});
 
-		var btn = document.getElementById("mapartCollectBtn"), note = document.getElementById("mapartCollectNote");
-		var owned = false;
-		function paint(){
-			btn.textContent = owned ? "✓ In my collection" : "+ Add to my collection";
-			btn.style.opacity = owned ? "1" : "";
+		var host = document.getElementById("mapartCollectHost");
+		function draw(){
+			if(!(acct && acct.getSession()) || !window.sctpCol){ host.innerHTML = ""; return; }
+			host.innerHTML = window.sctpCol.chip("mapart", m.id, m.world, m.world + " collection");
 		}
-		function setup(){
-			var session = acct ? acct.getSession() : null;
+		if(window.sctpCol){
+			window.sctpCol.bind(host);
+			window.sctpCol.ready(draw);
+		}
+		window.sctpOnAccountChange = function(){
 			refreshLabel();
-			btn.hidden = !session;
-			note.hidden = true;
-			if(!session) return;
-			fetch(API_BASE + "/collection/mine", { headers: { "Authorization": "Bearer " + session.token } })
-				.then(function(r){ return r.ok ? r.json() : null; })
-				.then(function(d){
-					if(!d) return;
-					owned = d.items.some(function(i){ return i.kind === "mapart" && i.itemId === m.id && i.world === m.world; });
-					paint();
-				}).catch(function(){});
-		}
-		btn.addEventListener("click", function(){
-			var session = acct.getSession(); if(!session) return;
-			var want = !owned;
-			btn.disabled = true;
-			fetch(API_BASE + "/collection/set", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + session.token },
-				body: JSON.stringify({ kind: "mapart", world: m.world, ids: [m.id], owned: want }) })
-				.then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); })
-				.then(function(res){
-					btn.disabled = false;
-					if(!res.ok){ note.textContent = res.d.error || "Couldn't update your collection."; note.hidden = false; return; }
-					owned = want; paint();
-					note.innerHTML = 'See your progress in <a href="/account/#collections">Account &rarr; Collections</a>.'; note.hidden = false;
-				}).catch(function(){ btn.disabled = false; });
-		});
-		window.sctpOnAccountChange = setup;
-		setup();
+			if(window.sctpCol){ window.sctpCol.reload(); window.sctpCol.ready(draw); }
+		};
 	}
 
 	// ================= seller page =================
@@ -1055,6 +1056,7 @@
 					'<button type="button" class="share-item-btn" data-share-url="'+esc(location.origin+"/items/"+encodeURIComponent(slug))+'">Share</button>'+
 				'</div>'+
 				renamedNotice+
+				(isRare ? '<div id="rareCollectHost" class="col-detail" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px;"></div>' : '')+
 				(isRare ? rareInfoHtml(entry) : '')+
 				'<p class="history-note" id="historyNote"></p>'+
 				'<div id="itemStatsRow"></div>'+
@@ -1081,12 +1083,28 @@
 					'<div class="pagination" id="itemPagination" style="display:none;"></div>'+
 				'</section>';
 			document.getElementById("app").insertAdjacentHTML("beforeend", html);
+			if(isRare) mountRareCollect(entry.id);
 			document.getElementById("itemWorldFilter").addEventListener("change", function(){
 				worldFilter = this.value;
 				renderItemTable();
 			});
 			document.getElementById("scalePer1").addEventListener("click", function(){ setPriceScale(1); });
 			document.getElementById("scalePer64").addEventListener("click", function(){ setPriceScale(64); });
+		}
+
+		// "I own this" toggles for a rare item, one per world (collections are per world).
+		function mountRareCollect(id){
+			var host = document.getElementById("rareCollectHost");
+			if(!host || !window.sctpCol) return;
+			function draw(){
+				if(!(window.sctpAccount && window.sctpAccount.getSession())){ host.innerHTML = ""; return; }
+				host.innerHTML = '<span style="color:var(--muted);font-size:13px;">Collection:</span>' +
+					window.sctpCol.chip("rare", id, "Firefly", "Firefly") + window.sctpCol.chip("rare", id, "Honeybee", "Honeybee") +
+					' <a href="/collection/" style="font-size:12.5px;">My collection &rarr;</a>';
+			}
+			window.sctpCol.bind(host);
+			window.sctpCol.ready(draw);
+			window.sctpOnAccountChange = function(){ window.sctpCol.reload(); window.sctpCol.ready(draw); };
 		}
 
 		function setPriceScale(scale){

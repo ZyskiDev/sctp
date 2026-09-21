@@ -88,11 +88,20 @@
 		};
 	}
 
+	// artist-field.js is loaded on demand so pages don't each need another tag.
+	function withArtistField(cb) {
+		if (window.sctpArtistField) return cb();
+		var sc = document.createElement("script");
+		sc.src = "/artist-field.js";
+		sc.onload = cb;
+		document.head.appendChild(sc);
+	}
+
 	function openEdit(m, onDone) {
 		var bg = modal(
 			"<h2>Edit mapart</h2>" +
 			'<p class="mr-sub">' + esc(m.title || "Mapart") + " — changes apply immediately.</p>" +
-			'<label class="mr-l" for="mrArtist">Artist</label><input type="text" id="mrArtist" maxlength="40" placeholder="Loading…" disabled>' +
+			'<label class="mr-l">Artist(s) — arrow for collabs</label><div id="mrArtistHost" style="margin-bottom:12px;"><input type="text" placeholder="Loading…" disabled></div>' +
 			'<label class="mr-l" for="mrWorld">World</label><select id="mrWorld" disabled><option value="Firefly">Firefly</option><option value="Honeybee">Honeybee</option></select>' +
 			'<label class="mr-l" for="mrCat">Category</label><select id="mrCat" disabled><option value="">No category</option>' +
 				CATEGORIES.map(function (c) { return '<option value="' + c + '">' + c + "</option>"; }).join("") + "</select>" +
@@ -100,15 +109,17 @@
 			'<div class="mr-actions"><button type="button" class="danger" id="mrDelete" title="Removes the mapart for good (inappropriate image)">Remove mapart</button>' +
 				'<button type="button" id="mrCancel">Cancel</button><button type="button" class="primary" id="mrSave" disabled>Save</button></div>'
 		);
-		var st = bg.querySelector("#mrStatus"), artist = bg.querySelector("#mrArtist"), world = bg.querySelector("#mrWorld"), cat = bg.querySelector("#mrCat"), save = bg.querySelector("#mrSave");
+		var st = bg.querySelector("#mrStatus"), artistHost = bg.querySelector("#mrArtistHost"), artistField = null, world = bg.querySelector("#mrWorld"), cat = bg.querySelector("#mrCat"), save = bg.querySelector("#mrSave");
 		var orig = null;
 		bg.querySelector("#mrCancel").onclick = function () { bg.remove(); };
 
 		function fill(cur) {
 			orig = { artist: cur.artist || "", world: cur.world || "Firefly", category: cur.category || "" };
-			artist.value = orig.artist; world.value = orig.world; cat.value = orig.category;
-			artist.placeholder = "Unknown artist";
-			[artist, world, cat, save].forEach(function (el) { el.disabled = false; });
+			world.value = orig.world; cat.value = orig.category;
+			withArtistField(function () {
+				artistField = window.sctpArtistField.create(artistHost, { value: orig.artist });
+				[world, cat, save].forEach(function (el) { el.disabled = false; });
+			});
 		}
 		// The listing rows don't carry category/artist, so always read the live piece.
 		fetch(API_BASE + "/mapart/by-slug?slug=" + encodeURIComponent(m.slug || ""))
@@ -118,7 +129,7 @@
 
 		save.onclick = function () {
 			var body = { id: m.id };
-			if (artist.value.trim() !== orig.artist) body.artist = artist.value.trim();
+			if (artistField && artistField.getValue() !== orig.artist) body.artist = artistField.getValue();
 			if (world.value !== orig.world) body.world = world.value;
 			if (cat.value !== orig.category) body.category = cat.value || null;
 			if (Object.keys(body).length === 1) { st.className = "mr-status"; st.textContent = "Nothing changed."; return; }
