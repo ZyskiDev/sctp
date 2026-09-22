@@ -93,14 +93,18 @@
 	}
 	.upload-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(183,226,61,0.18);}
 	.upload-cta:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
-	/* Flashy treatment for the download CTA specifically — same idea as the
-	   nav's "NEW" marketplace badge (pulsing glow + gradient), just applied
-	   to a button instead of a pill. A pulsing box-shadow (not a scale/
-	   transform) so it never reflows the header row, plus a shine sweep. */
+	/* Flashy treatment for the download CTA — same thin pill family as the nav's
+	   Rare-dle button (site-nav.js: moving gradient, soft glow, a light shine
+	   sweep), just in blue-purple instead of Rare-dle's warm orange-pink. */
 	#downloadMod{
 		position:relative;
 		overflow:hidden;
-		background:linear-gradient(90deg,#B7E23D,#6FE3C8,#4FC3F7,#B7E23D);
+		padding:4px 12px;
+		font-weight:800;
+		font-size:13px;
+		letter-spacing:.01em;
+		color:#F3F0FF;
+		background:linear-gradient(90deg,#4FA0F7,#8C6FE8,#C06FE2,#4FA0F7);
 		background-size:300% auto;
 		animation:downloadGradientShift 4s linear infinite, downloadPulseGlow 2.2s ease-in-out infinite;
 	}
@@ -112,18 +116,18 @@
 		left:-60%;
 		width:35%;
 		height:100%;
-		background:linear-gradient(120deg,transparent,rgba(255,255,255,0.65),transparent);
+		background:linear-gradient(120deg,transparent,rgba(255,255,255,0.55),transparent);
 		transform:skewX(-20deg);
 		animation:downloadShine 3s ease-in-out infinite;
 		pointer-events:none;
 	}
 	@keyframes downloadGradientShift{0%{background-position:0% center;}100%{background-position:300% center;}}
 	@keyframes downloadPulseGlow{
-		0%{box-shadow:0 0 0 0 rgba(183,226,61,0.55);}
-		50%{box-shadow:0 0 16px 5px rgba(183,226,61,0.4);}
-		100%{box-shadow:0 0 0 0 rgba(183,226,61,0);}
+		0%{box-shadow:0 0 0 0 rgba(140,111,232,0.55);}
+		50%{box-shadow:0 0 12px 3px rgba(140,111,232,0.4);}
+		100%{box-shadow:0 0 0 0 rgba(140,111,232,0);}
 	}
-	@keyframes downloadShine{0%{left:-60%;}50%{left:130%;}100%{left:130%;}}
+	@keyframes downloadShine{0%{left:-60%;}55%{left:130%;}100%{left:130%;}}
 	.docs-cta{
 		display:inline-block;
 		background:transparent;
@@ -396,16 +400,17 @@
 	.motd-by{color:var(--shell);font-size:14px;margin:0 0 4px;overflow-wrap:anywhere;}
 	.motd-meta{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px;}
 	.motd-pill{font-size:11.5px;font-family:var(--font-mono);color:var(--muted);background:var(--panel-alt);border:1px solid var(--line);border-radius:999px;padding:2px 10px;}
-	/* Rare-dle slot: intentionally empty until release */
-	.promo-raredle{border:1.5px dashed var(--line);background:transparent;align-items:center;justify-content:center;text-align:center;}
-	.promo-soon{color:var(--muted);font-size:12.5px;letter-spacing:.03em;opacity:.75;}
+	.promo-raredle{background:linear-gradient(160deg,rgba(255,122,89,0.13),rgba(240,80,143,0.05) 55%,transparent),var(--panel);border-color:rgba(255,122,89,0.35);}
+	.promo-raredle .promo-kicker{color:#FF9466;}
+	.promo-raredle .promo-btn.primary{background:linear-gradient(90deg,#FFB347,#FF7A59,#F0508F);color:#2A1408;}
+	.promo-raredle .promo-btn.primary:hover{filter:brightness(1.08);}
 	/* marketplace ad */
 	.promo-market{background:linear-gradient(160deg,rgba(79,195,247,0.13),rgba(111,227,200,0.05) 55%,transparent),var(--panel);border-color:rgba(79,195,247,0.35);}
 	.promo-market .promo-kicker{color:#6FE3C8;}
 	.promo-stat{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);background:var(--panel-alt);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:0 0 12px;align-self:flex-start;}
 	.promo-stat b{color:#6FE3C8;font-family:var(--font-mono);}
 	@media (max-width:1100px){.promo-strip{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}.promo-motd{grid-column:1 / -1;}}
-	@media (max-width:640px){.promo-strip{grid-template-columns:1fr;}.promo-raredle{min-height:70px;}.promo-motd{flex-direction:column;}.promo-motd .motd-img{max-width:100%;flex:none;}}
+	@media (max-width:640px){.promo-strip{grid-template-columns:1fr;}.promo-motd{flex-direction:column;}.promo-motd .motd-img{max-width:100%;flex:none;}}
 	.dym{color:var(--muted);font-size:13.5px;margin:6px 0 0;}
 	.dym a{color:var(--accent);font-weight:600;cursor:pointer;}
 	.dym-inline{margin-left:10px;font-size:12.5px;color:var(--muted);font-weight:400;}
@@ -639,7 +644,12 @@
 <div class="wrap">
 	<section class="promo-strip" id="promoStrip" aria-label="Featured">
 		<article class="promo-card promo-motd" id="motd"><div class="promo-loading">Loading today's mapart…</div></article>
-		<article class="promo-card promo-raredle" id="promoRaredle" aria-label="Rare-dle (coming soon)"><span class="promo-soon">&#127919; Rare-dle &middot; coming soon</span></article>
+		<article class="promo-card promo-raredle" id="promoRaredle">
+			<div class="promo-kicker">Rare-dle</div>
+			<h2 class="promo-title">Guess the secret Snailcraft rare</h2>
+			<p class="promo-text">One new rare a day &mdash; 8 tries, hints as you go, streaks &amp; leaderboards.</p>
+			<div class="promo-actions"><a class="promo-btn primary" href="/rare-dle/">Play today's Rare-dle &rarr;</a></div>
+		</article>
 		<article class="promo-card promo-market" id="promoMarket">
 			<div class="promo-kicker">&#128722; Marketplace</div>
 			<h2 class="promo-title">Buy, sell &amp; trade with other players</h2>

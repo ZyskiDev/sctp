@@ -1,1 +1,0 @@
-import{_ as a,o as t,c as r,a2 as i}from"./chunks/framework.CNDaxUod.js";const m=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"features.md","filePath":"features.md"}'),l={name:"features.md"};function o(s,e,n,h,c,p){return t(),r("div",null,[...e[0]||(e[0]=[i("",49)])])}const f=a(l,[["render",o]]);export{m as __pageData,f as default};

@@ -71,6 +71,12 @@
 	.lc-bid-line{font-family:var(--font-mono);font-size:12.5px;color:var(--shell);margin-bottom:6px;}
 	.lc-notes{color:var(--text);font-size:13px;margin:0 0 10px;opacity:0.85;}
 	.lc-foot{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted);}
+	.job-rating{display:flex;gap:10px;font-size:12.5px;font-weight:600;}
+	.job-rating.none{color:var(--muted);font-weight:400;}
+	.job-rating .up{color:var(--accent);}
+	.job-rating .down{color:var(--bad);}
+	.job-vote-btn.active-up{background:rgba(183,226,61,0.18);border-color:var(--accent);color:var(--accent);}
+	.job-vote-btn.active-down{background:rgba(226,100,61,0.18);border-color:var(--bad);color:var(--bad);}
 	.empty-state{color:var(--muted);font-size:13.5px;padding:30px 0;text-align:center;}
 
 	.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;}
@@ -221,6 +227,7 @@
 	var itemCatalog = []; // {name, baseItem} for both vanilla + rare
 
 	var jobs = [];
+	var myJobReviews = {}; // jobId -> 1 | -1, the caller's own vote (any job, not just their own)
 	var jobWorldFilter = "Firefly";
 	var jobTypeFilter = "";
 	var jobSearch = "";
@@ -447,8 +454,11 @@
 	// ---------------- jobs: browse ----------------
 	var jobDeepLinkHandled = false;
 	function loadJobs(){
-		return fetch(API_BASE + "/marketplace/jobs").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }).then(function(rows){
-			jobs = rows;
+		return Promise.all([
+			fetch(API_BASE + "/marketplace/jobs").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+			loadMyJobReviews(),
+		]).then(function(res){
+			jobs = res[0];
 			renderJobs();
 			if(!jobDeepLinkHandled && location.hash.indexOf("#job=") === 0){
 				jobDeepLinkHandled = true;
@@ -463,6 +473,19 @@
 		return j.rewardAmount == null ? "No " + word + " set" : currencyText(j.rewardAmount, j.rewardCurrency) + " " + word;
 	}
 	function jobBadgeHtml(j){ return '<span class="badge ' + (j.type === "hiring" ? "hiring" : "forhire") + '">' + (j.type === "hiring" ? "Hiring" : "For Hire") + '</span>'; }
+	// Thumbs up/down summary — a plain "no ratings yet" note once there's
+	// nothing to show, otherwise counts plus the % that were positive.
+	function jobRatingHtml(j){
+		var up = j.thumbsUp || 0, down = j.thumbsDown || 0, total = up + down;
+		if(!total) return '<span class="job-rating none">No ratings yet</span>';
+		return '<span class="job-rating" title="' + Math.round((up / total) * 100) + '% positive"><span class="up">👍 ' + up + '</span><span class="down">👎 ' + down + '</span></span>';
+	}
+	function loadMyJobReviews(){
+		if(!session()) { myJobReviews = {}; return Promise.resolve(); }
+		return authFetch("/marketplace/mine").then(function(res){
+			myJobReviews = (res.ok && res.data.myJobReviews) || {};
+		});
+	}
 
 	function renderJobs(){
 		var grid = document.getElementById("jobsGrid");
@@ -484,6 +507,7 @@
 					'<span>' + esc(j.poster) + '</span>' +
 					'<span>' + (j.interestCount ? j.interestCount + " interested" : "No interest yet") + '</span>' +
 				'</div>' +
+				'<div class="lc-foot" style="margin-top:2px;">' + jobRatingHtml(j) + '</div>' +
 				'<div style="display:flex;gap:8px;margin-top:10px;">' +
 					'<button type="button" class="btn-ghost" style="flex:1;" data-open-job="' + esc(j.id) + '">View</button>' +
 					'<button type="button" class="btn-ghost" data-share-job="' + esc(j.id) + '" title="Share">Share</button>' +
@@ -535,6 +559,7 @@
 			'<p class="lc-meta">Posted ' + esc(new Date(j.createdAt).toLocaleDateString()) + ' · expires ' + esc(new Date(j.expiresAt).toLocaleDateString()) + (j.deadline ? ' · needed by ' + esc(new Date(j.deadline).toLocaleDateString()) : '') + '</p>' +
 			'<div class="lc-price">' + esc(rewardText(j)) + '</div>' +
 			(j.description ? '<p class="lc-notes">' + esc(j.description) + '</p>' : '') +
+			'<div id="jobReviewArea" style="margin:10px 0;"></div>' +
 			'<div id="jobInterestArea"></div>' +
 			'<div class="actions"><button type="button" class="btn-ghost" id="jobDetailShare" style="flex:1;">Share</button><button type="button" class="btn-ghost" id="jobDetailClose" style="flex:1;">Close</button></div></div>';
 		wrap.innerHTML = html;
@@ -542,6 +567,8 @@
 		document.getElementById("jobDetailClose").onclick = function(){ wrap.remove(); };
 		document.getElementById("jobDetailShare").onclick = function(){ openShareModal(j.id, j.title + " — " + j.poster, "job"); };
 		// Same reasoning as the New Listing/New Job forms — no outside-click-to-close.
+
+		renderJobReviewArea(j, s);
 
 		var area = document.getElementById("jobInterestArea");
 		if(!s){
@@ -565,6 +592,40 @@
 					});
 			};
 		}
+	}
+
+	// Rating summary + thumbs up/down voting inside the job detail modal.
+	// Not shown for your own job post (the poster can't review themselves —
+	// enforced server-side too, this is just to not show a pointless control).
+	function renderJobReviewArea(j, s){
+		var host = document.getElementById("jobReviewArea");
+		var isOwn = s && (s.mcUsername || s.username) === j.poster;
+		var mine = myJobReviews[j.id] || 0;
+		var voteBtns = !s || isOwn ? "" :
+			'<div style="display:flex;gap:8px;align-items:center;margin-top:6px;">' +
+				'<button type="button" class="btn-ghost job-vote-btn' + (mine === 1 ? " active-up" : "") + '" data-vote="1">👍 Helpful</button>' +
+				'<button type="button" class="btn-ghost job-vote-btn' + (mine === -1 ? " active-down" : "") + '" data-vote="-1">👎 Not helpful</button>' +
+			'</div>';
+		host.innerHTML = '<div class="lc-meta">' + jobRatingHtml(j) + '</div>' + voteBtns;
+		if(!voteBtns) return;
+		host.querySelectorAll("[data-vote]").forEach(function(btn){
+			btn.addEventListener("click", function(){
+				var v = Number(btn.getAttribute("data-vote"));
+				var next = mine === v ? 0 : v; // clicking your existing vote again removes it
+				authFetch("/marketplace/jobs/review", { method: "POST", body: JSON.stringify({ jobId: j.id, vote: next }) }).then(function(res){
+					if(!res.ok) return;
+					myJobReviews[j.id] = next || undefined;
+					// Undo the old vote's count, then apply the new one.
+					if(mine === 1) j.thumbsUp = Math.max(0, (j.thumbsUp || 0) - 1);
+					if(mine === -1) j.thumbsDown = Math.max(0, (j.thumbsDown || 0) - 1);
+					if(next === 1) j.thumbsUp = (j.thumbsUp || 0) + 1;
+					if(next === -1) j.thumbsDown = (j.thumbsDown || 0) + 1;
+					mine = next;
+					renderJobReviewArea(j, s);
+					renderJobs();
+				});
+			});
+		});
 	}
 
 	// ---------------- jobs: new job post modal ----------------
@@ -907,6 +968,8 @@
 			});
 		});
 	}
+
+	window.sctpOnAccountChange = function(){ loadJobs(); };
 
 	Promise.all([loadCatalog(), loadListings(), loadJobs()]);
 })();

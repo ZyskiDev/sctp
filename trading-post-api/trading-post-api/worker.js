@@ -87,8 +87,8 @@
 //   POST /mapart/report                      (API_KEY, like POST /reports) body: {id, reason: "wrong_artist"|"wrong_world"|"wrong_category"|"inappropriate_image", details?} -> lands in the `reports` queue as listingKey "mapart:<id>", handled by "manageMapart"
 //   GET  /collection/mine, POST /collection/set {kind: "rare"|"mapart", world, ids[], owned}, POST /collection/privacy {private}   (any account) — personal collections, per world
 //   GET  /collection/public?username=        (public) -> {username, private, items?}
-//   GET  /raredle/state, POST /raredle/guess {itemId}, POST /raredle/reset + POST /raredle/practice/new + mode=practice on state/guess (testing mode only) (any account), GET /raredle/leaderboard (public) — the daily Rare-dle game; the answer never leaves the Worker until a game is finished
-//   GET  /profile?username=                  (public, cached 2m) -> mapart (as artist/commissioner/owner), commission info, collection summary, marketplace history
+//   GET  /raredle/state, POST /raredle/guess {itemId}, POST /raredle/practice/new + mode=practice on state/guess (any account), GET /raredle/leaderboard (public) — the daily Rare-dle game; the answer never leaves the Worker until a game is finished. POST /raredle/reset exists but is QA-only (RAREDLE_ALLOW_RESET is false live).
+//   GET  /profile?username=                  (public, cached 2m) -> mapart (as artist/commissioner/owner), commission info, collection summary, marketplace history, jobRating (thumbs up/down summed across every job they've posted)
 //   POST /account/commission                 (verified account) body: {open, info?, discord?} — shown on the profile's Mapart tab
 //   GET  /mapart/of-the-day                  (public) one random piece per UTC day; POST /admin/mapart/otd/reroll ("manageMapart") body: {id?} picks another
 //   POST /mapart/search-image                (public) body: {hash} 64-hex difference hash from mapart-search.js -> closest pieces; POST /admin/mapart/build-index ("manageMapart") indexes not-yet-hashed pieces in small batches
@@ -188,6 +188,7 @@
 //   POST /marketplace/jobs/create                  body: {type: "hiring"|"forHire", title, description?, world, rewardAmount?, rewardCurrency?, deadline?}
 //   POST /marketplace/jobs/interest                body: {jobId, message?} -> records interest, returns {contactInfo} for the poster, notifies the poster with the responder's contact info
 //   POST /marketplace/jobs/close                   body: {id, status: "fulfilled"|"cancelled"} -> poster only
+//   POST /marketplace/jobs/review                  body: {jobId, vote: 1|-1|0} -> thumbs up/down on someone else's job post, 0 removes your vote; GET /marketplace/jobs returns each job's {thumbsUp, thumbsDown}, GET /marketplace/mine returns your own votes as {myJobReviews: {jobId: vote}}
 //   GET  /marketplace/mine also returns {jobs, myJobInterests, jobInterestsReceived} (the last one includes contactInfo directly — see handleGetMyMarketplace)
 // Active selling/lookingFor listings are also merged straight into GET
 // /listings (see handleGetListings) — tagged marketplace/marketplaceType/
@@ -1419,6 +1420,7 @@ async function handleGetMarketplaceJobs(request, env, ctx) {
 
 		const jobIds = results.map((r) => r.id);
 		const interestCountByJob = new Map();
+		const reviewsByJob = new Map();
 		if (jobIds.length > 0) {
 			for (const chunk of chunkArray(jobIds, MAX_QUERY_PARAMS_PER_CHUNK)) {
 				const placeholders = chunk.map(() => "?").join(",");
@@ -1426,6 +1428,11 @@ async function handleGetMarketplaceJobs(request, env, ctx) {
 					`SELECT jobId, COUNT(*) as c FROM marketplaceJobInterests WHERE jobId IN (${placeholders}) GROUP BY jobId`
 				).bind(...chunk).all();
 				for (const row of counts) interestCountByJob.set(row.jobId, row.c);
+				const { results: reviews } = await env.DB.prepare(
+					`SELECT jobId, SUM(CASE WHEN vote = 1 THEN 1 ELSE 0 END) AS up, SUM(CASE WHEN vote = -1 THEN 1 ELSE 0 END) AS down
+					 FROM marketplaceJobReviews WHERE jobId IN (${placeholders}) GROUP BY jobId`
+				).bind(...chunk).all();
+				for (const row of reviews) reviewsByJob.set(row.jobId, { up: row.up, down: row.down });
 			}
 		}
 
@@ -1436,6 +1443,8 @@ async function handleGetMarketplaceJobs(request, env, ctx) {
 			createdAt: j.createdAt, expiresAt: j.expiresAt,
 			poster: j.accountMcUsername || j.accountUsername,
 			interestCount: interestCountByJob.get(j.id) || 0,
+			thumbsUp: (reviewsByJob.get(j.id) || { up: 0 }).up,
+			thumbsDown: (reviewsByJob.get(j.id) || { down: 0 }).down,
 		}));
 	});
 }
@@ -1472,6 +1481,34 @@ async function handleExpressJobInterest(request, env) {
 		`${auth.admin.username} ${verb} for your "${job.title}" post! Contact them via:\n${contactInfoText(auth.admin)}`, jobId);
 
 	return json({ ok: true, contactInfo: poster ? contactInfoText(poster) : null });
+}
+
+// POST /marketplace/jobs/review — thumbs up/down on a job post. One vote per
+// (job, reviewer); posting again just changes it, vote: 0 removes it.
+// Anyone with an account can review any job except their own.
+async function handleReviewMarketplaceJob(request, env) {
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const jobId = String(body.jobId || "");
+	const vote = Number(body.vote);
+	if (!jobId) return json({ error: "jobId is required" }, 400);
+	if (![1, -1, 0].includes(vote)) return json({ error: "vote must be 1, -1, or 0" }, 400);
+
+	const job = await env.DB.prepare("SELECT id, accountId FROM marketplaceJobs WHERE id = ?").bind(jobId).first();
+	if (!job) return json({ error: "Job not found" }, 404);
+	if (job.accountId === auth.admin.id) return json({ error: "You can't review your own job post" }, 400);
+
+	if (vote === 0) {
+		await env.DB.prepare("DELETE FROM marketplaceJobReviews WHERE jobId = ? AND reviewerAccountId = ?").bind(jobId, auth.admin.id).run();
+	} else {
+		await env.DB.prepare(
+			`INSERT INTO marketplaceJobReviews (id, jobId, reviewerAccountId, vote, createdAt) VALUES (?, ?, ?, ?, ?)
+			 ON CONFLICT(jobId, reviewerAccountId) DO UPDATE SET vote = excluded.vote, createdAt = excluded.createdAt`
+		).bind(newId(), jobId, auth.admin.id, vote, new Date().toISOString()).run();
+	}
+	return json({ ok: true });
 }
 
 async function handleCloseMarketplaceJob(request, env) {
@@ -1674,7 +1711,14 @@ async function handleGetMyMarketplace(request, env) {
 		}
 	}
 
-	return json({ listings, myBids, bidsReceived, jobs, myJobInterests, jobInterestsReceived });
+	// The caller's own thumbs up/down votes, keyed by jobId, so the marketplace
+	// page can show their existing vote as already-selected on any job (not
+	// just their own) without a round trip per card.
+	const { results: myReviewRows } = await env.DB.prepare("SELECT jobId, vote FROM marketplaceJobReviews WHERE reviewerAccountId = ?").bind(auth.admin.id).all();
+	const myJobReviews = {};
+	for (const r of myReviewRows) myJobReviews[r.jobId] = r.vote;
+
+	return json({ listings, myBids, bidsReceived, jobs, myJobInterests, jobInterestsReceived, myJobReviews });
 }
 
 async function handleGetMarketplaceNotifications(request, env) {
@@ -4578,6 +4622,15 @@ async function handleGetProfile(request, env, ctx) {
 				 FROM marketplaceListings WHERE accountId = ? AND status IN ('active', 'fulfilled') ORDER BY createdAt DESC LIMIT 30`
 			).bind(acct.id).all();
 			out.marketplace = mk;
+
+			// General seller rating — every thumbs up/down cast across every job
+			// this person has ever posted (hiring or forHire alike), summed.
+			const jobRatingRow = await env.DB.prepare(
+				`SELECT SUM(CASE WHEN r.vote = 1 THEN 1 ELSE 0 END) AS up, SUM(CASE WHEN r.vote = -1 THEN 1 ELSE 0 END) AS down
+				 FROM marketplaceJobReviews r JOIN marketplaceJobs j ON j.id = r.jobId WHERE j.accountId = ?`
+			).bind(acct.id).first();
+			const jobUp = (jobRatingRow && jobRatingRow.up) || 0, jobDown = (jobRatingRow && jobRatingRow.down) || 0;
+			if (jobUp + jobDown > 0) out.jobRating = { up: jobUp, down: jobDown };
 		}
 		return out;
 	});
@@ -4925,9 +4978,11 @@ async function handleAdminBuildMapartIndex(request, env) {
 //   GET  /raredle/state                (any account) -> today's game: guesses + feedback, status, hint, stats (answer only when finished)
 //   POST /raredle/guess                (any account) body: {itemId}
 //   GET  /raredle/leaderboard          (public, cached 1 min) -> {date, daily: [...], allTime: [...], streaks: [...]}
-// TESTING MODE: while true, players can reset today's game and play it again as often as they like
-// (POST /raredle/reset). Set to false to go back to one game per account per day.
-const RAREDLE_TESTING = true;
+// Resetting today's game (POST /raredle/reset) is a QA-only escape hatch, off now that
+// Rare-dle is live — one official daily game per account per day.
+const RAREDLE_ALLOW_RESET = false;
+// Unlimited random practice rounds are a real, permanent feature (not gated by launch state).
+const RAREDLE_PRACTICE_ENABLED = true;
 const RAREDLE_MAX_GUESSES = 8;
 const RAREDLE_BASE_POINTS = [1000, 800, 650, 500, 400, 300, 200, 120]; // by number of guesses used when won
 const RAREDLE_STREAK_BONUS = 25;        // per streak day, capped below
@@ -5144,7 +5199,7 @@ async function raredleStatePayload(env, admin) {
 	}).filter(Boolean);
 	const status = game ? game.status : "playing";
 	const out = {
-		date: today, maxGuesses: RAREDLE_MAX_GUESSES, status, guesses, testing: RAREDLE_TESTING,
+		date: today, maxGuesses: RAREDLE_MAX_GUESSES, status, guesses,
 		pixelHint: status === "playing" ? await raredlePixelHint(answer, guesses.length) : null,
 		pixelSteps: RAREDLE_PIXEL_STEPS.slice().reverse(),
 		noPeek: { bonus: RAREDLE_NO_PEEK_BONUS, lost: !!(game && game.usedRares) },
@@ -5160,14 +5215,14 @@ async function handleRaredleState(request, env) {
 	if (!auth.ok) return auth.response;
 	try {
 		if (new URL(request.url).searchParams.get("mode") === "practice") {
-			if (!RAREDLE_TESTING) return json({ error: "Practice rounds are only available in testing mode." }, 403);
+			if (!RAREDLE_PRACTICE_ENABLED) return json({ error: "Practice rounds aren't available right now." }, 403);
 			return json(await raredlePracticePayload(env, auth.admin, await getRareCatalog(), null));
 		}
 		return json(await raredleStatePayload(env, auth.admin));
 	} catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
 }
 
-// ---- practice rounds (testing mode): unlimited random rares, one open round per account,
+// ---- practice rounds: unlimited random rares, one open round per account,
 // never counted toward points, streaks or leaderboards.
 function raredlePracticePool(cat) {
 	const pool = cat.items.filter((i) => i.texture && i.category && !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null");
@@ -5192,7 +5247,7 @@ async function raredlePracticePayload(env, admin, cat, row) {
 		return g ? { itemId: id, name: g.name, texture: g.texture, feedback: raredleCompare(g, answer) } : null;
 	}).filter(Boolean);
 	const out = {
-		date: raredleToday(), mode: "practice", testing: RAREDLE_TESTING, maxGuesses: RAREDLE_MAX_GUESSES, status: row.status, guesses,
+		date: raredleToday(), mode: "practice", maxGuesses: RAREDLE_MAX_GUESSES, status: row.status, guesses,
 		pixelHint: row.status === "playing" ? await raredlePixelHint(answer, guesses.length) : null,
 		pixelSteps: RAREDLE_PIXEL_STEPS.slice().reverse(),
 		noPeek: null, score: 0,
@@ -5203,7 +5258,7 @@ async function raredlePracticePayload(env, admin, cat, row) {
 }
 
 async function handleRaredlePracticeNew(request, env) {
-	if (!RAREDLE_TESTING) return json({ error: "Practice rounds are only available in testing mode." }, 403);
+	if (!RAREDLE_PRACTICE_ENABLED) return json({ error: "Practice rounds aren't available right now." }, 403);
 	const auth = await requireAnyAdmin(request, env);
 	if (!auth.ok) return auth.response;
 	try {
@@ -5228,9 +5283,9 @@ async function raredlePracticeGuess(env, admin, cat, itemId) {
 	return json(await raredlePracticePayload(env, admin, cat, null));
 }
 
-// Testing mode only: throw away the caller's game for today so it can be played again.
+// QA only: throw away the caller's game for today so it can be played again.
 async function handleRaredleReset(request, env) {
-	if (!RAREDLE_TESTING) return json({ error: "Resetting is only available in testing mode." }, 403);
+	if (!RAREDLE_ALLOW_RESET) return json({ error: "Resetting isn't available." }, 403);
 	const auth = await requireAnyAdmin(request, env);
 	if (!auth.ok) return auth.response;
 	await env.DB.prepare("DELETE FROM raredleGames WHERE accountId = ? AND date = ?").bind(auth.admin.id, raredleToday()).run();
@@ -5246,7 +5301,7 @@ async function handleRaredleGuess(request, env) {
 	let cat;
 	try { cat = await getRareCatalog(); } catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
 	if (body.mode === "practice") {
-		if (!RAREDLE_TESTING) return json({ error: "Practice rounds are only available in testing mode." }, 403);
+		if (!RAREDLE_PRACTICE_ENABLED) return json({ error: "Practice rounds aren't available right now." }, 403);
 		return raredlePracticeGuess(env, auth.admin, cat, itemId);
 	}
 	const guess = cat.byId.get(itemId);
@@ -5563,6 +5618,7 @@ const ROUTES = [
 	["GET", "/marketplace/jobs", handleGetMarketplaceJobs],
 	["POST", "/marketplace/jobs/create", handleCreateMarketplaceJob],
 	["POST", "/marketplace/jobs/interest", handleExpressJobInterest],
+	["POST", "/marketplace/jobs/review", handleReviewMarketplaceJob],
 	["POST", "/marketplace/jobs/close", handleCloseMarketplaceJob],
 	["GET", "/marketplace/mine", handleGetMyMarketplace],
 	["GET", "/marketplace/notifications", handleGetMarketplaceNotifications],

@@ -36,9 +36,10 @@
 		{ menu: "info", label: "Info", items: [
 			{ href: "/docs/faq", label: "FAQ" },
 			{ href: "/docs/installation", label: "Installation" },
-			{ href: "/docs/features", label: "Features" }
+			{ href: "/docs/features", label: "Features" },
+			{ href: "/docs/changelog", label : "Changelog" }
 		] },
-		{ cta: true, disabled: true, href: "/rare-dle/", label: "Rare-dle", note: "coming soon" }
+		{ cta: true, href: "/rare-dle/", label: "Rare-dle" }
 	];
 	var MOBILE_BREAKPOINT = 760;
 
@@ -126,21 +127,17 @@
 			".site-nav-dd-panel a{white-space:normal;}" +
 			".site-nav-links{max-width:calc(100vw - 24px);}" +
 		"}" +
-		// ---- Rare-dle call-to-action: same idea as the home page's Download button
-		// (moving gradient, soft glow, a light sweep) in warm colours and a calmer rhythm.
-		"#siteNavMount a.site-nav-cta{position:relative;overflow:hidden;display:inline-block;padding:7px 14px;border-radius:999px;color:#2A1408;font-weight:800;font-size:13.5px;letter-spacing:.01em;white-space:nowrap;" +
+		// ---- Rare-dle call-to-action: same "flashy pill" family as the home page's
+		// Download button (site-cta-pill, in index.html) — moving gradient, soft
+		// glow, a light sweep — but thin, fit tightly to its text, in warm colours.
+		"#siteNavMount a.site-nav-cta{position:relative;overflow:hidden;display:inline-block;padding:4px 12px;border-radius:999px;color:#2A1408;font-weight:800;font-size:13px;letter-spacing:.01em;white-space:nowrap;" +
 			"background:linear-gradient(90deg,#FFB347,#FF7A59,#F0508F,#FFB347);background-size:300% auto;animation:siteNavCtaShift 7s linear infinite,siteNavCtaGlow 3.6s ease-in-out infinite;}" +
 		"#siteNavMount a.site-nav-cta:hover,#siteNavMount a.site-nav-cta.active{color:#2A1408;filter:brightness(1.06);animation-play-state:paused,paused;}" +
 		"#siteNavMount a.site-nav-cta::after{content:'';position:absolute;top:0;left:-60%;width:30%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,0.45),transparent);transform:skewX(-20deg);animation:siteNavCtaShine 5.5s ease-in-out infinite;pointer-events:none;}" +
-		"#siteNavMount a.site-nav-cta .site-nav-cta-note{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.8;margin-left:4px;padding-left:8px;border-left:1px solid rgba(42,20,8,0.35);}" +
-		// Disabled state: same pill, but greyed back, still and not clickable.
-		"#siteNavMount .site-nav-cta-disabled{position:relative;display:inline-block;padding:7px 14px;border-radius:999px;color:#2A1408;font-weight:800;font-size:13.5px;white-space:nowrap;cursor:not-allowed;user-select:none;opacity:.55;filter:saturate(.7);background:linear-gradient(90deg,#FFB347,#FF7A59,#F0508F);}" +
-		"#siteNavMount .site-nav-cta-disabled .site-nav-cta-note{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-left:4px;padding-left:8px;border-left:1px solid rgba(42,20,8,0.35);}" +
-		"@media (max-width:" + MOBILE_BREAKPOINT + "px){#siteNavMount .site-nav-cta-disabled{display:block;text-align:center;margin:6px 4px 2px;}}" +
 		"@keyframes siteNavCtaShift{0%{background-position:0% center;}100%{background-position:300% center;}}" +
 		"@keyframes siteNavCtaGlow{0%{box-shadow:0 0 0 0 rgba(255,122,89,0.40);}50%{box-shadow:0 0 12px 3px rgba(255,122,89,0.28);}100%{box-shadow:0 0 0 0 rgba(255,122,89,0);}}" +
 		"@keyframes siteNavCtaShine{0%{left:-60%;}55%{left:130%;}100%{left:130%;}}" +
-		"@media (max-width:" + MOBILE_BREAKPOINT + "px){#siteNavMount a.site-nav-cta{display:block;text-align:center;margin:6px 4px 2px;}}";
+		"@media (max-width:" + MOBILE_BREAKPOINT + "px){#siteNavMount a.site-nav-cta{display:inline-block;margin:6px 4px 2px;}}";
 	document.head.appendChild(style);
 
 	// "/foo", "/foo/", and "/foo/index.html" are all the same page for
@@ -170,12 +167,8 @@
 						return '<a href="' + it.href + '"' + (isActive(it.href) ? ' class="active"' : "") + ">" + it.label + "</a>";
 					}).join("") + "</div></div>";
 			}
-			if (l.cta && l.disabled) {
-				// Not clickable for now — the page itself still works by direct link.
-				return '<span class="site-nav-cta site-nav-cta-disabled" aria-disabled="true" title="Coming soon">&#127919; ' + l.label + (l.note ? ' <span class="site-nav-cta-note">' + l.note + "</span>" : "") + "</span>";
-			}
 			if (l.cta) {
-				return '<a class="site-nav-cta' + (isActive(l.href) ? " active" : "") + '" href="' + l.href + '">&#127919; ' + l.label + (l.note ? ' <span class="site-nav-cta-note">' + l.note + "</span>" : "") + "</a>";
+				return '<a class="site-nav-cta' + (isActive(l.href) ? " active" : "") + '" href="' + l.href + '">' + l.label + "</a>";
 			}
 			var attrs = l.requireAuth ? " data-require-auth hidden" : "";
 			var classes = (l.isNew ? "site-nav-new-link " : "") + (isActive(l.href) ? "active" : "");

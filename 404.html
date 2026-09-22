@@ -225,6 +225,8 @@
 	.comm-pill{font-size:11.5px;border-radius:999px;padding:2px 10px;border:1px solid var(--line);}
 	.comm-pill.open{color:var(--accent);border-color:rgba(183,226,61,0.5);}
 	.comm-pill.closed{color:var(--muted);}
+	.seller-rating{font-size:11.5px;border-radius:999px;padding:2px 10px;border:1px solid rgba(183,226,61,0.5);color:var(--accent);font-weight:600;}
+	.seller-rating .n{color:var(--muted);font-weight:400;}
 	.comm-box .info{white-space:pre-wrap;font-size:14px;color:var(--text);margin:6px 0;}
 	.comm-box .disc{font-size:13.5px;color:var(--shell);}
 	.pm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
@@ -303,6 +305,13 @@
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var DATA_URL = API_BASE + "/listings";
 	var SHARED_SHOPS_URL = API_BASE + "/shared-shops";
+
+	// The "Make image"/"Make card" buttons (Marketing-studio image generator) are admin-only.
+	function isAdminSession(){
+		var acct = window.sctpAccount;
+		var s = acct && acct.getSession();
+		return !!(s && (s.isHeadAdmin || (s.permissions && s.permissions.length)));
+	}
 
 	// Shared by the item page's and seller profile's Share buttons — copies
 	// the Worker's server-rendered share-page URL (real og:title/description
@@ -708,7 +717,7 @@
 							'</dl>' +
 							'<button type="button" class="share-item-btn" style="margin-left:0;" data-share-url="' + esc(location.origin + "/mapart/" + encodeURIComponent(m.slug)) + '">Share</button> ' +
 							'<span id="mapartCollectHost"></span> ' +
-							'<button type="button" class="share-item-btn" id="mapartImgBtn" style="margin-left:0;">Make image</button> ' +
+							(isAdminSession() ? '<button type="button" class="share-item-btn" id="mapartImgBtn" style="margin-left:0;">Make image</button> ' : '') +
 							'<button type="button" class="report-player-btn" id="mapartReportBtn">Report</button>' +
 							
 							(m.claimed ? '' : '<p style="color:var(--muted);font-size:13px;margin-top:18px;">Is this yours? Log in and use <strong>Mapart Management</strong> in the account menu to claim it.</p>') +
@@ -760,7 +769,8 @@
 			});
 		});
 
-		document.getElementById("mapartImgBtn").addEventListener("click", function(){
+		var mapartImgBtn = document.getElementById("mapartImgBtn");
+		if(mapartImgBtn) mapartImgBtn.addEventListener("click", function(){
 			if(!window.sctpShare) return;
 			var names = m.artist ? m.artist.split(" & ").map(function(a){ return a.trim(); }).filter(Boolean) : [];
 			var details = [m.world + (m.width * m.height > 1 ? "  \u00b7  " + m.width + "\u00d7" + m.height + " maps" : "") + (m.category ? "  \u00b7  " + m.category : "")];
@@ -885,8 +895,15 @@
 				head.insertAdjacentHTML("beforeend", '<a href="#mapart" class="comm-pill open" data-goto="mapart" style="text-decoration:none;">&#127912; Open for commissions</a>');
 				head.querySelector("[data-goto]").addEventListener("click", function(e){ e.preventDefault(); show("mapart"); });
 			}
+			if(p.jobRating && head){
+				var jrUp = p.jobRating.up, jrDown = p.jobRating.down, jrTotal = jrUp + jrDown;
+				head.insertAdjacentHTML("beforeend",
+					'<span class="seller-rating" title="Rated from thumbs up/down on this player\'s job posts">'+
+						Math.round((jrUp / jrTotal) * 100)+'% positive <span class="n">('+fmtNum(jrTotal)+' rating'+(jrTotal === 1 ? '' : 's')+')</span>'+
+					'</span>');
+			}
 			var mp = p.mapart || [];
-			if(mp.length && head && window.sctpShare){
+			if(mp.length && head && window.sctpShare && isAdminSession()){
 				head.insertAdjacentHTML("beforeend", '<button type="button" class="share-player-btn" id="profileImgBtn">Make card</button>');
 				document.getElementById("profileImgBtn").addEventListener("click", function(){
 					window.sctpShare.open({
@@ -1233,7 +1250,7 @@
 				renamedNotice+
 				(isRare ? '<div id="rareCollectHost" class="col-detail" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px;"></div>' : '')+
 				(isRare ? '<div id="priceCheck" class="price-check"></div>' : '')+
-				(isRare ? '<div style="margin:-6px 0 14px;"><button type="button" class="share-item-btn" id="rareImgBtn" style="margin-left:0;">Make image</button></div>' : '')+
+				(isRare && isAdminSession() ? '<div style="margin:-6px 0 14px;"><button type="button" class="share-item-btn" id="rareImgBtn" style="margin-left:0;">Make image</button></div>' : '')+
 				(isRare ? rareInfoHtml(entry) : '')+
 				'<p class="history-note" id="historyNote"></p>'+
 				'<div id="itemStatsRow"></div>'+
@@ -1263,7 +1280,8 @@
 			document.getElementById("app").insertAdjacentHTML("beforeend", html);
 			if(isRare){
 				mountRareCollect(entry.id);
-				document.getElementById("rareImgBtn").addEventListener("click", function(){
+				var rareImgBtn = document.getElementById("rareImgBtn");
+				if(rareImgBtn) rareImgBtn.addEventListener("click", function(){
 					if(!window.sctpShare) return;
 					var details = [];
 					if(entry.effect) details.push(entry.effect);

@@ -73,7 +73,6 @@
 	.modebar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center;}
 	.mode{background:var(--panel-alt);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 16px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit;}
 	.mode.active{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
-	.card.testing{border-color:rgba(217,150,43,0.6);background:rgba(217,150,43,0.08);font-size:13.5px;}
 	.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:10px;}
 	.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
 
@@ -122,12 +121,10 @@
 	<div class="card" id="loginCta" hidden><div class="login-cta">Log in to play Rare-dle &mdash; use the button up top. The leaderboards below are public.</div></div>
 
 	<div id="game" hidden>
-		<div class="card testing" id="testingBar" hidden>
-			<b>&#129514; Testing mode</b> &mdash; Rare-dle isn't officially live yet. 
+		<div class="card">
 			<div class="modebar">
 				<button type="button" class="mode active" id="modeDaily">Daily rare</button>
 				<button type="button" class="mode" id="modePractice">Random practice</button>
-				<button type="button" class="btn ghost" id="resetBtn">Reset today's game</button>
 				<button type="button" class="btn ghost" id="newPracticeBtn" hidden>New random round</button>
 			</div>
 		</div>
@@ -193,6 +190,7 @@
 
 	function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 	function session(){ return window.sctpAccount ? window.sctpAccount.getSession() : null; }
+	function isAdminSession(){ var s = session(); return !!(s && (s.isHeadAdmin || (s.permissions && s.permissions.length))); }
 	function api(path, opts){
 		opts = opts || {};
 		var s = session(), h = {};
@@ -220,8 +218,6 @@
 
 	function renderGame(){
 		var st = state, done = st.status !== "playing";
-		$("testingBar").hidden = !st.testing;
-		$("resetBtn").hidden = mode !== "daily";
 		$("newPracticeBtn").hidden = mode !== "practice";
 		$("stats").parentNode.hidden = mode === "practice";
 		$("gCount").textContent = st.guesses.length; $("gMax").textContent = st.maxGuesses;
@@ -292,11 +288,11 @@
 			(a.effect ? '<div class="sub" style="margin-top:4px;">' + esc(a.effect) + '</div>' : '') + '</div>' +
 			(won && mode === "daily" ? '<div style="text-align:center;"><div class="score">+' + st.score + '</div><div class="sub">points</div></div>' : '') +
 			(mode === "practice" ? '<div><button type="button" class="btn" id="againBtn">Next random rare</button></div>' : '') +
-			'<div><button type="button" class="btn" id="shareBtn">Copy result</button> <button type="button" class="btn ghost" id="imgBtn">Make image</button><div class="sub" id="shareNote" style="margin-top:6px;"></div></div></div>' +
+			'<div><button type="button" class="btn" id="shareBtn">Copy result</button> ' + (isAdminSession() ? '<button type="button" class="btn ghost" id="imgBtn">Make image</button>' : '') + '<div class="sub" id="shareNote" style="margin-top:6px;"></div></div></div>' +
 			'<div class="sub" style="margin-top:12px;"><a href="/items/' + encodeURIComponent(a.id) + '">See ' + esc(a.name) + ' in the item library &rarr;</a></div>';
 		$("shareBtn").addEventListener("click", share);
 		if($("againBtn")) $("againBtn").addEventListener("click", function(){ $("newPracticeBtn").click(); });
-		$("imgBtn").addEventListener("click", function(){
+		if($("imgBtn")) $("imgBtn").addEventListener("click", function(){
 			if(!window.sctpShare) return;
 			window.sctpShare.open({
 				modalTitle: "Make an image of your Rare-dle", type: "tiles", eyebrow: "Rare-dle \u00b7 " + st.date,
@@ -338,16 +334,6 @@
 			busy = false;
 			if(!r.ok){ $("gErr").textContent = r.data.error || "Couldn't start a new round."; return; }
 			state = r.data; $("gErr").textContent = ""; renderGame();
-		}).catch(function(){ busy = false; });
-	});
-	$("resetBtn").addEventListener("click", function(){
-		if(busy) return;
-		busy = true;
-		try { localStorage.removeItem("sctp_raredle_peek"); } catch(e){}
-		api("/raredle/reset", { method: "POST", body: "{}" }).then(function(r){
-			busy = false;
-			if(!r.ok){ $("gErr").textContent = r.data.error || "Couldn't reset."; return; }
-			state = r.data; $("gErr").textContent = ""; renderGame(); loadLeaderboard();
 		}).catch(function(){ busy = false; });
 	});
 
