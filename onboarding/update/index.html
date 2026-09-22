@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>What's New - SCTP</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23101B14'/><circle cx='100' cy='100' r='60' fill='%23B7E23D'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="What's new in SCTP 2.0 — mapart, collections, Rare-dle, marketplace reviews and more.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+	:root{
+		--bg:#101B14; --panel:#1B2A20; --panel-alt:#22332A; --line:#33453A;
+		--muted:#8FA593; --text:#EAEFE7; --shell:#D9C89A;
+		--accent:#B7E23D; --accent-dim:#87AE29; --accent-ink:#16210F;
+		--warn:#E2A33D; --bad:#E2643D;
+		--font-display:'Fraunces',serif; --font-body:'Inter',sans-serif; --font-mono:'JetBrains Mono',monospace;
+	}
+	*{box-sizing:border-box;}
+	body{margin:0;background:radial-gradient(1200px 500px at 15% -10%, rgba(183,226,61,0.07), transparent 60%), var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.55;}
+	a{color:var(--accent);}
+	code{font-family:var(--font-mono);background:var(--panel-alt);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.92em;}
+	.wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+	header.site{border-bottom:1px solid var(--line);padding:20px 0;}
+	.header-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+	.brand-row{display:flex;align-items:center;gap:12px;min-width:0;}
+	.brand-mark{flex:0 0 auto;width:36px;height:36px;border-radius:9px;background:var(--panel-alt);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;}
+	header.site h1{font-family:var(--font-display);font-weight:600;font-size:20px;margin:0;}
+	.tag{color:var(--muted);font-size:13px;margin:2px 0 0;}
+
+	#topProgress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),#6FE3C8);width:0%;z-index:200;transition:width .1s linear;}
+
+	.hero{padding:54px 0 36px;border-bottom:1px solid var(--line);position:relative;overflow:hidden;}
+	.hero::before{content:"";position:absolute;top:-40%;right:-10%;width:520px;height:520px;background:radial-gradient(circle,rgba(183,226,61,0.14),transparent 65%);pointer-events:none;}
+	.hero .kicker{color:var(--accent);font-weight:700;font-size:12px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 10px;position:relative;}
+	.hero h2{font-family:var(--font-display);font-size:clamp(28px,4.2vw,44px);font-weight:700;margin:0 0 14px;line-height:1.1;max-width:18ch;position:relative;}
+	.hero p{color:var(--shell);font-size:16px;max-width:62ch;margin:0 0 22px;position:relative;}
+	.hero-actions{display:flex;gap:10px;flex-wrap:wrap;position:relative;}
+	.btn{display:inline-block;background:var(--accent);color:var(--accent-ink);border:none;border-radius:999px;padding:11px 20px;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;font-family:inherit;}
+	.btn:hover{background:var(--accent-dim);}
+	.btn-ghost{display:inline-block;background:transparent;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:10px 20px;font-weight:600;font-size:14px;cursor:pointer;text-decoration:none;font-family:inherit;}
+	.btn-ghost:hover{border-color:var(--accent-dim);color:var(--accent);}
+	.hero-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:26px;font-size:12.5px;color:var(--muted);position:relative;}
+	.hero-meta b{color:var(--text);}
+
+	.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;padding:36px 0 80px;align-items:start;}
+	@media (max-width:860px){.layout{grid-template-columns:1fr;}}
+	nav.toc{position:sticky;top:20px;display:flex;flex-direction:column;gap:2px;max-height:calc(100vh - 40px);overflow-y:auto;}
+	nav.toc a{display:block;padding:7px 10px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;border-left:2px solid transparent;}
+	nav.toc a:hover{color:var(--text);}
+	nav.toc a.active{color:var(--accent);background:rgba(183,226,61,0.08);border-left-color:var(--accent);}
+	nav.toc .toc-num{display:inline-block;width:20px;color:var(--muted);font-family:var(--font-mono);font-size:11px;}
+	@media (max-width:860px){
+		nav.toc{position:static;flex-direction:row;overflow-x:auto;overflow-y:visible;max-height:none;gap:6px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--line);-webkit-overflow-scrolling:touch;}
+		nav.toc a{white-space:nowrap;flex:none;border-left:none;border-bottom:2px solid transparent;}
+		nav.toc a.active{border-left-color:transparent;border-bottom-color:var(--accent);}
+	}
+
+	.steps{display:flex;flex-direction:column;gap:64px;min-width:0;}
+	section.step{scroll-margin-top:16px;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease;}
+	section.step.in{opacity:1;transform:none;}
+	@media (prefers-reduced-motion:reduce){section.step{opacity:1;transform:none;transition:none;}}
+	.step-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;flex-wrap:wrap;}
+	.step-num{font-family:var(--font-display);font-weight:700;color:var(--accent-ink);background:var(--accent);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:13px;}
+	.step-head h3{font-family:var(--font-display);font-size:24px;font-weight:700;margin:0;}
+	.step-lede{color:var(--shell);font-size:14.5px;margin:0 0 18px;max-width:66ch;}
+	.step-body{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:start;}
+	.step-body.wide{grid-template-columns:1fr;}
+	@media (max-width:760px){.step-body{grid-template-columns:1fr !important;}}
+
+	.shot{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);box-shadow:0 12px 30px rgba(0,0,0,0.35);}
+	.shot img{display:block;width:100%;height:auto;}
+	.shot-cap{padding:8px 12px;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);font-family:var(--font-mono);}
+
+	.notes{display:flex;flex-direction:column;gap:10px;}
+	.notes p{margin:0;font-size:14px;}
+	.notes ul{margin:0;padding-left:20px;font-size:14px;}
+	.notes li{margin-bottom:6px;}
+	.tip{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text);}
+	.tip b{color:var(--accent);}
+	.new-pill{display:inline-block;background:linear-gradient(135deg,var(--accent),#6FE3C8);color:var(--accent-ink);font-size:10px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:999px;}
+
+	.demo-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px;background:var(--panel);border:1px dashed var(--line);border-radius:10px;}
+	.demo-label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);width:100%;margin-bottom:2px;}
+	.col-chip{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+	.col-chip.on{background:var(--accent);border-color:transparent;color:var(--accent-ink);}
+	.job-rating{display:flex;gap:10px;font-size:12.5px;font-weight:600;}
+	.job-rating .up{color:var(--accent);}
+	.job-rating .down{color:var(--bad);}
+	.seller-rating{font-size:11.5px;border-radius:999px;padding:2px 10px;border:1px solid rgba(183,226,61,0.5);color:var(--accent);font-weight:600;}
+	.seller-rating .n{color:var(--muted);font-weight:400;}
+
+	.chiprow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+	.minichip{font-size:12px;font-weight:600;background:var(--panel-alt);border:1px solid var(--line);border-radius:999px;padding:4px 11px;color:var(--shell);}
+
+	footer.site{border-top:1px solid var(--line);padding:40px 0;margin-top:20px;}
+	.foot-grid{display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px;font-size:13.5px;color:var(--muted);}
+	.foot-links{display:flex;gap:18px;flex-wrap:wrap;}
+	.foot-links a{color:var(--text);text-decoration:none;font-weight:600;}
+	.foot-links a:hover{color:var(--accent);}
+</style>
+</head>
+<body>
+<div id="topProgress"></div>
+<header class="site">
+	<div class="wrap header-row">
+		<div class="brand-row">
+			<div class="brand-mark">✨</div>
+			<div><h1>SCTP 2.0</h1><p class="tag">What's new</p></div>
+		</div>
+		<nav id="siteNavMount"></nav>
+	</div>
+</header>
+
+<div class="wrap hero">
+	<p class="kicker">Onboarding &middot; What's new</p>
+	<h2>Everything SCTP 2.0 added</h2>
+	<p>If you've used the Trading Post before, this is the fast version: just what's new since 1.6, in the order you'll actually run into it. Already know the basics? Skip straight to a section below. New here entirely? The <a href="/onboarding/web">full website walkthrough</a> and <a href="/onboarding/mod">mod walkthrough</a> cover everything, old and new.</p>
+	<div class="hero-actions">
+		<a class="btn" href="/">Open the Trading Post &rarr;</a>
+		<a class="btn-ghost" href="/docs/changelog">Full changelog &rarr;</a>
+	</div>
+	<div class="hero-meta">
+		<span><b>Released</b> September 2026</span>
+		<span><b>Mod</b> updated to 2.0 alongside the site</span>
+	</div>
+</div>
+
+<div class="wrap layout">
+	<nav class="toc" id="toc">
+		<a href="#mapart"><span class="toc-num">01</span>Mapart catalog</a>
+		<a href="#collections"><span class="toc-num">02</span>Collections</a>
+		<a href="#profiles"><span class="toc-num">03</span>Public profiles</a>
+		<a href="#jobs"><span class="toc-num">04</span>Job reviews</a>
+		<a href="#raredle"><span class="toc-num">05</span>Rare-dle</a>
+		<a href="#site-qol"><span class="toc-num">06</span>Site QOL</a>
+		<a href="#mod-qol"><span class="toc-num">07</span>Mod QOL</a>
+		<a href="#downloads"><span class="toc-num">08</span>New download flow</a>
+	</nav>
+
+	<div class="steps">
+
+		<section class="step" id="mapart">
+			<div class="step-head"><div class="step-num">1</div><h3>Mapart catalog</h3><span class="new-pill">ALL NEW</span></div>
+			<p class="step-lede">Snailcraft's mapart, all in one searchable place: title, artist, world, category, where to buy it, and a picture — sourced from the gallery and now scanned automatically by the mod too.</p>
+			<div class="step-body">
+				<div class="shot"><img src="img/mapart-catalog.png" alt="Mapart catalog grid with search, category filter, search-by-image, and world toggle." loading="lazy"><div class="shot-cap">/mapart/</div></div>
+				<div class="shot"><img src="img/mapart-detail.png" alt="A mapart detail page with artist, tags, verified badge, where-to-buy, Share and Report." loading="lazy"><div class="shot-cap">/mapart/&lt;slug&gt;</div></div>
+			</div>
+			<div class="chiprow">
+				<span class="minichip">Search by image</span>
+				<span class="minichip">Collab artists</span>
+				<span class="minichip">Commission info</span>
+				<span class="minichip">Price field</span>
+				<span class="minichip">Artist verification</span>
+				<span class="minichip">Report queue</span>
+				<span class="minichip">In-game scanner</span>
+			</div>
+		</section>
+
+		<section class="step" id="collections">
+			<div class="step-head"><div class="step-num">2</div><h3>Collections</h3><span class="new-pill">ALL NEW</span></div>
+			<p class="step-lede">A personal checklist for rare items and mapart, per world — tick things off as you get them, and share your progress on a public profile page if you want to.</p>
+			<div class="demo-row">
+				<span class="demo-label">Example toggle — collection chip on a rare/mapart page</span>
+				<button type="button" class="col-chip on">✓ Firefly</button>
+				<button type="button" class="col-chip">+ Honeybee</button>
+			</div>
+			<p style="font-size:13.5px;color:var(--muted);margin-top:10px;">Toggle from any card or detail page; view everything at <code>/collection/</code>, public by default at <code>/collection/&lt;username&gt;</code> unless you make it private.</p>
+		</section>
+
+		<section class="step" id="profiles">
+			<div class="step-head"><div class="step-num">3</div><h3>Public profiles</h3><span class="new-pill">ALL NEW</span></div>
+			<p class="step-lede">The old seller page is now a full tabbed profile — Shop, Mapart (with open commissions), Collection, and Marketplace history, all in one place at each player's own URL.</p>
+			<div class="step-body wide">
+				<div class="shot"><img src="img/profile.png" alt="A tabbed profile page with Shop and Mapart tabs, stats, and a filterable listings table." loading="lazy"><div class="shot-cap">/s/ff/&lt;username&gt; or /s/hb/&lt;username&gt;</div></div>
+			</div>
+		</section>
+
+		<section class="step" id="jobs">
+			<div class="step-head"><div class="step-num">4</div><h3>Job listing reviews</h3><span class="new-pill">ALL NEW</span></div>
+			<p class="step-lede">Marketplace job posts (hiring or for-hire) can now be rated thumbs up or down by anyone who isn't the poster — and every rating rolls up into a seller rating shown right on that player's profile.</p>
+			<div class="step-body">
+				<div class="shot"><img src="img/marketplace-jobs.png" alt="Marketplace Jobs tab with Hiring/For Hire filters." loading="lazy"><div class="shot-cap">/marketplace/#jobs</div></div>
+				<div class="notes">
+					<div class="demo-row">
+						<span class="demo-label">Example — rating shown on a job card</span>
+						<span class="job-rating"><span class="up">👍 12</span><span class="down">👎 1</span></span>
+					</div>
+					<div class="demo-row" style="margin-top:10px;">
+						<span class="demo-label">Example — seller rating on a profile</span>
+						<span class="seller-rating">92% positive <span class="n">(13 ratings)</span></span>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="step" id="raredle">
+			<div class="step-head"><div class="step-num">5</div><h3>Rare-dle</h3><span class="new-pill">ALL NEW</span></div>
+			<p class="step-lede">A daily Wordle-style guessing game built around Snailcraft's own rare items — one secret rare a day, 8 tries, per-attribute feedback, streaks, and a sharpening pixel hint the longer you're stuck.</p>
+			<div class="step-body wide">
+				<div class="shot"><img src="img/raredle.png" alt="The Rare-dle page with leaderboard tabs and how-to-play rules." loading="lazy"><div class="shot-cap">/rare-dle/</div></div>
+			</div>
+			<div class="chiprow">
+				<span class="minichip">8 guesses a day</span>
+				<span class="minichip">Streaks &amp; scoring</span>
+				<span class="minichip">+125 no-peek bonus</span>
+				<span class="minichip">Unlimited practice mode</span>
+				<span class="minichip">Public leaderboards</span>
+			</div>
+		</section>
+
+		<section class="step" id="site-qol">
+			<div class="step-head"><div class="step-num">6</div><h3>Smaller website upgrades</h3></div>
+			<p class="step-lede">A pile of quality-of-life changes across the main table and item pages.</p>
+			<div class="step-body">
+				<div class="notes">
+					<ul>
+						<li><b>Hide any column</b> in the results table, bring it back from "Columns ▾".</li>
+						<li><b>Diamond-equivalent pricing</b> everywhere, on by default — see raw currency any time with one toggle.</li>
+						<li><b>"Did you mean…?"</b> suggestions when a search comes up nearly empty.</li>
+						<li><b>Price check</b> on every rare item page — a general value per world, from every active listing.</li>
+						<li><b>Undercut alerts</b> and reprice/restock hints on My Shop Statistics.</li>
+						<li>Redesigned nav with <b>More</b> and <b>Info</b> menus, and a home page featured strip for mapart of the day, Rare-dle and the marketplace.</li>
+					</ul>
+				</div>
+				<div class="shot"><img src="img/home.png" alt="The redesigned home page with the featured strip and search bar." loading="lazy"><div class="shot-cap">sctp.nl</div></div>
+			</div>
+		</section>
+
+		<section class="step" id="mod-qol">
+			<div class="step-head"><div class="step-num">7</div><h3>Mod 2.0</h3></div>
+			<p class="step-lede">The mod got just as big an update — full details on the <a href="/onboarding/mod">mod walkthrough</a>, short version here.</p>
+			<div class="notes">
+				<ul>
+					<li><b>Mapart scanner</b>, built right in — finds and uploads mapart automatically, no separate tool.</li>
+					<li><b>Ignore this listing</b> on watchlist alerts, without losing the rest of your watchlist for that item.</li>
+					<li><b>Advanced Settings</b> screen for scan log format, per-shop cooldown, teleport beam style and more.</li>
+					<li>Now ships <b>four builds</b>: Fabric 26.2/26.3 and NeoForge 26.2/26.3.</li>
+				</ul>
+			</div>
+		</section>
+
+		<section class="step" id="downloads">
+			<div class="step-head"><div class="step-num">8</div><h3>New download flow</h3></div>
+			<p class="step-lede">The download popup was rebuilt around a simple loader + version picker instead of a flat list of files.</p>
+			<div class="step-body wide">
+				<div class="shot" style="max-width:520px;"><img src="img/download-modal.png" alt="The redesigned Download Shop Logger modal with loader and version toggles." loading="lazy"><div class="shot-cap">Download mod button, any page</div></div>
+			</div>
+		</section>
+
+	</div>
+</div>
+
+<footer class="site">
+	<div class="wrap foot-grid">
+		<span>Snailcraft Trading Post &middot; onboarding</span>
+		<div class="foot-links">
+			<a href="/onboarding/web">Website walkthrough</a>
+			<a href="/onboarding/mod">Mod walkthrough</a>
+			<a href="/docs/changelog">Full changelog</a>
+			<a href="/">Back to the Trading Post</a>
+		</div>
+	</div>
+</footer>
+
+<script src="/site-nav.js" defer></script>
+<script src="/account-widget.js" defer></script>
+<script>
+(function(){
+	"use strict";
+	var bar = document.getElementById("topProgress");
+	function onScroll(){
+		var h = document.documentElement;
+		var pct = (h.scrollTop) / ((h.scrollHeight - h.clientHeight) || 1) * 100;
+		bar.style.width = Math.min(100, Math.max(0, pct)) + "%";
+	}
+	document.addEventListener("scroll", onScroll, { passive: true });
+	onScroll();
+
+	var steps = document.querySelectorAll("section.step");
+	if("IntersectionObserver" in window){
+		var io = new IntersectionObserver(function(entries){
+			entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add("in"); });
+		}, { threshold: 0.08, rootMargin: "0px 0px -8% 0px" });
+		steps.forEach(function(s){ io.observe(s); });
+	} else {
+		steps.forEach(function(s){ s.classList.add("in"); });
+	}
+
+	var links = document.querySelectorAll("#toc a");
+	var map = {};
+	links.forEach(function(a){ map[a.getAttribute("href").slice(1)] = a; });
+	if("IntersectionObserver" in window){
+		var spy = new IntersectionObserver(function(entries){
+			entries.forEach(function(e){
+				var a = map[e.target.id];
+				if(!a) return;
+				if(e.isIntersecting) { links.forEach(function(l){ l.classList.remove("active"); }); a.classList.add("active"); }
+			});
+		}, { rootMargin: "-40% 0px -55% 0px" });
+		steps.forEach(function(s){ spy.observe(s); });
+	}
+})();
+</script>
+</body>
+</html>
