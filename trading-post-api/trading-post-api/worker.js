@@ -5141,15 +5141,26 @@ function raredleCompare(g, a) {
 	return out;
 }
 
+// True if every one of the six fields Rare-dle actually compares (category, released,
+// obtained from, type/slot, dyeable, particles) is known — catalogued with a real value,
+// not missing/"null", and not marked uncertain with a "?" (e.g. "Escargold?"). Anything
+// less makes for an unfair puzzle (a category the player can never get feedback on, or
+// worse, misleading feedback), so only items that pass this can be the secret rare of the
+// day — guessing an item that fails it is still completely fine.
+function raredleFullyKnown(i) {
+	return [i.category, i.releaseDate, i.obtainedFrom, i.typeSlot, i.dyeable, i.glowParticles]
+		.every((v) => v != null && String(v).trim() !== "" && String(v) !== "null" && !String(v).includes("?"));
+}
+
 async function raredleAnswerFor(env, date) {
 	const row = await env.DB.prepare("SELECT itemId FROM raredleAnswers WHERE date = ?").bind(date).first();
 	if (row) return row.itemId;
 	const cat = await getRareCatalog();
 	const { results: recent } = await env.DB.prepare("SELECT itemId FROM raredleAnswers ORDER BY date DESC LIMIT ?").bind(RAREDLE_NO_REPEAT_DAYS).all();
 	const used = new Set(recent.map((r) => r.itemId));
-	// Only items with enough attributes to make for a fair puzzle.
-	let pool = cat.items.filter((i) => i.texture && i.category && !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null" && !used.has(i.id));
-	if (!pool.length) pool = cat.items.filter((i) => i.category && !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && i.releaseDate && i.releaseDate !== "null");
+	// Only items with every attribute known (see raredleFullyKnown) make for a fair puzzle.
+	let pool = cat.items.filter((i) => i.texture && !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && raredleFullyKnown(i) && !used.has(i.id));
+	if (!pool.length) pool = cat.items.filter((i) => !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && raredleFullyKnown(i));
 	const pick = pool[crypto.getRandomValues(new Uint32Array(1))[0] % pool.length].id;
 	await env.DB.prepare("INSERT OR IGNORE INTO raredleAnswers (date, itemId) VALUES (?, ?)").bind(date, pick).run();
 	const stored = await env.DB.prepare("SELECT itemId FROM raredleAnswers WHERE date = ?").bind(date).first();
