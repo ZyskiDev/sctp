@@ -37,9 +37,11 @@
 	.pip.used{background:var(--near);}
 	.pip.won{background:var(--good);}
 
-	.guess-box{position:relative;margin-bottom:14px;}
-	.guess-box input{width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:13px 16px;font-size:16px;font-family:inherit;}
-	.guess-box input:focus{outline:none;border-color:var(--accent-dim);}
+	.guess-box{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+	.guess-input-wrap{position:relative;flex:1;min-width:220px;}
+	.guess-input-wrap input{width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:13px 16px;font-size:16px;font-family:inherit;}
+	.guess-input-wrap input:focus{outline:none;border-color:var(--accent-dim);}
+	.rare-credit{color:var(--muted);font-size:12.5px;margin:10px 0 0;max-width:220px;}
 	.suggest{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;z-index:30;max-height:340px;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,0.45);}
 	.suggest[hidden]{display:none;}
 	.sg{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;font-size:14px;}
@@ -134,8 +136,11 @@
 				<span>&#128293; Streak <b id="gStreak">0</b> &middot; Next rare in <b id="gCountdown">--:--:--</b></span>
 			</div>
 			<div class="guess-box" id="guessBox">
-				<input type="text" id="guessInput" placeholder="Type a rare item's name…" autocomplete="off" spellcheck="false">
-				<div class="suggest" id="suggest" hidden></div>
+				<div class="guess-input-wrap">
+					<input type="text" id="guessInput" placeholder="Type a rare item's name…" autocomplete="off" spellcheck="false">
+					<div class="suggest" id="suggest" hidden></div>
+				</div>
+				<p class="rare-credit">Thanks to LadyMaledicte &amp; Hornzilla for their amazing work on the rare library!</p>
 			</div>
 			<p class="err" id="gErr"></p>
 			<div class="pixel-hint" id="pixelBox" hidden>
