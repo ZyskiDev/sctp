@@ -212,11 +212,13 @@ public class ShopLoggerClient implements ClientModInitializer {
 			WorldDetector.getInstance().requestRedetect();
 			WatchlistJoinCheck.requestCheck();
 			UpdateNoticeCheck.requestCheck();
+			OnboardingLinkCheck.requestCheck();
 		});
 		ClientConfigurationConnectionEvents.COMPLETE.register((handler, client) -> {
 			WorldDetector.getInstance().requestRedetect();
 			WatchlistJoinCheck.requestCheck();
 			UpdateNoticeCheck.requestCheck();
+			OnboardingLinkCheck.requestCheck();
 		});
 
 		// Automatic path: silent proximity scanning (requires the mixin).
@@ -229,6 +231,7 @@ public class ShopLoggerClient implements ClientModInitializer {
 			WorldDetector.getInstance().tick(client);
 			WatchlistJoinCheck.tick(client);
 			UpdateNoticeCheck.tick(client);
+			OnboardingLinkCheck.tick(client);
 			ShopVisitAlert.tick(client);
 			QolHookManager.onTick();
 

@@ -35,9 +35,9 @@
 		] },
 		{ menu: "info", label: "Info", items: [
 			{ href: "/docs/faq", label: "FAQ" },
-			{ href: "/docs/installation", label: "Installation" },
-			{ href: "/docs/features", label: "Features" },
-			{ href: "/docs/changelog", label : "Changelog" }
+			{ href: "/onboarding/mod", label: "Mod Features & Installation" },
+			{ href: "/onboarding/web", label: "Website Features" },
+			{ href: "/onboarding/update", label : "Changelog" }
 		] },
 		{ cta: true, href: "/rare-dle/", label: "Rare-dle" }
 	];

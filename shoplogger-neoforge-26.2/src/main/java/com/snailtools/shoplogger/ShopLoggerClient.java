@@ -251,6 +251,7 @@ public class ShopLoggerClient {
 		WorldDetector.getInstance().requestRedetect();
 		WatchlistJoinCheck.requestCheck();
 		UpdateNoticeCheck.requestCheck();
+		OnboardingLinkCheck.requestCheck();
 	}
 
 	// Automatic path: silent proximity scanning (requires the mixin).
@@ -266,6 +267,7 @@ public class ShopLoggerClient {
 		WorldDetector.getInstance().tick(client);
 		WatchlistJoinCheck.tick(client);
 		UpdateNoticeCheck.tick(client);
+		OnboardingLinkCheck.tick(client);
 		ShopVisitAlert.tick(client);
 		QolHookManager.onTick();
 

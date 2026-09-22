@@ -23,12 +23,18 @@ public final class Config {
 
     private static JsonObject root = new JsonObject();
 
+    /** Whether sctp.json was already on disk the moment load() ran — the difference between
+     *  a genuinely fresh install and an existing player whose config just doesn't have some
+     *  particular key yet (see OnboardingLinkCheck, which needs to tell those apart). */
+    private static boolean existedAtLoad = false;
+
     private Config() {
     }
 
     //called on init to load config.
     public static synchronized void load() {
-        if (!Files.exists(CONFIG_PATH)) {
+        existedAtLoad = Files.exists(CONFIG_PATH);
+        if (!existedAtLoad) {
             root = new JsonObject();
             save();
             return;
@@ -122,6 +128,11 @@ public final class Config {
     //rough check to see if a path exists in the in memory config.
     public static synchronized boolean has(String path) {
         return getElement(path) != null;
+    }
+
+    /** See the existedAtLoad field's own doc comment. */
+    public static synchronized boolean existedBeforeLoad() {
+        return existedAtLoad;
     }
 
     /*
