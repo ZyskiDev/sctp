@@ -2565,7 +2565,9 @@ async function handleGetRoadmap(request, env, ctx) {
 // GET /update-notice — public, cached. The mod fetches this once per join
 // (see UpdateNoticeCheck) and compares its own version against minVersion
 // using the same isVersionAtLeast logic as MIN_TRUSTED_PRUNE_VERSION above;
-// below it, `message` gets printed to chat. Nothing else on the site reads this.
+// below it, `message` gets printed to chat — mod versions newer than 2.0 render any
+// [text](url) inside it as a clickable link, older ones show the raw brackets/text.
+// Nothing else on the site reads this.
 async function handleGetUpdateNotice(request, env, ctx) {
 	return cachedGet(request, ctx, CACHE_TTL_SECONDS, async () => {
 		const row = await env.DB.prepare("SELECT enabled, minVersion, message FROM updateNotice WHERE id = 1").first();

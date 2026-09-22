@@ -336,7 +336,8 @@
 			<label for="updateNoticeMinVersion" style="margin-top:10px;display:block;">Minimum version (e.g. 1.5.2) — anyone below this sees the message</label>
 			<input type="text" id="updateNoticeMinVersion" placeholder="1.5.2" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;">
 			<label for="updateNoticeMessage">Chat message</label>
-			<textarea id="updateNoticeMessage" rows="2" placeholder="A new version is available — download it from sctp.nl!" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;"></textarea>
+			<div class="meta" style="margin:2px 0 6px;">Supports <code>[link text](https://a-url)</code> anywhere in the message — that part renders as a clickable, underlined link in chat. Everything else is plain text. Needs a mod version newer than 2.0 to render as a link; older clients just show the raw <code>[text](url)</code> text.</div>
+			<textarea id="updateNoticeMessage" rows="2" placeholder="A new version is available — [download it here](https://sctp.nl)!" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;"></textarea>
 			<div class="meta" id="updateNoticeMeta"></div>
 			<button id="updateNoticeSaveBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;margin-top:8px;">Save</button>
 			<div class="err" id="updateNoticeErr"></div>
