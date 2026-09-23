@@ -403,6 +403,14 @@
 		</details>
 		</section>
 
+		<section data-perm="__headAdminOnly__">
+		<details class="section-toggle" id="modUsersSection">
+		<summary>Mod users</summary>
+		<div class="meta" style="margin-bottom:10px;">Counts distinct players the mod has ever seen, from a join-time ping every install already sends (no mod update needed) &mdash; see the code comment on <code>recordModUserPing</code> for exactly how. Only a one-way hash of each MC username is ever stored, never the name itself.</div>
+		<div id="modUsersStats"><div class="empty">Loading…</div></div>
+		</details>
+		</section>
+
 		</div>
 		</details>
 
@@ -1495,6 +1503,34 @@
 		}
 	}
 
+	// ---------------- mod users ----------------
+
+	function renderModUserStats(stats){
+		var el = document.getElementById("modUsersStats");
+		if(!el) return;
+		if(!stats){ el.innerHTML = '<div class="empty">Couldn\'t load mod-user stats.</div>'; return; }
+		var since = stats.trackingSince ? new Date(stats.trackingSince).toLocaleDateString() : null;
+		el.innerHTML = '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+			['<div class="card" style="flex:1;min-width:140px;"><div class="meta">All-time</div><div style="font-size:26px;font-weight:700;">' + stats.total.toLocaleString() + '</div></div>',
+			 '<div class="card" style="flex:1;min-width:140px;"><div class="meta">Last 7 days</div><div style="font-size:26px;font-weight:700;">' + stats.activeLast7d.toLocaleString() + '</div></div>',
+			 '<div class="card" style="flex:1;min-width:140px;"><div class="meta">Last 30 days</div><div style="font-size:26px;font-weight:700;">' + stats.activeLast30d.toLocaleString() + '</div></div>'
+			].join("") + '</div>' +
+			'<div class="meta" style="margin-top:10px;">' + (since ? "Tracking since " + esc(since) + " — all-time only covers players seen since then, not the mod's full history." : "No pings recorded yet.") + '</div>' +
+			'<button type="button" id="modUsersRefreshBtn" style="margin-top:10px;">Refresh</button>';
+		var btn = document.getElementById("modUsersRefreshBtn");
+		if(btn) btn.addEventListener("click", refreshModUserStats);
+	}
+
+	async function refreshModUserStats(){
+		var el = document.getElementById("modUsersStats");
+		if(el) el.innerHTML = '<div class="empty">Loading…</div>';
+		try {
+			renderModUserStats(await api("/admin/mod-user-stats"));
+		} catch(err){
+			renderModUserStats(null);
+		}
+	}
+
 	// ---------------- password reset links ----------------
 
 	var passwordResetLinks = [];
@@ -1710,6 +1746,7 @@
 	lazyLoadOnOpen("vlSection", refreshVerifLinks);
 	lazyLoadOnOpen("prlSection", refreshPasswordResetLinks);
 	lazyLoadOnOpen("mapartSection", refreshMapartAdmin);
+	lazyLoadOnOpen("modUsersSection", refreshModUserStats);
 
 	// ---------------- maintenance ----------------
 

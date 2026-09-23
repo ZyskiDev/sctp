@@ -185,6 +185,10 @@
 //   POST /marketplace/notifications/mark-read      body: {ids: [...]} or {} for "mark all"
 //   GET  /marketplace/notifications/for-mc?mcUsername=<name> (public, no session — the MOD calls this on join)
 //     -> undelivered notifications for a VERIFIED account only, marks them delivered
+//     also the basis for unique-mod-user tracking (see recordModUserPing/modUserPings) —
+//     every mod install hits this on every join, account or no account, so it doubles
+//     as a live per-player ping without needing any mod update.
+//   GET  /admin/mod-user-stats                     (head admin only) -> {total, activeLast7d, activeLast30d, trackingSince}
 //   GET  /admin/marketplace/listings?username=<exact> (empty/missing -> []), POST /admin/marketplace/listings/remove (permission "marketplaceListings")
 //
 // Jobs/tasks marketplace — deliberately simpler than the item listings above
@@ -1754,16 +1758,60 @@ async function handleMarkNotificationsRead(request, env) {
 	return json({ ok: true });
 }
 
+// ---- unique mod-user tracking ----
+// Piggybacks on GET /marketplace/notifications/for-mc: WatchlistJoinCheck (in
+// the mod) already calls this, with the player's real MC username, on every
+// single join — unconditionally, no watchlist or account needed — so this is
+// a live per-player signal that already exists in every currently-deployed
+// mod version, no mod update required. The raw username is never stored:
+// only an HMAC-SHA256 of it (keyed by the dedicated MOD_USER_HASH_SECRET,
+// never reused elsewhere), so this can only ever answer "how many distinct
+// players", never "which ones". Best-effort — must never break notification
+// delivery itself if it fails for any reason.
+async function modUserPingHash(env, mcUsername) {
+	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.MOD_USER_HASH_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+	const normalized = mcUsername.trim().toLowerCase().replace(/^\.+/, ""); // Bedrock names carry a leading '.'
+	const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(normalized));
+	return bufToHex(sig);
+}
+async function recordModUserPing(env, mcUsername) {
+	try {
+		const hash = await modUserPingHash(env, mcUsername);
+		const now = new Date().toISOString();
+		await env.DB.prepare(
+			"INSERT INTO modUserPings (usernameHash, firstSeenAt, lastSeenAt, pingCount) VALUES (?, ?, ?, 1) " +
+			"ON CONFLICT(usernameHash) DO UPDATE SET lastSeenAt = excluded.lastSeenAt, pingCount = pingCount + 1"
+		).bind(hash, now, now).run();
+	} catch (e) { /* telemetry only — never worth failing the real request over */ }
+}
+
+// Head admin: unique-mod-user counts derived from modUserPings above.
+async function handleAdminModUserStats(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	const now = Date.now(), day = 24 * 60 * 60 * 1000;
+	const cutoff7 = new Date(now - 7 * day).toISOString();
+	const cutoff30 = new Date(now - 30 * day).toISOString();
+	const [total, last7, last30, since] = await Promise.all([
+		env.DB.prepare("SELECT COUNT(*) AS c FROM modUserPings").first(),
+		env.DB.prepare("SELECT COUNT(*) AS c FROM modUserPings WHERE lastSeenAt >= ?").bind(cutoff7).first(),
+		env.DB.prepare("SELECT COUNT(*) AS c FROM modUserPings WHERE lastSeenAt >= ?").bind(cutoff30).first(),
+		env.DB.prepare("SELECT MIN(firstSeenAt) AS m FROM modUserPings").first(),
+	]);
+	return json({ total: total.c, activeLast7d: last7.c, activeLast30d: last30.c, trackingSince: since.m || null });
+}
+
 // Used by the MOD on join — no session token (the mod isn't a logged-in
 // website session), just the player's own MC username, same trust model the
 // rest of the mod's uploads already use. Verification is now mapart-only, so
 // this delivers for EVERY account whose linked MC username matches (typed
 // usernames are taken on trust — same as registration). Marks whatever it
 // returns as delivered so it isn't repeated on the next join.
-async function handleGetNotificationsForMc(request, env) {
+async function handleGetNotificationsForMc(request, env, ctx) {
 	const url = new URL(request.url);
 	const mcUsername = (url.searchParams.get("mcUsername") || "").trim();
 	if (!mcUsername) return json({ error: "mcUsername is required" }, 400);
+	ctx.waitUntil(recordModUserPing(env, mcUsername));
 
 	const { results: accounts } = await env.DB.prepare("SELECT id FROM admins WHERE lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))").bind(mcUsername).all();
 	if (accounts.length === 0) return json([]);
@@ -5895,6 +5943,7 @@ const ROUTES = [
 	["GET", "/marketplace/notifications", handleGetMarketplaceNotifications],
 	["POST", "/marketplace/notifications/mark-read", handleMarkNotificationsRead],
 	["GET", "/marketplace/notifications/for-mc", handleGetNotificationsForMc],
+	["GET", "/admin/mod-user-stats", handleAdminModUserStats],
 	["GET", "/admin/marketplace/listings", handleAdminListMarketplaceListings],
 	["POST", "/admin/marketplace/listings/remove", handleAdminRemoveMarketplaceListing],
 ];
