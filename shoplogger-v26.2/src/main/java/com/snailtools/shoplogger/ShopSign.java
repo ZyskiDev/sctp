@@ -6,7 +6,8 @@ import net.minecraft.core.BlockPos;
  * A parsed Snailcraft-style shop sign. Two formats:
  *
  * Priced shop:
- *   1: "[PRICE]"  (literal, case-insensitive)
+ *   1: "[PRICE]" or "[STOCK]"  (literal, case-insensitive — the two are exact
+ *      aliases of each other, sellers just use whichever word they prefer)
  *   2: amount of currency for however many of the item the shop stocks per
  *      inventory slot (not necessarily a full stack — see ShopEntryFactory,
  *      which scales this up to a real full-stack price using the actual
@@ -24,9 +25,11 @@ public record ShopSign(BlockPos signPos, int signPrice, String currency, String 
 	/** Currency sentinel for display-only signs — see ShopEntry#priceLabel. */
 	public static final String DISPLAY_CURRENCY = "display";
 
-	/** Parses 4 raw sign lines as a priced [PRICE] shop. Returns null if the sign doesn't match that format. */
+	/** Parses 4 raw sign lines as a priced [PRICE]/[STOCK] shop. Returns null if the sign doesn't match that format. */
 	public static ShopSign parse(BlockPos signPos, String line1, String line2, String line3, String line4) {
-		if (line1 == null || !line1.trim().equalsIgnoreCase("[PRICE]")) {
+		if (line1 == null) return null;
+		String label = line1.trim();
+		if (!label.equalsIgnoreCase("[PRICE]") && !label.equalsIgnoreCase("[STOCK]")) {
 			return null;
 		}
 		if (line2 == null || line3 == null || line4 == null) {
