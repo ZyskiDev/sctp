@@ -7,6 +7,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.snailtools.shoplogger.config.Config;
 import com.snailtools.shoplogger.qol.Cooldowns;
 import com.snailtools.shoplogger.qol.QolHookManager;
+import com.snailtools.shoplogger.qol.RGBPreview;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -202,6 +203,10 @@ public class ShopLoggerClient implements ClientModInitializer {
 									.then(ClientCommands.argument("y", IntegerArgumentType.integer())
 											.then(ClientCommands.argument("z", IntegerArgumentType.integer())
 													.executes(ShopLoggerClient::watchBeam))))));
+
+			dispatcher.register(ClientCommands.literal("preview")
+					.then(ClientCommands.argument("name", StringArgumentType.greedyString())
+							.executes(RGBPreview::execute)));
 		});
 
 		// Redetect the world on every fresh join (covers singleplayer -> a real
