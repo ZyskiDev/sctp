@@ -5041,6 +5041,7 @@ function raredleDerivedIds(items) {
 	}
 	return out;
 }
+
 async function getRareCatalog() {
 	if (raredleCatalogCache.items && Date.now() - raredleCatalogCache.at < 30 * 60 * 1000) return raredleCatalogCache;
 	const res = await fetch(RAREDLE_CATALOG_URL, { cf: { cacheTtl: 1800, cacheEverything: true } });
@@ -5077,6 +5078,16 @@ function raredleParts(s) {
 	const v = String(s == null ? "" : s).trim();
 	if (!v || v.toLowerCase() === "null") return [];
 	return v.split(/[\/,&]| and /i).map((p) => p.toLowerCase().replace(/wldcard/g, "wildcard").replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+
+// A lot of rares share every compared field with some other rare (decor sets and recolors,
+// mostly, that only really differ by name/icon) — so a wrong guess can legitimately show
+// green on all six rows. This is the player-facing heads-up for exactly that: every row
+// came back "correct" (green), but the guess still isn't the actual secret rare.
+const RAREDLE_TWIN_NOTE = "Exact match on the categories, but not the same rare!";
+function raredleTwinNote(feedback, guessId, answerId) {
+	if (guessId === answerId) return null;
+	return feedback.length > 0 && feedback.every((f) => f.s === "correct") ? RAREDLE_TWIN_NOTE : null;
 }
 
 // state: correct (green) | close (yellow) | wrong (red) | none (grey, unknown); dir: the answer is "up" (later) / "down" (earlier)
@@ -5208,7 +5219,9 @@ async function raredleStatePayload(env, admin) {
 	const ids = game ? JSON.parse(game.guesses) : [];
 	const guesses = ids.map((id) => {
 		const g = cat.byId.get(id);
-		return g ? { itemId: id, name: g.name, texture: g.texture, feedback: raredleCompare(g, answer) } : null;
+		if (!g) return null;
+		const feedback = raredleCompare(g, answer);
+		return { itemId: id, name: g.name, texture: g.texture, feedback, note: raredleTwinNote(feedback, id, answerId) };
 	}).filter(Boolean);
 	const status = game ? game.status : "playing";
 	const out = {
@@ -5257,7 +5270,9 @@ async function raredlePracticePayload(env, admin, cat, row) {
 	const ids = JSON.parse(row.guesses);
 	const guesses = ids.map((id) => {
 		const g = cat.byId.get(id);
-		return g ? { itemId: id, name: g.name, texture: g.texture, feedback: raredleCompare(g, answer) } : null;
+		if (!g) return null;
+		const feedback = raredleCompare(g, answer);
+		return { itemId: id, name: g.name, texture: g.texture, feedback, note: raredleTwinNote(feedback, id, row.answerId) };
 	}).filter(Boolean);
 	const out = {
 		date: raredleToday(), mode: "practice", maxGuesses: RAREDLE_MAX_GUESSES, status: row.status, guesses,

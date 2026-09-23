@@ -259,7 +259,10 @@
 				if (draw) {
 					g.font = "700 " + big + "px " + st.display; g.fillStyle = accent; g.textAlign = align;
 					g.fillText(spec.stat, cx, Math.min(y + hAvail - 4, cy + big * 1.05));
-					if (spec.statLabel) { g.font = "500 " + Math.max(13, Math.round(big * 0.34)) + "px " + st.body; g.fillStyle = st.muted; g.fillText(spec.statLabel, cx + (align === "center" ? 0 : g.measureText(spec.stat).width + 14), Math.min(y + hAvail - 4, cy + big * 1.05)); }
+					// measured with the stat's own (bigger, display-font) width still active — measuring
+					// after switching to the label's font would under-measure it and overlap the two.
+					var statW = g.measureText(spec.stat).width;
+					if (spec.statLabel) { g.font = "500 " + Math.max(13, Math.round(big * 0.34)) + "px " + st.body; g.fillStyle = st.muted; g.fillText(spec.statLabel, cx + (align === "center" ? 0 : statW + 14), Math.min(y + hAvail - 4, cy + big * 1.05)); }
 				}
 				cy += big * 1.15;
 			}
@@ -369,7 +372,34 @@
 		var footH = (o.logo || o.url) ? Math.round(Math.min(W, H) / 40 * 1.9) + 14 : 0;
 		var rows = spec.rows || [], cols = rows.length ? rows[0].length : 6;
 		var wide = ar > 1.3;
-		var tilesArea = wide ? { x: W * 0.52, y: pad, w: W * 0.42, h: H - pad * 2 - footH } : { x: pad, y: H * 0.42, w: W - pad * 2, h: H * 0.5 - footH };
+
+		// Lay out (and draw) the text column first — the tile grid's position depends on
+		// where the text actually ends, not a fixed fraction of the canvas, so a long
+		// title/subtitle/stat can never run into the tiles below it (stacked layout) or
+		// past its own column into them (side-by-side layout).
+		var tx = pad, tw = wide ? W * 0.46 - pad : W - pad * 2, y = pad;
+		var es = Math.max(14, Math.round(Math.min(W, H) / 30));
+		if (spec.eyebrow) { g.fillStyle = accent; g.font = "700 " + es + "px " + st.body; g.textAlign = "left"; g.fillText(spec.eyebrow.toUpperCase(), tx, y + es); y += es * 2; }
+		var tf = fitText(g, title, st.display, st.display === HEAVY ? "400" : "700", tw, 2, Math.round(Math.min(W, H) / 7.5), 26); fitFont(g, tf, st.display === HEAVY ? "400" : "700", st.display);
+		y = textBlock(g, tf, tx, y + tf.size * 0.9, st.text, "left");
+		if (sub) { var sf = fitText(g, sub, st.body, "500", tw, 2, Math.round(tf.size * 0.42), 14); fitFont(g, sf, "500", st.body); y = textBlock(g, sf, tx, y + sf.size + 4, st.muted, "left"); }
+		if (spec.stat) {
+			var big = Math.round(tf.size * 1.3); g.font = "700 " + big + "px " + st.display; g.fillStyle = accent;
+			g.fillText(spec.stat, tx, y + big * 1.2);
+			// measured with the stat's own (bigger, display-font) width still active — measuring
+			// after switching to the label's font would under-measure it and overlap the two.
+			var statW = g.measureText(spec.stat).width;
+			if (spec.statLabel) { g.font = "500 " + Math.round(big * 0.34) + "px " + st.body; g.fillStyle = st.muted; g.fillText(spec.statLabel, tx + statW + 14, y + big * 1.2); }
+			y += big * 1.2 + Math.round(big * 0.25);
+		}
+
+		// Now place the tile grid in whatever room is actually left — for the side-by-side
+		// (wide) layout that's always the right-hand column; for the stacked layout it
+		// starts below wherever the text column just ended (never before it).
+		var tilesArea = wide
+			? { x: W * 0.52, y: pad, w: W * 0.42, h: H - pad * 2 - footH }
+			: { x: pad, y: Math.max(H * 0.42, y + pad * 0.5), w: W - pad * 2, h: 0 };
+		if (!wide) tilesArea.h = Math.max(60, H - footH - pad - tilesArea.y);
 		var cell = Math.min(tilesArea.w / cols, tilesArea.h / Math.max(1, rows.length)) * 0.94;
 		var gx = tilesArea.x + (tilesArea.w - cell * cols) / 2, gy = tilesArea.y + (tilesArea.h - cell * rows.length) / 2;
 		rows.forEach(function (row, r) {
@@ -379,13 +409,6 @@
 				g.fillRect(gx + c * cell + m, gy + r * cell + m, cell - m * 2, cell - m * 2);
 			});
 		});
-		var tx = wide ? pad : pad, tw = wide ? W * 0.46 - pad : W - pad * 2, y = pad;
-		var es = Math.max(14, Math.round(Math.min(W, H) / 30));
-		if (spec.eyebrow) { g.fillStyle = accent; g.font = "700 " + es + "px " + st.body; g.textAlign = "left"; g.fillText(spec.eyebrow.toUpperCase(), tx, y + es); y += es * 2; }
-		var tf = fitText(g, title, st.display, st.display === HEAVY ? "400" : "700", tw, 2, Math.round(Math.min(W, H) / 7.5), 26); fitFont(g, tf, st.display === HEAVY ? "400" : "700", st.display);
-		y = textBlock(g, tf, tx, y + tf.size * 0.9, st.text, "left");
-		if (sub) { var sf = fitText(g, sub, st.body, "500", tw, 2, Math.round(tf.size * 0.42), 14); fitFont(g, sf, "500", st.body); y = textBlock(g, sf, tx, y + sf.size + 4, st.muted, "left"); }
-		if (spec.stat) { var big = Math.round(tf.size * 1.3); g.font = "700 " + big + "px " + st.display; g.fillStyle = accent; g.fillText(spec.stat, tx, y + big * 1.2); if (spec.statLabel) { g.font = "500 " + Math.round(big * 0.34) + "px " + st.body; g.fillStyle = st.muted; g.fillText(spec.statLabel, tx + g.measureText(spec.stat).width + 14, y + big * 1.2); } }
 		footer(g, W, H, spec, o, st, accent, pad);
 	}
 
