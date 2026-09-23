@@ -235,6 +235,10 @@ public class ShopLoggerClient {
 								.then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("y", IntegerArgumentType.integer())
 										.then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("z", IntegerArgumentType.integer())
 												.executes(ShopLoggerClient::watchBeam))))));
+
+		dispatcher.register(LiteralArgumentBuilder.<CommandSourceStack>literal("preview")
+				.then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("name", StringArgumentType.greedyString())
+						.executes(ShopLoggerClient::watchUnignore)));
 	}
 
 	// Redetect the world on every fresh join (covers singleplayer -> a real
