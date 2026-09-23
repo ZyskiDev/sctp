@@ -106,6 +106,12 @@
 //   POST /admin/verification-links/create {mcUsername, days?}, GET /admin/verification-links, POST /admin/verification-links/revoke {token}   (head admin only)
 //   GET  /verify-link/info?token=            (public) -> {mcUsername, expiresAt}
 //   POST /verify-link/redeem                 (public) body: {token, mode: "register"|"link", username?, password} -> session
+// Password reset links — same single-use/expiring/head-admin-generated shape as
+// verification links above, but for an existing account's password (no email
+// sending here — the admin sends the link to the player some other way):
+//   POST /admin/password-reset-links/create {username, days?}, GET /admin/password-reset-links, POST /admin/password-reset-links/revoke {token}   (head admin only)
+//   GET  /password-reset-link/info?token=    (public) -> {username, expiresAt}
+//   POST /password-reset-link/redeem         (public) body: {token, newPassword} -> session
 //
 // Permission bucket "reports":
 //   GET  /admin/reports
@@ -550,7 +556,10 @@ async function handleAdminLogin(request, env) {
 	const password = String(body.password || "");
 	if (!username || !password) return json({ error: "username and password are required" }, 400);
 
-	const admin = await env.DB.prepare("SELECT * FROM admins WHERE username = ?").bind(username).first();
+	// Case-insensitive: "Steve" and "steve" are the same login (uniqueness is
+	// enforced the same way at every account-creation path — see the other
+	// lower(username) lookups below).
+	const admin = await env.DB.prepare("SELECT * FROM admins WHERE lower(username) = lower(?)").bind(username).first();
 	if (!admin || !(await verifyPassword(password, admin.passwordSalt, admin.passwordHash))) {
 		return json({ error: "Invalid username or password" }, 401);
 	}
@@ -601,7 +610,7 @@ async function handleAdminCreateAdmin(request, env) {
 	if (!username) return json({ error: "username is required" }, 400);
 	if (password.length < 8) return json({ error: "password must be at least 8 characters" }, 400);
 
-	const existing = await env.DB.prepare("SELECT id FROM admins WHERE username = ?").bind(username).first();
+	const existing = await env.DB.prepare("SELECT id FROM admins WHERE lower(username) = lower(?)").bind(username).first();
 	if (existing) return json({ error: "Username already exists" }, 409);
 
 	const id = crypto.randomUUID();
@@ -918,7 +927,7 @@ async function handleCompleteRegistration(request, env) {
 	if (Date.parse(pending.expiresAt) < Date.now()) return json({ error: "Code expired, please start again" }, 410);
 	if (!pending.verified || !pending.mcUsername) return json({ error: "Not verified yet — join the server first" }, 400);
 
-	const existing = await env.DB.prepare("SELECT id FROM admins WHERE username = ?").bind(pending.mcUsername).first();
+	const existing = await env.DB.prepare("SELECT id FROM admins WHERE lower(username) = lower(?)").bind(pending.mcUsername).first();
 	if (existing) return json({ error: "An account for this Minecraft username already exists — log in instead, or ask a head admin for help." }, 409);
 
 	const id = crypto.randomUUID();
@@ -956,7 +965,7 @@ async function handleDirectRegistration(request, env) {
 	}
 	if (password.length < 8) return json({ error: "password must be at least 8 characters" }, 400);
 
-	const existing = await env.DB.prepare("SELECT id FROM admins WHERE username = ?").bind(mcUsername).first();
+	const existing = await env.DB.prepare("SELECT id FROM admins WHERE lower(username) = lower(?)").bind(mcUsername).first();
 	if (existing) return json({ error: "An account for this Minecraft username already exists — log in instead, or ask a head admin for help." }, 409);
 
 	const id = crypto.randomUUID();
@@ -3168,6 +3177,7 @@ const MAPART_MAX_GRID = 20;
 // there — these slugs would collide with real static paths.
 const MAPART_RESERVED_SLUGS = new Set(["manage", "index", "image"]);
 const VERIFICATION_LINK_BASE_URL = "https://sctp.nl/verify-link/?t=";
+const PASSWORD_RESET_LINK_BASE_URL = "https://sctp.nl/reset-password/?t=";
 
 function mapartSlugify(title) {
 	let s = String(title || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
@@ -4985,7 +4995,7 @@ async function handleAdminBuildMapartIndex(request, env) {
 // per-attribute feedback; the answer is revealed only once the player's game is over.
 //   GET  /raredle/state                (any account) -> today's game: guesses + feedback, status, hint, stats (answer only when finished)
 //   POST /raredle/guess                (any account) body: {itemId}
-//   GET  /raredle/leaderboard          (public, cached 1 min) -> {date, daily: [...], allTime: [...], streaks: [...]}
+//   GET  /raredle/leaderboard          (public, cached 1 min) -> {date, weekStart, daily: [...], week: [...], allTime: [...]}
 // Resetting today's game (POST /raredle/reset) is a QA-only escape hatch, off now that
 // Rare-dle is live — one official daily game per account per day.
 // Practice mode (?mode=practice / body.mode:"practice") is playable logged OUT too —
@@ -5187,6 +5197,16 @@ async function raredleAnswerFor(env, date) {
 	await env.DB.prepare("INSERT OR IGNORE INTO raredleAnswers (date, itemId) VALUES (?, ?)").bind(date, pick).run();
 	const stored = await env.DB.prepare("SELECT itemId FROM raredleAnswers WHERE date = ?").bind(date).first();
 	return stored.itemId;
+}
+
+// Monday 00:00 UTC on/before the given YYYY-MM-DD — the "this week" leaderboard's
+// reset point (Sunday night into Monday, same UTC-midnight convention the daily
+// puzzle itself already resets on).
+function raredleWeekStart(dateStr) {
+	const d = new Date(dateStr + "T00:00:00Z");
+	const sinceMonday = (d.getUTCDay() + 6) % 7; // Mon=0 ... Sun=6
+	d.setUTCDate(d.getUTCDate() - sinceMonday);
+	return d.toISOString().slice(0, 10);
 }
 
 function computeRaredleStreaks(games, today) {
@@ -5475,6 +5495,7 @@ async function handleRaredleGuess(request, env) {
 async function handleRaredleLeaderboard(request, env, ctx) {
 	return cachedGet(request, ctx, 60, async () => {
 		const today = raredleToday();
+		const weekStart = raredleWeekStart(today);
 		const { results } = await env.DB.prepare(
 			`SELECT g.accountId, a.username, g.date, g.status, g.guessCount, g.score, g.startedAt, g.finishedAt
 			 FROM raredleGames g JOIN admins a ON a.id = g.accountId WHERE g.status IN ('won','lost')`
@@ -5484,25 +5505,34 @@ async function handleRaredleLeaderboard(request, env, ctx) {
 			.sort((x, y) => y.score - x.score || x.guessCount - y.guessCount || String(x.finishedAt).localeCompare(String(y.finishedAt)))
 			.slice(0, 25).map((r, i) => ({ rank: i + 1, username: r.username, guesses: r.guessCount, score: r.score }));
 
-		const byUser = new Map();
-		for (const r of results) {
-			let e = byUser.get(r.accountId);
-			if (!e) { e = { username: r.username, games: [] }; byUser.set(r.accountId, e); }
-			e.games.push(r);
+		function groupByUser(rowsIn) {
+			const byUser = new Map();
+			for (const r of rowsIn) {
+				let e = byUser.get(r.accountId);
+				if (!e) { e = { username: r.username, games: [] }; byUser.set(r.accountId, e); }
+				e.games.push(r);
+			}
+			return [...byUser.values()];
 		}
-		const rows = [...byUser.values()].map((e) => {
+		function pointsRow(e) {
 			const wins = e.games.filter((g) => g.status === "won");
-			const st = computeRaredleStreaks(e.games, today);
 			return {
 				username: e.username, points: e.games.reduce((a, g) => a + g.score, 0),
 				played: e.games.length, wins: wins.length,
 				avgGuesses: wins.length ? Math.round((wins.reduce((a, g) => a + g.guessCount, 0) / wins.length) * 10) / 10 : null,
-				streak: st.current, bestStreak: st.best,
 			};
-		});
-		const allTime = rows.slice().sort((a, b) => b.points - a.points || b.wins - a.wins).slice(0, 25).map((r, i) => ({ rank: i + 1, ...r }));
-		const streaks = rows.filter((r) => r.bestStreak > 0).sort((a, b) => b.streak - a.streak || b.bestStreak - a.bestStreak).slice(0, 25).map((r, i) => ({ rank: i + 1, username: r.username, streak: r.streak, bestStreak: r.bestStreak }));
-		return { date: today, daily, allTime, streaks, playersToday: results.filter((r) => r.date === today).length };
+		}
+		const rankByPoints = (rows) => rows.slice().sort((a, b) => b.points - a.points || b.wins - a.wins).slice(0, 25).map((r, i) => ({ rank: i + 1, ...r }));
+
+		// All-time keeps its win-streak columns (an ongoing, not calendar-scoped
+		// stat); "this week" is a fresh points race that resets Monday, so no streak there.
+		const allTime = rankByPoints(groupByUser(results).map((e) => {
+			const st = computeRaredleStreaks(e.games, today);
+			return { ...pointsRow(e), streak: st.current, bestStreak: st.best };
+		}));
+		const week = rankByPoints(groupByUser(results.filter((r) => r.date >= weekStart)).map(pointsRow));
+
+		return { date: today, weekStart, daily, week, allTime, playersToday: results.filter((r) => r.date === today).length };
 	});
 }
 
@@ -5587,7 +5617,7 @@ async function handleRedeemVerificationLink(request, env) {
 	const now = new Date().toISOString();
 	if (mode === "link") {
 		const username = String(body.username || "").trim();
-		const admin = await env.DB.prepare("SELECT * FROM admins WHERE username = ?").bind(username).first();
+		const admin = await env.DB.prepare("SELECT * FROM admins WHERE lower(username) = lower(?)").bind(username).first();
 		if (!admin || !(await verifyPassword(password, admin.passwordSalt, admin.passwordHash))) {
 			return json({ error: "Invalid username or password" }, 401);
 		}
@@ -5598,7 +5628,7 @@ async function handleRedeemVerificationLink(request, env) {
 		if (password.length < 8) return json({ error: "password must be at least 8 characters" }, 400);
 		const username = String(body.username || "").trim() || link.mcUsername;
 		if (!isValidClaimedMcUsername(username)) return json({ error: "Login username may only contain letters, digits and underscores (max 16)." }, 400);
-		const taken = await env.DB.prepare("SELECT id FROM admins WHERE username = ?").bind(username).first();
+		const taken = await env.DB.prepare("SELECT id FROM admins WHERE lower(username) = lower(?)").bind(username).first();
 		if (taken) return json({ error: "That login username is already taken — pick a different one." }, 409);
 		accountId = crypto.randomUUID(); accountUsername = username;
 	}
@@ -5633,6 +5663,109 @@ async function handleRedeemVerificationLink(request, env) {
 	let permissions = [];
 	try { permissions = JSON.parse(acct.permissions || "[]"); } catch (e) { /* ignore */ }
 	return json({ token, username: accountUsername, isHeadAdmin: !!acct.isHeadAdmin, permissions, expiresAt, mcUsername: link.mcUsername, mcVerified: true });
+}
+
+// ---------------- password reset links ----------------
+// Same mechanic as verification links just above: a head admin mints a
+// single-use, expiring link for an existing account, sends it to the player
+// privately (there's no outbound email here), and whoever opens it can set a
+// brand-new password — no need to know the old one.
+
+// Head admin: body {username, days?} -> {token, url, username, expiresAt}
+async function handleAdminCreatePasswordResetLink(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const username = String(body.username || "").trim();
+	if (!username) return json({ error: "username is required" }, 400);
+	const account = await env.DB.prepare("SELECT id, username FROM admins WHERE lower(username) = lower(?)").bind(username).first();
+	if (!account) return json({ error: "No account with that username" }, 404);
+	const days = Math.min(365, Math.max(1, Math.floor(Number(body.days) || 7)));
+	const token = newToken();
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+	await env.DB.prepare("INSERT INTO passwordResetLinks (token, accountId, username, createdBy, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?, ?)")
+		.bind(token, account.id, account.username, auth.admin ? auth.admin.username : "master", now.toISOString(), expiresAt).run();
+	return json({ token, url: PASSWORD_RESET_LINK_BASE_URL + token, username: account.username, expiresAt });
+}
+
+async function handleAdminListPasswordResetLinks(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	const { results } = await env.DB.prepare("SELECT * FROM passwordResetLinks ORDER BY createdAt DESC LIMIT 100").all();
+	const now = Date.now();
+	return json(results.map((l) => {
+		const status = l.usedAt ? "used" : Date.parse(l.expiresAt) < now ? "expired" : "active";
+		return {
+			username: l.username, createdBy: l.createdBy, createdAt: l.createdAt, expiresAt: l.expiresAt, usedAt: l.usedAt || null,
+			status, token: status === "active" ? l.token : null, url: status === "active" ? PASSWORD_RESET_LINK_BASE_URL + l.token : null,
+		};
+	}));
+}
+
+async function handleAdminRevokePasswordResetLink(request, env) {
+	const auth = await requireAdminAuth(request, env, null);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const res = await env.DB.prepare("DELETE FROM passwordResetLinks WHERE token = ? AND usedAt IS NULL").bind(String(body.token || "")).run();
+	if (res.meta.changes === 0) return json({ error: "No such unused link" }, 404);
+	return json({ ok: true });
+}
+
+async function loadUsablePasswordResetLink(env, token) {
+	const link = await env.DB.prepare("SELECT * FROM passwordResetLinks WHERE token = ?").bind(String(token || "")).first();
+	if (!link) return { error: json({ error: "This link doesn't exist." }, 404) };
+	if (link.usedAt) return { error: json({ error: "This link has already been used." }, 410) };
+	if (Date.parse(link.expiresAt) < Date.now()) return { error: json({ error: "This link has expired." }, 410) };
+	return { link };
+}
+
+// Public — lets the landing page show which account it's about.
+async function handlePasswordResetLinkInfo(request, env) {
+	const token = new URL(request.url).searchParams.get("token");
+	const res = await loadUsablePasswordResetLink(env, token);
+	if (res.error) return res.error;
+	return json({ username: res.link.username, expiresAt: res.link.expiresAt });
+}
+
+// body: {token, newPassword} -> logs in with the new password, same shape as
+// POST /admin/login. Single-use, and every other existing session on the
+// account is torn down (same as a normal password change) — the link itself
+// is the proof of identity here, so anything a stolen old session could still
+// do gets cut off the moment it's redeemed.
+async function handlePasswordResetLinkRedeem(request, env) {
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const newPassword = String(body.newPassword || "");
+	if (newPassword.length < 8) return json({ error: "newPassword must be at least 8 characters" }, 400);
+	const usable = await loadUsablePasswordResetLink(env, body.token);
+	if (usable.error) return usable.error;
+	const link = usable.link;
+
+	// Claim the single use before doing anything irreversible-ish.
+	const now = new Date().toISOString();
+	const claimed = await env.DB.prepare("UPDATE passwordResetLinks SET usedAt = ? WHERE token = ? AND usedAt IS NULL").bind(now, link.token).run();
+	if (claimed.meta.changes === 0) return json({ error: "This link has already been used." }, 410);
+
+	const salt = newSaltHex();
+	const hash = await hashPassword(newPassword, salt);
+	await env.DB.prepare("UPDATE admins SET passwordHash = ?, passwordSalt = ? WHERE id = ?").bind(hash, salt, link.accountId).run();
+	await env.DB.prepare("DELETE FROM adminSessions WHERE adminId = ?").bind(link.accountId).run();
+
+	const admin = await env.DB.prepare("SELECT * FROM admins WHERE id = ?").bind(link.accountId).first();
+	if (!admin) return json({ error: "That account no longer exists." }, 410);
+	const token = newToken();
+	const expiresAt = new Date(Date.now() + ADMIN_SESSION_TTL_MS).toISOString();
+	await env.DB.prepare("INSERT INTO adminSessions (token, adminId, createdAt, expiresAt) VALUES (?, ?, ?, ?)")
+		.bind(token, admin.id, now, expiresAt).run();
+	let permissions = [];
+	try { permissions = JSON.parse(admin.permissions || "[]"); } catch (e) { /* ignore */ }
+	return json({
+		token, username: admin.username, isHeadAdmin: !!admin.isHeadAdmin, permissions, expiresAt,
+		mcUsername: admin.mcUsername || null, mcVerified: !!admin.mcVerified,
+	});
 }
 
 const ROUTES = [
@@ -5733,6 +5866,11 @@ const ROUTES = [
 	["POST", "/admin/verification-links/revoke", handleAdminRevokeVerificationLink],
 	["GET", "/verify-link/info", handleVerificationLinkInfo],
 	["POST", "/verify-link/redeem", handleRedeemVerificationLink],
+	["POST", "/admin/password-reset-links/create", handleAdminCreatePasswordResetLink],
+	["GET", "/admin/password-reset-links", handleAdminListPasswordResetLinks],
+	["POST", "/admin/password-reset-links/revoke", handleAdminRevokePasswordResetLink],
+	["GET", "/password-reset-link/info", handlePasswordResetLinkInfo],
+	["POST", "/password-reset-link/redeem", handlePasswordResetLinkRedeem],
 	["GET", "/account/register/status", handleGetRegistrationStatus],
 	["POST", "/account/register/complete", handleCompleteRegistration],
 	["POST", "/account/register/verify-callback", handleRegistrationVerifyCallback],

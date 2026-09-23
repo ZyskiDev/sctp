@@ -162,8 +162,8 @@
 		<h2>Leaderboards</h2>
 		<div class="tabs">
 			<button type="button" class="tab active" data-lb="daily">Today</button>
+			<button type="button" class="tab" data-lb="week">This week</button>
 			<button type="button" class="tab" data-lb="allTime">All-time</button>
-			<button type="button" class="tab" data-lb="streaks">Streaks</button>
 		</div>
 		<div id="lbBody"><div class="empty">Loading…</div></div>
 	</div>
@@ -449,9 +449,10 @@
 				? '<table class="lb"><thead><tr><th>#</th><th>Player</th><th class="num">Points</th><th class="num">Wins</th><th class="num">Played</th><th class="num">Avg guesses</th><th class="num">Best streak</th></tr></thead><tbody>' + lb.allTime.map(function(r){ return row(r, '<td class="num">' + r.points.toLocaleString() + '</td><td class="num">' + r.wins + '</td><td class="num">' + r.played + '</td><td class="num">' + (r.avgGuesses == null ? "—" : r.avgGuesses) + '</td><td class="num">' + r.bestStreak + '</td>'); }).join("") + '</tbody></table>'
 				: '<div class="empty">No finished games yet.</div>';
 		} else {
-			html = lb.streaks.length
-				? '<table class="lb"><thead><tr><th>#</th><th>Player</th><th class="num">Current streak</th><th class="num">Best streak</th></tr></thead><tbody>' + lb.streaks.map(function(r){ return row(r, '<td class="num">' + r.streak + '</td><td class="num">' + r.bestStreak + '</td>'); }).join("") + '</tbody></table>'
-				: '<div class="empty">No streaks yet.</div>';
+			html = lb.week.length
+				? '<table class="lb"><thead><tr><th>#</th><th>Player</th><th class="num">Points</th><th class="num">Wins</th><th class="num">Played</th><th class="num">Avg guesses</th></tr></thead><tbody>' + lb.week.map(function(r){ return row(r, '<td class="num">' + r.points.toLocaleString() + '</td><td class="num">' + r.wins + '</td><td class="num">' + r.played + '</td><td class="num">' + (r.avgGuesses == null ? "—" : r.avgGuesses) + '</td>'); }).join("") + '</tbody></table>'
+				: '<div class="empty">Nobody\'s played this week yet.</div>';
+			html += '<div class="empty" style="padding-bottom:0;">Resets Monday at midnight UTC.</div>';
 		}
 		$("lbBody").innerHTML = html;
 	}
