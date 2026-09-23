@@ -121,7 +121,7 @@
 </header>
 
 <main class="wrap">
-	<div class="card" id="loginCta" hidden><div class="login-cta">Log in to play Rare-dle &mdash; use the button up top. The leaderboards below are public.</div></div>
+	<div class="card" id="loginCta" hidden><div class="login-cta">Log in to play the daily Rare-dle &mdash; use the button up top. Try <button type="button" class="btn ghost" id="loginCtaPractice" style="margin:0 2px;">Random practice</button> without an account, or check the public leaderboards below.</div></div>
 
 	<div id="game" hidden>
 		<div class="card">
@@ -197,6 +197,12 @@
 	function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 	function session(){ return window.sctpAccount ? window.sctpAccount.getSession() : null; }
 	function isAdminSession(){ var s = session(); return !!(s && (s.isHeadAdmin || (s.permissions && s.permissions.length))); }
+	// Practice mode is playable logged out — its round state rides in this
+	// signed token instead of an account row, so it's the one thing we persist
+	// client-side. Daily always needs a real session, this never substitutes for one.
+	var PRACTICE_TOKEN_KEY = "sctp_raredle_practice_token";
+	function getPracticeToken(){ try { return localStorage.getItem(PRACTICE_TOKEN_KEY); } catch(e){ return null; } }
+	function savePracticeToken(t){ try { if(t) localStorage.setItem(PRACTICE_TOKEN_KEY, t); } catch(e){} }
 	function api(path, opts){
 		opts = opts || {};
 		var s = session(), h = {};
@@ -210,15 +216,28 @@
 	// ---------------- game ----------------
 	function loadGame(){
 		var s = session();
-		$("loginCta").hidden = !!s;
-		$("game").hidden = !s;
-		if(!s) return;
-		api("/raredle/state" + (mode === "practice" ? "?mode=practice" : "")).then(function(r){
+		// Practice plays without an account; the daily still needs one.
+		if(mode === "daily"){
+			$("loginCta").hidden = !!s;
+			$("game").hidden = !s;
+			if(!s) return;
+		} else {
+			$("loginCta").hidden = true;
+			$("game").hidden = false;
+		}
+		var path = "/raredle/state";
+		if(mode === "practice"){
+			path += "?mode=practice";
+			if(!s && getPracticeToken()) path += "&token=" + encodeURIComponent(getPracticeToken());
+		}
+		api(path).then(function(r){
 			if(!r.ok){
-				if(mode === "practice"){ mode = "daily"; setMode("daily"); }
+				if(mode === "practice"){ mode = "daily"; setMode("daily"); loadGame(); return; }
 				$("gErr").textContent = r.data.error || "Couldn't load today's game."; return;
 			}
-			state = r.data; renderGame();
+			state = r.data;
+			if(state.practiceToken) savePracticeToken(state.practiceToken);
+			renderGame();
 		});
 	}
 
@@ -340,9 +359,12 @@
 		api("/raredle/practice/new", { method: "POST", body: "{}" }).then(function(r){
 			busy = false;
 			if(!r.ok){ $("gErr").textContent = r.data.error || "Couldn't start a new round."; return; }
-			state = r.data; $("gErr").textContent = ""; renderGame();
+			state = r.data;
+			if(state.practiceToken) savePracticeToken(state.practiceToken);
+			$("gErr").textContent = ""; renderGame();
 		}).catch(function(){ busy = false; });
 	});
+	$("loginCtaPractice").addEventListener("click", function(){ setMode("practice"); loadGame(); });
 
 	// ---------------- guessing ----------------
 	function peekedToday(){
@@ -373,10 +395,14 @@
 		if(busy || !item) return;
 		busy = true; $("gErr").textContent = "";
 		$("guessInput").value = ""; $("suggest").hidden = true;
-		api("/raredle/guess", { method: "POST", body: JSON.stringify({ itemId: item.id, mode: mode, peeked: peekedToday() }) }).then(function(r){
+		var body = { itemId: item.id, mode: mode, peeked: peekedToday() };
+		if(mode === "practice") body.practiceToken = getPracticeToken();
+		api("/raredle/guess", { method: "POST", body: JSON.stringify(body) }).then(function(r){
 			busy = false;
 			if(!r.ok){ $("gErr").textContent = r.data.error || "Couldn't submit that guess."; if(r.status === 409) loadGame(); return; }
-			state = r.data; renderGame();
+			state = r.data;
+			if(state.practiceToken) savePracticeToken(state.practiceToken);
+			renderGame();
 			if(state.status !== "playing" && mode === "daily") loadLeaderboard();
 		}).catch(function(){ busy = false; $("gErr").textContent = "Network problem — try again."; });
 	}

@@ -3159,7 +3159,7 @@ async function handleAdminSnapshots(request, env) {
 
 // ---------------- mapart ----------------
 
-const MAPART_CATEGORIES = ["Pets", "Anime", "Art", "Memes", "Photography", "Letters", "Seasonal", "Advertisement", "Misc", "Flags"];
+const MAPART_CATEGORIES = ["Pets", "Anime", "TV/Animation", "Art", "Memes", "Nature", "Photography", "Letters", "Seasonal", "Advertisement", "Misc", "Flags"];
 const MAPART_WORLDS = ["Firefly", "Honeybee"];
 const MAPART_MAX_PNG_BYTES = 4 * 1024 * 1024;
 const MAPART_MAX_GROUPS_PER_UPLOAD = 40;
@@ -4980,14 +4980,17 @@ async function handleAdminBuildMapartIndex(request, env) {
 }
 
 // ---------------- Rare-dle ----------------
-// Daily guess-the-rare game (see 0026_raredle.sql). Login required to play. The
-// answer lives only here: the client sends a guess and gets back per-attribute
-// feedback; the answer is revealed only once the player's game is over.
+// Daily guess-the-rare game (see 0026_raredle.sql). Login required to play the
+// daily. The answer lives only here: the client sends a guess and gets back
+// per-attribute feedback; the answer is revealed only once the player's game is over.
 //   GET  /raredle/state                (any account) -> today's game: guesses + feedback, status, hint, stats (answer only when finished)
 //   POST /raredle/guess                (any account) body: {itemId}
 //   GET  /raredle/leaderboard          (public, cached 1 min) -> {date, daily: [...], allTime: [...], streaks: [...]}
 // Resetting today's game (POST /raredle/reset) is a QA-only escape hatch, off now that
 // Rare-dle is live — one official daily game per account per day.
+// Practice mode (?mode=practice / body.mode:"practice") is playable logged OUT too —
+// see the "anonymous practice" block below raredlePracticePool for how that state is
+// carried in a signed client-held token instead of a DB row, since there's no accountId.
 const RAREDLE_ALLOW_RESET = false;
 // Unlimited random practice rounds are a real, permanent feature (not gated by launch state).
 const RAREDLE_PRACTICE_ENABLED = true;
@@ -5243,14 +5246,25 @@ async function raredleStatePayload(env, admin) {
 }
 
 async function handleRaredleState(request, env) {
-	const auth = await requireAnyAdmin(request, env);
-	if (!auth.ok) return auth.response;
+	const url = new URL(request.url);
+	const isPractice = url.searchParams.get("mode") === "practice";
+	if (!isPractice) {
+		// Daily stays login-only.
+		const auth = await requireAnyAdmin(request, env);
+		if (!auth.ok) return auth.response;
+		try { return json(await raredleStatePayload(env, auth.admin)); }
+		catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
+	}
+	if (!RAREDLE_PRACTICE_ENABLED) return json({ error: "Practice rounds aren't available right now." }, 403);
 	try {
-		if (new URL(request.url).searchParams.get("mode") === "practice") {
-			if (!RAREDLE_PRACTICE_ENABLED) return json({ error: "Practice rounds aren't available right now." }, 403);
-			return json(await raredlePracticePayload(env, auth.admin, await getRareCatalog(), null));
-		}
-		return json(await raredleStatePayload(env, auth.admin));
+		const cat = await getRareCatalog();
+		const auth = await requireAnyAdmin(request, env);
+		if (auth.ok) return json(await raredlePracticePayload(env, auth.admin, cat, null));
+		// Logged out: state rides in the token, not a DB row.
+		const token = url.searchParams.get("token");
+		let payload = token ? await raredleVerifyPracticeToken(env, token) : null;
+		if (!payload) payload = raredleNewAnonPractice(cat);
+		return json(await raredlePracticeAnonPayload(env, cat, payload));
 	} catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
 }
 
@@ -5259,6 +5273,84 @@ async function handleRaredleState(request, env) {
 function raredlePracticePool(cat) {
 	const pool = cat.items.filter((i) => i.texture && i.category && !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category) && i.releaseDate && i.releaseDate !== "null" && i.obtainedFrom && i.obtainedFrom !== "null" && i.typeSlot && i.typeSlot !== "null");
 	return pool.length ? pool : cat.items.filter((i) => !cat.derived.has(i.id) && !RAREDLE_EXCLUDED_CATEGORIES.has(i.category));
+}
+
+// ---- anonymous practice: logged-out players get practice too, but there's no
+// accountId to key a DB row on, so the round's state (answer + guesses so far)
+// rides along in a signed token the client holds and echoes back on every
+// request instead. HMAC-SHA256 over a base64url JSON payload, keyed by the
+// dedicated RAREDLE_PRACTICE_SECRET (never reused elsewhere) so a forged token
+// can only ever pick its own answerId out of thin air, never anything sensitive.
+function raredleB64urlEncode(str) {
+	const bytes = new TextEncoder().encode(str);
+	let bin = "";
+	bytes.forEach((b) => { bin += String.fromCharCode(b); });
+	return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function raredleB64urlDecode(str) {
+	str = str.replace(/-/g, "+").replace(/_/g, "/");
+	while (str.length % 4) str += "=";
+	const bin = atob(str);
+	const bytes = new Uint8Array(bin.length);
+	for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+	return new TextDecoder().decode(bytes);
+}
+async function raredlePracticeHmac(env, data) {
+	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.RAREDLE_PRACTICE_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+	const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+	return bufToHex(sig);
+}
+async function raredleSignPracticeToken(env, payload) {
+	const payloadB64 = raredleB64urlEncode(JSON.stringify(payload));
+	return payloadB64 + "." + await raredlePracticeHmac(env, payloadB64);
+}
+async function raredleVerifyPracticeToken(env, token) {
+	if (!token || typeof token !== "string") return null;
+	const dot = token.lastIndexOf(".");
+	if (dot < 0) return null;
+	const payloadB64 = token.slice(0, dot), sig = token.slice(dot + 1);
+	try {
+		const expected = await raredlePracticeHmac(env, payloadB64);
+		if (!timingSafeEqualHex(sig, expected)) return null;
+		const parsed = JSON.parse(raredleB64urlDecode(payloadB64));
+		if (!parsed || typeof parsed.answerId !== "string" || !Array.isArray(parsed.guesses)) return null;
+		return parsed;
+	} catch (e) { return null; }
+}
+function raredleNewAnonPractice(cat) {
+	const pool = raredlePracticePool(cat);
+	const answerId = pool[crypto.getRandomValues(new Uint32Array(1))[0] % pool.length].id;
+	return { answerId, guesses: [], status: "playing" };
+}
+async function raredlePracticeAnonPayload(env, cat, payload) {
+	const answer = cat.byId.get(payload.answerId);
+	const guesses = payload.guesses.map((id) => {
+		const g = cat.byId.get(id);
+		if (!g) return null;
+		const feedback = raredleCompare(g, answer);
+		return { itemId: id, name: g.name, texture: g.texture, feedback, note: raredleTwinNote(feedback, id, payload.answerId) };
+	}).filter(Boolean);
+	const out = {
+		date: raredleToday(), mode: "practice", maxGuesses: RAREDLE_MAX_GUESSES, status: payload.status, guesses,
+		pixelHint: payload.status === "playing" ? await raredlePixelHint(answer, guesses.length) : null,
+		pixelSteps: RAREDLE_PIXEL_STEPS.slice().reverse(),
+		noPeek: null, score: 0,
+		stats: { played: 0, wins: 0, winRate: 0, avgGuesses: null, streak: 0, bestStreak: 0, points: 0 },
+		practiceToken: await raredleSignPracticeToken(env, payload),
+	};
+	if (payload.status !== "playing") out.answer = { id: answer.id, name: answer.name, texture: answer.texture, effect: answer.effect || "", category: answer.category, releaseDate: answer.releaseDate, obtainedFrom: answer.obtainedFrom };
+	return out;
+}
+async function raredlePracticeAnonGuess(env, cat, itemId, token) {
+	const guess = cat.byId.get(itemId);
+	if (!guess) return json({ error: "Pick a rare from the list." }, 400);
+	let payload = token ? await raredleVerifyPracticeToken(env, token) : null;
+	if (!payload) payload = raredleNewAnonPractice(cat);
+	if (payload.status !== "playing") return json({ error: "This practice round is over — start a new one." }, 409);
+	if (payload.guesses.includes(itemId)) return json({ error: "You already guessed that one." }, 409);
+	payload.guesses.push(itemId);
+	payload.status = itemId === payload.answerId ? "won" : payload.guesses.length >= RAREDLE_MAX_GUESSES ? "lost" : "playing";
+	return json(await raredlePracticeAnonPayload(env, cat, payload));
 }
 
 async function raredleNewPractice(env, accountId, cat) {
@@ -5293,12 +5385,14 @@ async function raredlePracticePayload(env, admin, cat, row) {
 
 async function handleRaredlePracticeNew(request, env) {
 	if (!RAREDLE_PRACTICE_ENABLED) return json({ error: "Practice rounds aren't available right now." }, 403);
-	const auth = await requireAnyAdmin(request, env);
-	if (!auth.ok) return auth.response;
 	try {
 		const cat = await getRareCatalog();
-		const row = await raredleNewPractice(env, auth.admin.id, cat);
-		return json(await raredlePracticePayload(env, auth.admin, cat, row));
+		const auth = await requireAnyAdmin(request, env);
+		if (auth.ok) {
+			const row = await raredleNewPractice(env, auth.admin.id, cat);
+			return json(await raredlePracticePayload(env, auth.admin, cat, row));
+		}
+		return json(await raredlePracticeAnonPayload(env, cat, raredleNewAnonPractice(cat)));
 	} catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
 }
 
@@ -5327,17 +5421,22 @@ async function handleRaredleReset(request, env) {
 }
 
 async function handleRaredleGuess(request, env) {
-	const auth = await requireAnyAdmin(request, env);
-	if (!auth.ok) return auth.response;
 	let body;
 	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
 	const itemId = String(body.itemId || "");
 	let cat;
 	try { cat = await getRareCatalog(); } catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
+
 	if (body.mode === "practice") {
 		if (!RAREDLE_PRACTICE_ENABLED) return json({ error: "Practice rounds aren't available right now." }, 403);
-		return raredlePracticeGuess(env, auth.admin, cat, itemId);
+		const auth = await requireAnyAdmin(request, env);
+		if (auth.ok) return raredlePracticeGuess(env, auth.admin, cat, itemId);
+		return raredlePracticeAnonGuess(env, cat, itemId, body.practiceToken);
 	}
+
+	// Daily stays login-only.
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
 	const guess = cat.byId.get(itemId);
 	if (!guess) return json({ error: "Pick a rare from the list." }, 400);
 

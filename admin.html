@@ -1110,7 +1110,7 @@
 			  '</div>'+
 			  '<div class="edit-form" id="edit-'+r.id+'">'+
 				'<select id="field-'+r.id+'">'+fieldOptions+'</select>'+
-				'<input type="text" id="value-'+r.id+'" placeholder="new value (category: Pets, Anime, Art, Memes, Photography, Letters, Seasonal, Advertisement, Misc, Flags)">'+
+				'<input type="text" id="value-'+r.id+'" placeholder="new value (category: Pets, Anime, TV/Animation, Art, Memes, Nature, Photography, Letters, Seasonal, Advertisement, Misc, Flags)">'+
 				'<button class="change report-change-submit" data-id="'+r.id+'" type="button">Apply</button>'+
 			  '</div>'
 			: '<span class="badge '+r.status+'">'+r.status+'</span>';
@@ -1478,7 +1478,7 @@
 	// ---------------- mapart (admin) ----------------
 
 	var adminMapart = [];
-	var MAPART_CATEGORIES = ["Pets","Anime","Art","Memes","Photography","Letters","Seasonal","Advertisement","Misc","Flags"];
+	var MAPART_CATEGORIES = ["Pets","Anime","TV/Animation","Art","Memes","Nature","Photography","Letters","Seasonal","Advertisement","Misc","Flags"];
 
 	function mapartImg(m){ return API_BASE + "/mapart/image?id=" + encodeURIComponent(m.id) + "&v=" + encodeURIComponent(m.imageHash || ""); }
 
