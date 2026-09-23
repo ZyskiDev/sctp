@@ -122,7 +122,7 @@
 	</div>
 	<div class="hero-meta">
 		<span><b>Released</b> September 2026</span>
-		<span><b>Mod</b> updated to 2.0 alongside the site</span>
+		<span><b>Mod</b> now on 2.1 — 2.0's overhaul, plus the new <code>/preview</code> command</span>
 	</div>
 </div>
 
@@ -135,7 +135,8 @@
 		<a href="#raredle"><span class="toc-num">05</span>Rare-dle</a>
 		<a href="#site-qol"><span class="toc-num">06</span>Site QOL</a>
 		<a href="#mod-qol"><span class="toc-num">07</span>Mod QOL</a>
-		<a href="#downloads"><span class="toc-num">08</span>New download flow</a>
+		<a href="#preview"><span class="toc-num">08</span>/preview (2.1)</a>
+		<a href="#downloads"><span class="toc-num">09</span>New download flow</a>
 	</nav>
 
 	<div class="steps">
@@ -241,8 +242,20 @@
 			</div>
 		</section>
 
+		<section class="step" id="preview">
+			<div class="step-head"><div class="step-num">8</div><h3>/preview</h3><span class="new-pill">NEW IN 2.1</span></div>
+			<p class="step-lede">Live-preview a colored, styled rename on the item in your hand before you commit to it for real — type the name with <code>&amp;#RRGGBB</code> hex color blocks and see it applied instantly.</p>
+			<div class="notes">
+				<ul>
+					<li>Hold the item, then run <code>/preview &amp;#FF0000Cool &amp;#00FF00Sword</code> — the color blocks apply to whatever text follows them, and you can mix as many colors in one name as you like.</li>
+					<li>It's a <b>client-side-only</b> preview — nothing is actually renamed on the server, so there's no cost and no commitment either way.</li>
+					<li>Move or drop the item (or just wait for the next server sync) and the preview clears itself automatically.</li>
+				</ul>
+			</div>
+		</section>
+
 		<section class="step" id="downloads">
-			<div class="step-head"><div class="step-num">8</div><h3>New download flow</h3></div>
+			<div class="step-head"><div class="step-num">9</div><h3>New download flow</h3></div>
 			<p class="step-lede">The download popup was rebuilt around a simple loader + version picker instead of a flat list of files.</p>
 			<div class="step-body wide">
 				<div class="shot" style="max-width:520px;"><img src="img/download-modal.png" alt="The redesigned Download Shop Logger modal with loader and version toggles." loading="lazy"><div class="shot-cap">Download mod button, any page</div></div>

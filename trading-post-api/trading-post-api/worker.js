@@ -3544,7 +3544,13 @@ async function sha256Hex16(bytes) {
 // POST /mapart/upload — from the (temporary) mapart scanner mod; gated by
 // the same shared API_KEY every other mod upload uses. Each entry is one
 // complete rectangle of item frames, already stitched into one PNG.
+// Kill switch: flip to false to let the mod's mapart scanner upload again.
+// Turned off after it started uploading bad/unwanted data — see the mod's own
+// mapart scanner code before re-enabling.
+const MAPART_UPLOADS_ENABLED = false;
+
 async function handleUploadMapart(request, env) {
+	if (!MAPART_UPLOADS_ENABLED) return json({ error: "Mapart uploads from the mod are temporarily disabled." }, 503);
 	if (!isAuthorized(request, env.API_KEY)) return json({ error: "Unauthorized" }, 401);
 	let body;
 	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }

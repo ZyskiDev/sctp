@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1 (mod 2.1, September 2026)
+
+### Mod
+- **`/preview <name>`:** live-preview a colored/styled rename on the item in your hand before you actually commit to it — type the name with `&#RRGGBB` hex color blocks (e.g. `/preview &#FF0000Cool &#00FF00Sword`) and it's applied to the held item's display name instantly, client-side only. Move or drop the item to clear the preview; nothing is actually renamed server-side.
+
 ## 2.0 (mod 2.0 + website, September 2026)
 
 Everything since mod 1.6 (released 14 Sep 2026).
