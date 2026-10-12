@@ -22,6 +22,7 @@ import com.snailtools.shoplogger.gui.ui.SettingRow;
 import com.snailtools.shoplogger.gui.ui.Theme;
 import com.snailtools.shoplogger.gui.ui.UiButton;
 import com.snailtools.shoplogger.gui.ui.UiScreen;
+import com.snailtools.shoplogger.qol.BuyConfirm;
 import com.snailtools.shoplogger.qol.EmptyHandItems;
 import com.snailtools.shoplogger.qol.StorageSwitcher;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -43,7 +44,7 @@ public class SettingsScreen extends UiScreen {
 
 	private enum Category {
 		SCANNING("Scanning", "How the mod reads shop chests"),
-		ALERTS("Alerts", "What gets posted in your chat"),
+		ALERTS("Alerts", "What gets posted in your chat, and buy warnings"),
 		DISPLAY("Look & tools", "Colour theme, in-world highlights and shortcuts"),
 		EMPTY_HAND("Empty hand", "Click doors, chests and other blocks with an empty slot instead of these items"),
 		DATA("Data", "Export or upload what you've scanned"),
@@ -144,7 +145,11 @@ public class SettingsScreen extends UiScreen {
 					SettingRow.toggle("Own-shop sale alerts", "Tell me when something sells from my shop",
 							OwnShopSaleTracker::isMessagesEnabled, OwnShopSaleTracker::setMessagesEnabled),
 					SettingRow.toggle("Watchlist: marketplace posts", "Include sctp.nl marketplace posts in watchlist alerts",
-							WatchlistStore::isMarketplaceAlertsEnabled, WatchlistStore::setMarketplaceAlertsEnabled));
+							WatchlistStore::isMarketplaceAlertsEnabled, WatchlistStore::setMarketplaceAlertsEnabled),
+					SettingRow.toggle("Confirm expensive buys", "Click twice to buy from a shop at or above the price below",
+							BuyConfirm::isEnabled, BuyConfirm::setEnabled),
+					SettingRow.stepper("Confirm from", "Shop price that needs a second click",
+							BuyConfirm.THRESHOLD_STEPS_DB, BuyConfirm::thresholdDb, BuyConfirm::setThresholdDb, "DB"));
 			case DISPLAY -> List.of(
 					SettingRow.choice("Colour theme", "The colours of every Shop Logger screen",
 							Arrays.asList(Theme.Palette.values()), Theme::get, Theme::set, v -> v.label),

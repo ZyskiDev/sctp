@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Secret Santa - SCTP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="description" content="Snailcraft Secret Santa on Firefly: sign up, make a gift for a random player, and open yours on Christmas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/secret-santa/santa.css">
+<!-- always Christmas here, whatever the site's live theme is -->
+<link rel="stylesheet" href="/themes/christmas.css">
+<script src="/themes/christmas.js" defer></script>
+<link rel="stylesheet" href="/site.css">
+<style>
+	.entry-summary{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14px;margin:12px 0 0;}
+	.entry-summary dt{color:var(--muted);}
+	.entry-summary dd{margin:0;overflow-wrap:anywhere;}
+	.done-mark{font-size:40px;line-height:1;}
+	.closed-note{display:flex;gap:14px;align-items:center;}
+	.value-classes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
+	@media (max-width:560px){.value-classes{grid-template-columns:1fr;}}
+	.value-classes div{background:var(--panel-alt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;}
+	.value-classes b{display:block;font-size:15px;}
+	.value-classes .v{font:700 13px/1.3 var(--font-mono);color:var(--gold);}
+</style>
+</head>
+<body>
+
+<header class="site">
+	<div class="wrap header-row">
+		<div class="brand-row">
+			<div class="brand-mark" aria-hidden="true">&#127873;</div>
+			<div><h1>Secret Santa</h1><p class="tag" id="tagline">Snailcraft &middot; Firefly</p></div>
+		</div>
+		<div id="siteNavMount"></div>
+	</div>
+</header>
+
+<main class="wrap">
+	<section class="card cane hero" id="hero">
+		<span class="firefly"><span class="dot"></span>Firefly only</span>
+		<h2 id="heroTitle">Secret Santa</h2>
+		<p class="status" id="heroStatus">Loading&hellip;</p>
+		<div class="actions" id="heroActions"></div>
+	</section>
+
+	<section class="card">
+		<h2>How it works</h2>
+		<p class="lead">You get a random player from the same value class, make them a gift, and on Christmas everyone opens the gift someone made for them. Nobody finds out who made theirs.</p>
+		<ol class="steps" id="steps"></ol>
+		<div class="value-classes">
+			<div><b>High value</b><span class="v">48 DB or more</span><br>Your gift is worth at least 48 DB, and so is the one you get.</div>
+			<div><b>Low value</b><span class="v">16 DB or more</span><br>Your gift is worth at least 16 DB, and so is the one you get.</div>
+		</div>
+	</section>
+
+	<section class="card" id="formCard" hidden>
+		<h2 id="formTitle">Sign up</h2>
+		<p class="lead" id="formLead"></p>
+		<div class="firefly-note" style="margin-bottom:18px;"><span class="firefly"><span class="dot"></span>Firefly</span><span>Secret Santa is <b>Firefly only</b>. Gifts are made, dropped off and opened on Firefly, so sign up with the account you play on Firefly.</span></div>
+		<div class="signin-nudge" id="signinNudge" hidden>
+			<span><b>Sign in first (recommended).</b> You can then change your entry until sign-ups close, and import your SCTP wishlist. Without signing in, your entry can't be changed later.</span>
+			<button type="button" class="btn" id="nudgeSignIn">Sign in</button>
+		</div>
+		<form id="form" novalidate>
+			<div class="row2">
+				<div class="field">
+					<label for="mcName">Minecraft username</label>
+					<input type="text" id="mcName" maxlength="17" autocomplete="off" spellcheck="false" placeholder="Your Firefly username">
+					<p class="help" id="mcHelp">Exactly as it is in game.</p>
+				</div>
+				<div class="field">
+					<label for="discord">Discord username</label>
+					<input type="text" id="discord" maxlength="64" autocomplete="off" spellcheck="false" placeholder="e.g. snailfan">
+					<p class="help">Only Secret Santa admins see this, in case they need to reach you.</p>
+				</div>
+			</div>
+
+			<div class="field" role="radiogroup" aria-labelledby="catLabel">
+				<span class="label" id="catLabel">Category</span>
+				<div class="cats">
+					<label class="cat"><input type="radio" name="category" value="high"><span class="t">High value</span><span class="v">48 DB+</span><span class="d">Make one gift worth at least 48 DB.</span></label>
+					<label class="cat"><input type="radio" name="category" value="low"><span class="t">Low value</span><span class="v">16 DB+</span><span class="d">Make one gift worth at least 16 DB.</span></label>
+					<label class="cat"><input type="radio" name="category" value="both"><span class="t">Both</span><span class="v">48 DB+ and 16 DB+</span><span class="d">Make two gifts, one of each.</span></label>
+				</div>
+				<div class="both-note" id="bothNote" hidden><b>You'll make 2 gifts:</b> one high value gift (48 DB+) for one player and one low value gift (16 DB+) for another. You'll get 2 gifts back too.</div>
+			</div>
+
+			<div class="field">
+				<span class="label">Don't match me with</span>
+				<p class="help">Up to 5 players you don't want to make a gift for or get one from. Use their full Minecraft username.</p>
+				<div id="excludes"></div>
+			</div>
+
+			<div class="field">
+				<span class="label">Wishlist</span>
+				<p class="help">What would you love to get? Pick rares, items and mapart from SCTP (with their suggested value), or write your own wishes. Your Secret Santa sees this list and where to buy each item on Firefly.</p>
+				<div id="wishlist"></div>
+			</div>
+
+			<div class="field">
+				<label for="about">About you</label>
+				<p class="help">Your hobbies, what you build, favourite colours, things you collect&hellip; anything that helps your Secret Santa pick something you'll love.</p>
+				<textarea id="about" maxlength="500" placeholder="I build cosy cottages, collect snail plushies and love anything purple."></textarea>
+				<div class="count" id="aboutCount">0 / 500</div>
+			</div>
+
+			<p class="form-error" id="formError" hidden></p>
+			<div class="form-actions">
+				<button type="submit" class="btn" id="submitBtn">Sign me up</button>
+				<button type="button" class="btn-danger" id="withdrawBtn" hidden>Withdraw my entry</button>
+			</div>
+		</form>
+	</section>
+
+	<section class="card" id="doneCard" hidden></section>
+</main>
+
+<script src="/site-nav.js" defer></script>
+<script src="/account-widget.js" defer></script>
+<script src="/secret-santa/santa.js"></script>
+<script>
+(function(){
+	"use strict";
+	var S = window.SANTA, $ = S.$, esc = S.esc;
+	var MC_NAME = /^[.*]?[A-Za-z0-9_]{2,16}$/;
+	var ev = null, counts = null, mine = null, account = null;
+	var wish = null, excl = null;
+
+	// ---------------- loading ----------------
+	function load(){
+		var s = S.session();
+		return Promise.all([
+			S.api("/secret-santa/event", { auth: false }),
+			s ? S.api("/secret-santa/mine").catch(function(){ return null; }) : Promise.resolve(null)
+		]).then(function(res){
+			ev = res[0].event; counts = res[0].counts;
+			mine = res[1] ? res[1].entry : null;
+			account = res[1] ? res[1].account : null;
+			if(mine) mine.revealToken = res[1].revealToken;
+			render();
+		}).catch(function(err){
+			$("heroStatus").textContent = "Couldn't load Secret Santa: " + err.message;
+		});
+	}
+
+	// ---------------- top of the page ----------------
+	function render(){
+		if(!ev){ $("heroStatus").textContent = "There's no Secret Santa planned yet."; return; }
+		document.title = "Secret Santa " + ev.id + " - SCTP";
+		$("heroTitle").textContent = "Secret Santa " + ev.id;
+		$("tagline").innerHTML = "Snailcraft &middot; Firefly &middot; Christmas " + esc(ev.id);
+		var dropOff = ev.dropOff ? "<b>" + esc(ev.dropOff) + "</b> on Firefly" : "the drop-off on Firefly";
+		var closeDay = closesDay();
+		var status = {
+			before: "Sign-ups open on <b>" + S.fmtDay(ev.signupOpenDate) + "</b>.",
+			signups: "Sign-ups are open until the end of <b>" + S.fmtDay(ev.signupCloseDate) + "</b>." + (counts && counts.total ? " " + counts.total + " player" + (counts.total === 1 ? " has" : "s have") + " signed up so far." : ""),
+			making: "Sign-ups are closed" + (ev.closedEarly ? " (on " + closeDay + ")" : "") + ". Make your gift and drop it off at " + dropOff + " by <b>" + S.fmtDay(ev.giftsDueDate) + "</b>.",
+			waiting: "All gifts are in. They get opened on <b>" + S.fmtDay(ev.openDate) + "</b>!",
+			opened: "Merry Christmas! &#127876; Every gift is ready to open."
+		}[ev.phase];
+		$("heroStatus").innerHTML = status;
+
+		var actions = [];
+		if(mine && mine.revealToken) actions.push('<a class="btn" href="/secret-santa/reveal/#' + esc(mine.revealToken) + '">&#127873; Open your Secret Santa</a>');
+		if(ev.accepting && !mine) actions.push('<a class="btn" href="#formCard">Sign up</a>');
+		if(ev.accepting && mine) actions.push('<a class="btn-ghost" href="#formCard">Change my entry</a>');
+		if(mine && !mine.revealToken && !ev.accepting && !ev.pairsGenerated) actions.push('<span class="pill good">You\'re signed up</span><span class="muted small">Your person shows up here once pairs are made.</span>');
+		$("heroActions").innerHTML = actions.join("");
+
+		renderSteps();
+		renderForm();
+	}
+	function closesDay(){
+		var d = new Date(ev.signupsCloseAt);
+		return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" });
+	}
+	function renderSteps(){
+		var dropOff = ev.dropOff ? esc(ev.dropOff) : "the drop-off";
+		var steps = [
+			{ when: S.fmtDay(ev.signupOpenDate) + " – " + S.fmtDay(ev.signupCloseDate), what: "Sign up", how: "Pick high value, low value or both, and fill in your wishlist.", on: ev.phase === "before" || ev.phase === "signups" },
+			{ when: "When sign-ups close", what: "Get your person", how: "You get a personal link to who you're making a gift for, with their wishlist.", on: false },
+			{ when: "1 – " + S.fmtDay(ev.giftsDueDate), what: "Make & drop off", how: "Make a gift matching your value class and drop it off at " + dropOff + " on Firefly.", on: ev.phase === "making" },
+			{ when: S.fmtDay(ev.openDate), what: "Open your gift", how: "Open the gift a random player made for you. It stays a secret who.", on: ev.phase === "waiting" || ev.phase === "opened" }
+		];
+		$("steps").innerHTML = steps.map(function(s){
+			return '<li' + (s.on ? ' class="now"' : '') + '><span class="when">' + esc(s.when) + '</span><span class="what">' + esc(s.what) + '</span><span class="how">' + s.how + '</span></li>';
+		}).join("");
+	}
+
+	// ---------------- the form ----------------
+	function renderForm(){
+		var s = S.session();
+		$("doneCard").hidden = true;
+		if(!ev.accepting){
+			$("formCard").hidden = true;
+			if(mine) showEntry(mine, ev.phase === "before" ? "" : "Sign-ups are closed, so your entry can't be changed anymore. Ask a Secret Santa admin if something needs fixing.");
+			else if(ev.phase === "before") showNote("&#128197;", "The sign-up form opens on " + S.fmtDay(ev.signupOpenDate) + ".", "Come back then to sign up. It's open until the end of " + S.fmtDay(ev.signupCloseDate) + ".");
+			else showNote("&#128274;", "Sign-ups are closed.", "Secret Santa " + esc(ev.id) + " is under way. See you next year!");
+			return;
+		}
+		$("formCard").hidden = false;
+		$("signinNudge").hidden = !!s;
+		$("formTitle").textContent = mine ? "Your entry" : "Sign up";
+		$("formLead").innerHTML = mine
+			? "You're signed up! You can change anything here until the end of " + S.fmtDay(ev.signupCloseDate) + "."
+			: "Sign-ups close at the end of " + S.fmtDay(ev.signupCloseDate) + ".";
+		$("submitBtn").textContent = mine ? "Save changes" : "Sign me up";
+		$("withdrawBtn").hidden = !mine;
+
+		var verified = account && account.mcVerified && account.mcUsername;
+		$("mcName").readOnly = !!verified;
+		$("mcName").value = verified ? account.mcUsername : (mine ? mine.mcUsername : $("mcName").value);
+		$("mcHelp").innerHTML = verified ? '<span class="verified">&#10003; Verified</span> from your SCTP account.' : s ? "Your SCTP account has no verified Minecraft name, so type it in exactly as it is in game." : "Exactly as it is in game.";
+		$("discord").value = mine ? mine.discord : ($("discord").value || (account && account.discord) || "");
+		var cat = mine ? mine.category : (document.querySelector('input[name=category]:checked') || {}).value;
+		document.querySelectorAll('input[name=category]').forEach(function(r){ r.checked = r.value === cat; });
+		$("bothNote").hidden = cat !== "both";
+		$("about").value = mine ? mine.about : $("about").value;
+		aboutCount();
+
+		var wishList = mine ? mine.wishlist : (wish ? wish.get() : []);
+		wish = S.wishEditor($("wishlist"), { list: wishList, onImport: s ? S.importAccountWishlist : null });
+		excl = S.nameChips($("excludes"), { list: mine ? mine.excludes : (excl ? excl.get() : []), max: 5, self: function(){ return $("mcName").value.trim(); } });
+	}
+	function showEntry(e, note){
+		var c = $("doneCard");
+		c.hidden = false;
+		c.innerHTML = '<div class="closed-note"><span class="done-mark" aria-hidden="true">&#127876;</span><div><h2>You\'re signed up, ' + esc(e.mcUsername) + '!</h2>' +
+			(note ? '<p class="lead" style="margin:0;">' + esc(note) + '</p>' : '') + '</div></div>' + summary(e);
+	}
+	function showNote(icon, title, text){
+		var c = $("doneCard");
+		c.hidden = false;
+		c.innerHTML = '<div class="closed-note"><span class="done-mark" aria-hidden="true">' + icon + '</span><div><h2>' + esc(title) + '</h2><p class="lead" style="margin:0;">' + text + '</p></div></div>';
+	}
+	function summary(e){
+		var c = S.CATEGORY[e.category] || {};
+		return '<dl class="entry-summary">' +
+			'<dt>Minecraft</dt><dd>' + esc(e.mcUsername) + '</dd>' +
+			'<dt>Discord</dt><dd>' + esc(e.discord) + '</dd>' +
+			'<dt>Category</dt><dd>' + esc(c.label) + ' (' + esc(c.short) + ')' + (e.category === "both" ? ' &middot; you make 2 gifts' : '') + '</dd>' +
+			'<dt>Don\'t match with</dt><dd>' + (e.excludes.length ? esc(e.excludes.join(", ")) : '<span class="muted">nobody</span>') + '</dd>' +
+			'<dt>Wishlist</dt><dd>' + (e.wishlist.length ? esc(e.wishlist.map(S.wishName).join(", ")) : '<span class="muted">empty</span>') + '</dd>' +
+			'<dt>About you</dt><dd>' + (e.about ? esc(e.about) : '<span class="muted">empty</span>') + '</dd></dl>';
+	}
+
+	function aboutCount(){ $("about") && ($("aboutCount").textContent = $("about").value.length + " / 500"); }
+	$("about").addEventListener("input", aboutCount);
+	document.querySelectorAll('input[name=category]').forEach(function(r){ r.addEventListener("change", function(){ $("bothNote").hidden = this.value !== "both"; }); });
+	$("nudgeSignIn").addEventListener("click", function(){ if(window.sctpAccount) window.sctpAccount.openLogin(); });
+
+	function fail(msg){ var e = $("formError"); e.textContent = msg; e.hidden = !msg; if(msg) e.scrollIntoView({ block: "center", behavior: "smooth" }); }
+	function collect(){
+		var name = $("mcName").value.trim();
+		if(!MC_NAME.test(name)){ fail("Enter your Minecraft username."); return null; }
+		var discord = $("discord").value.trim();
+		if(!discord){ fail("Enter your Discord username."); return null; }
+		var cat = (document.querySelector('input[name=category]:checked') || {}).value;
+		if(!cat){ fail("Choose high value, low value or both."); return null; }
+		fail("");
+		return { mcUsername: name, discord: discord, category: cat, excludes: excl.get(), wishlist: wish.get(), about: $("about").value.trim() };
+	}
+
+	$("form").addEventListener("submit", function(e){
+		e.preventDefault();
+		var data = collect();
+		if(!data) return;
+		if(S.session()) confirmRules(data);
+		else askSignIn(data);
+	});
+
+	// Not signed in: offer it once more, since it's how they can edit later.
+	function askSignIn(data){
+		var m = S.modal('<h2>Sign in first?</h2>' +
+			'<p>Signed in, you can change your entry until the end of ' + esc(S.fmtDay(ev.signupCloseDate)) + ' and see your Secret Santa link here. Without signing in, your entry can\'t be changed later.</p>' +
+			'<div class="actions"><button type="button" class="btn-ghost" data-a="back">Back</button><button type="button" class="btn-ghost" data-a="skip">Continue without signing in</button><button type="button" class="btn" data-a="in">Sign in</button></div>');
+		m.el.addEventListener("click", function(ev2){
+			var a = ev2.target.getAttribute && ev2.target.getAttribute("data-a");
+			if(!a) return;
+			m.close();
+			if(a === "skip") confirmRules(data);
+			if(a === "in"){
+				pendingAfterLogin = true;
+				if(window.sctpAccount) window.sctpAccount.openLogin();
+			}
+		});
+	}
+
+	// The rules, confirmed explicitly before anything is saved.
+	function confirmRules(data){
+		var two = data.category === "both";
+		var m = S.modal('<h2>Before you ' + (mine ? 'save' : 'sign up') + '</h2>' +
+			'<p>Secret Santa is <b>Firefly only</b>. Please read and tick both:</p>' +
+			'<div class="rules">' +
+				'<label><input type="checkbox" data-rule> <span>I will make ' + (two ? '<b>two gifts</b> (one high value, one low value)' : 'a gift') + ' between <b>1 December and ' + esc(S.fmtDay(ev.giftsDueDate)) + '</b>, for the person ' + (two ? 'or people ' : '') + 'I\'m assigned' + (ev.dropOff ? ', and drop ' + (two ? 'them' : 'it') + ' off at ' + esc(ev.dropOff) + ' on Firefly' : '') + '.</span></label>' +
+				'<label><input type="checkbox" data-rule> <span>I understand that I can\'t control what gift I get back.</span></label>' +
+			'</div>' +
+			'<div class="actions"><button type="button" class="btn-ghost" data-a="back">Back</button><button type="button" class="btn" data-a="ok" disabled>Confirm' + (mine ? ' and save' : ' and sign me up') + '</button></div>');
+		var ok = m.el.querySelector('[data-a=ok]');
+		m.el.querySelectorAll("[data-rule]").forEach(function(c){
+			c.addEventListener("change", function(){ ok.disabled = !Array.prototype.every.call(m.el.querySelectorAll("[data-rule]"), function(x){ return x.checked; }); });
+		});
+		m.el.querySelector('[data-a=back]').onclick = m.close;
+		ok.onclick = function(){ m.close(); send(data); };
+	}
+
+	var sending = false, pendingAfterLogin = false;
+	function send(data){
+		if(sending) return;
+		sending = true;
+		$("submitBtn").disabled = true;
+		data.agreed = true;
+		S.api("/secret-santa/signup", { body: data }).then(function(res){
+			ev = res.event;
+			var wasEdit = res.updated;
+			mine = res.entry;
+			$("formCard").hidden = true;
+			var c = $("doneCard");
+			c.hidden = false;
+			var signedIn = !!S.session();
+			c.innerHTML = '<div class="closed-note"><span class="done-mark" aria-hidden="true">&#127876;</span><div><h2>' + (wasEdit ? 'Saved!' : 'You\'re signed up, ' + esc(mine.mcUsername) + '!') + '</h2>' +
+				'<p class="lead" style="margin:0;">' + (signedIn
+					? 'You can change your entry here until the end of ' + esc(S.fmtDay(ev.signupCloseDate)) + '. Once pairs are made, your Secret Santa link shows up on this page.'
+					: 'Your entry can\'t be changed online, since you weren\'t signed in. Once pairs are made, a Secret Santa admin sends you your personal link.') + '</p></div></div>' +
+				summary(mine) +
+				(signedIn ? '<div class="form-actions" style="margin-top:16px;"><button type="button" class="btn-ghost" id="editAgain">Change my entry</button></div>' : '');
+			if($("editAgain")) $("editAgain").onclick = function(){ load().then(function(){ $("formCard").scrollIntoView({ behavior: "smooth" }); }); };
+			c.scrollIntoView({ behavior: "smooth", block: "start" });
+			S.api("/secret-santa/event", { auth: false }).then(function(r){ counts = r.counts; }).catch(function(){});
+		}).catch(function(err){ fail(err.message); })
+			.then(function(){ sending = false; $("submitBtn").disabled = false; });
+	}
+
+	$("withdrawBtn").addEventListener("click", function(){
+		var m = S.modal('<h2>Withdraw from Secret Santa?</h2><p>Your entry and wishlist are deleted. You can sign up again until the end of ' + esc(S.fmtDay(ev.signupCloseDate)) + '.</p>' +
+			'<div class="actions"><button type="button" class="btn-ghost" data-a="back">Keep my entry</button><button type="button" class="btn-danger" data-a="go">Withdraw</button></div>');
+		m.el.querySelector('[data-a=back]').onclick = m.close;
+		m.el.querySelector('[data-a=go]').onclick = function(){
+			S.api("/secret-santa/withdraw", { body: {} }).then(function(){ m.close(); mine = null; wish = null; excl = null; load(); })
+				.catch(function(err){ m.close(); fail(err.message); });
+		};
+	});
+
+	// Signing in or out reloads what's yours; a sign-in from the form goes straight on to the rules.
+	window.sctpOnAccountChange = function(){
+		var keep = { discord: $("discord").value, about: $("about").value };
+		load().then(function(){
+			if(!mine){ if(!$("discord").value) $("discord").value = keep.discord; if(!$("about").value) $("about").value = keep.about; aboutCount(); }
+			if(pendingAfterLogin && S.session()){
+				pendingAfterLogin = false;
+				// already signed up on this account: show that entry instead of overwriting it
+				if(mine){ $("formCard").scrollIntoView({ behavior: "smooth" }); return; }
+				var data = collect();
+				if(data) confirmRules(data);
+			}
+		});
+	};
+
+	load();
+})();
+</script>
+</body>
+</html>

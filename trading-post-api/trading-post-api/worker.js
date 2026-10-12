@@ -586,7 +586,7 @@ async function firstBannedItem(env, seller, itemNames) {
 // accounts existed — see requireAnyAdmin.
 const ADMIN_PERMISSION_BUCKETS = new Set([
 	"reports", "sharedShopRequests", "faq", "worldMap", "manualListings", "blockedSellers", "marketplaceListings", "updateNotice",
-	"suggestions", "bugReports", "playerReports", "manageMapart", "manageForms", "auctions", "siteNotice",
+	"suggestions", "bugReports", "playerReports", "manageMapart", "manageForms", "auctions", "siteNotice", "secretSanta",
 ]);
 
 // Ranks bids for a seller's convenience using the shared CURRENCY_VALUE
@@ -7367,6 +7367,729 @@ async function handleAdminAuctionResult(request, env) {
 	return json({ ok: true, soldDia, cutDia, payoutDia });
 }
 
+// ---------------- Secret Santa (Firefly only) ----------------
+//
+// /secret-santa/ (sign-up form), /secret-santa/reveal/#<token> (who you're
+// making a gift for) and /secret-santa/admin/ (permission "secretSanta").
+// Migration 0053 has the tables. Signing in is optional: signed-in players
+// can edit their entry until sign-ups close and import their wishlist. Pairs
+// are one loop per value pool (high 48 DB+, low 16 DB+; "both" is in each),
+// so nobody gives to themselves and, with 3+ people, nobody just swaps.
+// Gifts stay anonymous: the reveal page never shows who is making yours.
+
+const SANTA_POOLS = ["high", "low"];
+const SANTA_CATEGORIES = new Set(["high", "low", "both"]);
+const SANTA_GIFT_STATUSES = ["unsubmitted", "confirmed", "submitted", "placed"];
+const SANTA_MAX_EXCLUDES = 5;
+const SANTA_MAX_WISHES = 20;
+const SANTA_ABOUT_MAX = 500;
+const SANTA_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const SANTA_WORLD = "Firefly";
+
+/** Midnight at the start of a Dutch calendar day ("2026-11-01"), as a UTC timestamp. */
+function santaDayStart(date) {
+	const [y, m, d] = date.split("-").map(Number);
+	const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Amsterdam", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+	let t = Date.UTC(y, m - 1, d);
+	for (let i = 0; i < 2; i++) {
+		const p = Object.fromEntries(fmt.formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+		const wall = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+		t -= wall - Date.UTC(y, m - 1, d);
+	}
+	return t;
+}
+function santaDayEnd(date) {
+	const [y, m, d] = date.split("-").map(Number);
+	return santaDayStart(new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10));
+}
+
+function santaPhase(ev, now = Date.now()) {
+	if (now < santaDayStart(ev.signupOpenDate)) return "before";
+	if (!ev.closedEarlyAt && now < santaDayEnd(ev.signupCloseDate)) return "signups";
+	if (now < santaDayEnd(ev.giftsDueDate)) return "making";
+	if (now < santaDayStart(ev.openDate)) return "waiting";
+	return "opened";
+}
+
+function santaEventPublic(ev) {
+	const phase = santaPhase(ev);
+	return {
+		id: ev.id, world: ev.world, signupOpenDate: ev.signupOpenDate, signupCloseDate: ev.signupCloseDate,
+		giftsDueDate: ev.giftsDueDate, openDate: ev.openDate, dropOff: ev.dropOff || null,
+		closedEarly: !!ev.closedEarlyAt, pairsGenerated: !!ev.pairsGeneratedAt, phase, accepting: phase === "signups",
+		signupsCloseAt: new Date(ev.closedEarlyAt ? Date.parse(ev.closedEarlyAt) : santaDayEnd(ev.signupCloseDate)).toISOString(),
+		giftsDueAt: new Date(santaDayEnd(ev.giftsDueDate)).toISOString(),
+		openAt: new Date(santaDayStart(ev.openDate)).toISOString(),
+	};
+}
+
+async function santaCurrentEvent(env) {
+	return env.DB.prepare("SELECT * FROM santaEvents ORDER BY id DESC LIMIT 1").first();
+}
+
+function santaParse(json, fallback) {
+	try { const v = JSON.parse(json || ""); return v == null ? fallback : v; } catch (e) { return fallback; }
+}
+
+function santaPools(category) {
+	return category === "both" ? ["high", "low"] : category === "high" ? ["high"] : category === "low" ? ["low"] : [];
+}
+
+/**
+ * Checks and tidies what the form sent. Returns {error} or {value: {discord,
+ * category, excludes, wishlist, about}}. Catalog items are re-read from the
+ * catalog so names and pictures can't be made up.
+ */
+async function santaCleanEntry(env, body, mcUsername) {
+	const discord = String(body.discord || "").trim().slice(0, 64);
+	if (!discord) return { error: "Enter your Discord username." };
+	const category = String(body.category || "");
+	if (!SANTA_CATEGORIES.has(category)) return { error: "Choose a gift category." };
+
+	const excludes = [];
+	for (const raw of Array.isArray(body.excludes) ? body.excludes : []) {
+		const name = String(raw || "").trim();
+		if (!name) continue;
+		if (!MC_USERNAME.test(name)) return { error: `"${name.slice(0, 20)}" doesn't look like a Minecraft username.` };
+		const low = name.toLowerCase();
+		if (low === mcUsername.toLowerCase()) continue;
+		if (!excludes.includes(low)) excludes.push(low);
+	}
+	if (excludes.length > SANTA_MAX_EXCLUDES) return { error: `You can list at most ${SANTA_MAX_EXCLUDES} people not to be matched with.` };
+
+	const wishIn = Array.isArray(body.wishlist) ? body.wishlist : [];
+	if (wishIn.length > SANTA_MAX_WISHES) return { error: `Your wishlist can have at most ${SANTA_MAX_WISHES} items.` };
+	const catalog = wishIn.some((w) => w && w.kind === "rare") ? await getRareCatalog() : null;
+	const mapartIds = wishIn.filter((w) => w && w.kind === "mapart").map((w) => String(w.id || ""));
+	const maparts = new Map();
+	for (const chunk of chunkArray(mapartIds, 80)) {
+		const { results } = await env.DB.prepare(
+			`SELECT id, title, imageHash FROM maparts WHERE world = ? AND id IN (${chunk.map(() => "?").join(",")})`
+		).bind(SANTA_WORLD, ...chunk).all();
+		for (const m of results) maparts.set(m.id, m);
+	}
+	const wishlist = [];
+	const seen = new Set();
+	for (const w of wishIn) {
+		if (!w || typeof w !== "object") continue;
+		let item = null;
+		if (w.kind === "rare") {
+			const r = catalog.byId.get(String(w.id || ""));
+			if (r) item = { kind: "rare", id: r.id, name: r.name, texture: r.texture || null };
+		} else if (w.kind === "mapart") {
+			const m = maparts.get(String(w.id || ""));
+			if (m) item = { kind: "mapart", id: m.id, name: m.title, imageHash: m.imageHash || null };
+		} else if (w.kind === "item") {
+			const baseItem = String(w.baseItem || "").toLowerCase();
+			const name = String(w.name || "").trim().slice(0, 80);
+			const texture = String(w.texture || "");
+			if (/^minecraft:[a-z0-9_]{1,60}$/.test(baseItem) && name) {
+				item = { kind: "item", baseItem, name, texture: /^\/items\/textures\/[A-Za-z0-9_.-]{1,100}$/.test(texture) ? texture : null };
+			}
+		} else if (w.kind === "text") {
+			const text = String(w.text || "").trim().replace(/\s+/g, " ").slice(0, 100);
+			if (text) item = { kind: "text", text };
+		}
+		if (!item) continue;
+		const key = JSON.stringify([item.kind, item.id || item.baseItem || "", String(item.name || item.text || "").toLowerCase()]);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		wishlist.push(item);
+	}
+	const about = String(body.about || "").trim().slice(0, SANTA_ABOUT_MAX) || null;
+	return { value: { discord, category, excludes, wishlist, about } };
+}
+
+function santaEntryPublic(e, full) {
+	const out = {
+		id: e.id, mcUsername: e.mcUsername, mcVerified: !!e.mcVerified, signedIn: !!e.accountId,
+		discord: e.discord, category: e.category, excludes: santaParse(e.excludes, []),
+		wishlist: santaParse(e.wishlist, []), about: e.about || "", createdAt: e.createdAt, updatedAt: e.updatedAt,
+	};
+	if (full) { out.revealToken = e.revealToken; out.addedBy = e.addedBy || null; }
+	return out;
+}
+
+// ---- pairs ----
+
+function santaShuffle(a) {
+	for (let i = a.length - 1; i > 0; i--) {
+		const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+		[a[i], a[j]] = [a[j], a[i]];
+	}
+	return a;
+}
+
+/** Neither of them asked not to be matched with the other. */
+function santaCanGive(a, b) {
+	if (a.id === b.id) return false;
+	const ea = santaParse(a.excludes, []), eb = santaParse(b.excludes, []);
+	return !ea.includes(b.mcUsername.toLowerCase()) && !eb.includes(a.mcUsername.toLowerCase());
+}
+
+/**
+ * One random loop through everyone in `people` (giver -> next person). `avoid`
+ * is a Set of "giverId>recipientId" pairs to stay away from if possible (the
+ * other pool's pairs, so someone in both pools gets two different people).
+ * Returns [[giver, recipient], ...] or null when exclusions make it impossible.
+ */
+function santaLoop(people, avoid) {
+	const n = people.length;
+	if (n < 2) return null;
+	const ok = (a, b, soft) => santaCanGive(a, b) && (!soft || !avoid.has(a.id + ">" + b.id));
+	const asPairs = (order) => order.map((p, i) => [p, order[(i + 1) % n]]);
+	if (n === 2) return ok(people[0], people[1]) && ok(people[1], people[0]) ? asPairs(people) : null;
+	for (const soft of [true, false]) {
+		for (let t = 0; t < 3000; t++) {
+			const order = santaShuffle(people.slice());
+			if (order.every((p, i) => ok(p, order[(i + 1) % n], soft))) return asPairs(order);
+		}
+	}
+	// Lots of exclusions: search properly (random order, bounded).
+	let steps = 0;
+	const order = [people[0]], used = new Set([people[0].id]);
+	const extend = () => {
+		if (++steps > 200000) return false;
+		const last = order[order.length - 1];
+		if (order.length === n) return ok(last, order[0]);
+		for (const next of santaShuffle(people.filter((p) => !used.has(p.id)))) {
+			if (!ok(last, next)) continue;
+			order.push(next); used.add(next.id);
+			if (extend()) return true;
+			order.pop(); used.delete(next.id);
+		}
+		return false;
+	};
+	return extend() ? asPairs(order) : null;
+}
+
+async function santaLoad(env, eventId) {
+	const { results: entries } = await env.DB.prepare("SELECT * FROM santaEntries WHERE eventId = ? ORDER BY lower(mcUsername)").bind(eventId).all();
+	const { results: gifts } = await env.DB.prepare("SELECT * FROM santaGifts WHERE eventId = ?").bind(eventId).all();
+	return { entries, gifts };
+}
+
+/** Why a pool can't be paired: who's in it and who they excluded. */
+function santaLoopError(pool, people) {
+	if (people.length < 2) return `The ${pool === "high" ? "high value" : "low value"} pool needs at least 2 people (it has ${people.length}).`;
+	const ex = people.filter((p) => santaParse(p.excludes, []).length)
+		.map((p) => `${p.mcUsername} (not with ${santaParse(p.excludes, []).join(", ")})`);
+	return `Couldn't make a loop for the ${pool === "high" ? "high value" : "low value"} pool that respects everyone's "don't match me with" list.` +
+		(ex.length ? " People with exclusions: " + ex.join("; ") + "." : "");
+}
+
+async function santaRun(env, stmts) {
+	for (const c of chunkArray(stmts.map((s) => env.DB.prepare(s.sql).bind(...s.args)), 90)) await env.DB.batch(c);
+}
+
+/**
+ * Fixes pairs that break someone's "don't match me with" list (after a
+ * removal, a category change or an edited list) by moving one person to
+ * another spot in the loop. `next` maps giver -> recipient and is changed in
+ * place. Moves that change the recipient of a gift that's already submitted
+ * are only used when nothing else works. Returns the pairs it couldn't fix.
+ */
+function santaRepair(next, byId, status) {
+	const made = (id) => status.get(id) === "submitted" || status.get(id) === "placed";
+	const pred = (id) => { for (const [k, v] of next) if (v === id) return k; return null; };
+	const ok = (a, b) => a !== b && santaCanGive(byId.get(a), byId.get(b));
+	for (let round = 0; round < 20; round++) {
+		const bad = [...next].find(([a, b]) => !ok(a, b));
+		if (!bad) return [];
+		const [x, y] = bad;
+		let best = null;
+		// move y (x then gives to y's recipient) or move x (x's giver then gives to y)
+		for (const mover of [y, x]) {
+			const before = pred(mover), after = next.get(mover);
+			if (before === null || after === undefined || before === after) continue;
+			for (const [u, v] of next) {
+				if (u === mover || v === mover || u === before) continue;
+				if (!ok(before, after) || !ok(u, mover) || !ok(mover, v)) continue;
+				const cost = [before, u, mover].filter(made).length;
+				if (!best || cost < best.cost || (cost === best.cost && Math.random() < 0.5)) best = { mover, before, after, u, v, cost };
+			}
+		}
+		if (!best) return [[x, y]];
+		next.set(best.before, best.after);
+		next.set(best.u, best.mover);
+		next.set(best.mover, best.v);
+	}
+	return [...next].filter(([a, b]) => !ok(a, b));
+}
+
+/**
+ * Brings the loops in line after an entry changed or left (newCategory null):
+ * takes it out of pools it's no longer in (whoever gave to it now gives to
+ * its person), then repairs any pair that breaks a "don't match me with"
+ * list. Returns notes for the admin about every gift whose person changed.
+ */
+async function santaSyncPools(env, eventId, entryId, newCategory) {
+	const { entries, gifts } = await santaLoad(env, eventId);
+	const byId = new Map(entries.map((e) => [e.id, e]));
+	const keep = new Set(santaPools(newCategory));
+	const name = (id) => (byId.get(id) || {}).mcUsername || "Someone";
+	const stmts = [], notes = [];
+	for (const pool of SANTA_POOLS) {
+		const old = gifts.filter((g) => g.pool === pool);
+		if (!old.length) continue;
+		const next = new Map(old.map((g) => [g.giverId, g.recipientId]));
+		const status = new Map(old.map((g) => [g.giverId, g.status]));
+		if (!keep.has(pool) && (next.has(entryId) || old.some((g) => g.recipientId === entryId))) {
+			const out = next.get(entryId);
+			const into = old.find((g) => g.recipientId === entryId);
+			next.delete(entryId);
+			if (into) {
+				if (out === undefined || out === into.giverId) { next.delete(into.giverId); notes.push(`${name(into.giverId)} has no pair in the ${pool} value pool now. Fit them in or regenerate.`); }
+				else next.set(into.giverId, out);
+			}
+		}
+		const left = santaRepair(next, byId, status);
+		for (const [a, b] of left) notes.push(`${name(a)} → ${name(b)} in the ${pool} value pool goes against a "don't match me with" list and couldn't be fixed automatically. Regenerate this pool.`);
+
+		for (const g of old) {
+			if (!next.has(g.giverId)) {
+				if (g.giverId !== entryId || keep.has(pool)) continue;
+				stmts.push({ sql: "DELETE FROM santaGifts WHERE eventId = ? AND pool = ? AND giverId = ?", args: [eventId, pool, g.giverId] });
+			} else if (next.get(g.giverId) !== g.recipientId) {
+				stmts.push({ sql: "UPDATE santaGifts SET recipientId = ? WHERE eventId = ? AND pool = ? AND giverId = ?", args: [next.get(g.giverId), eventId, pool, g.giverId] });
+				notes.push(`${name(g.giverId)} now makes the ${pool} value gift for ${name(next.get(g.giverId))}` +
+					(g.status === "submitted" || g.status === "placed" ? ` (careful: their gift is already ${g.status})` : "") + ".");
+			}
+		}
+		// givers left without a pair (a loop of two that lost one person)
+		for (const g of old) {
+			if (g.giverId !== entryId && !next.has(g.giverId)) stmts.push({ sql: "DELETE FROM santaGifts WHERE eventId = ? AND pool = ? AND giverId = ?", args: [eventId, pool, g.giverId] });
+		}
+	}
+	await santaRun(env, stmts);
+	return notes;
+}
+
+// ---- value + where to buy (wishlist items) ----
+
+const santaNorm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9']/g, "");
+
+async function santaItemValue(env, item) {
+	if (item.kind === "rare") {
+		const catalog = await getRareCatalog();
+		const rare = catalog.byId.get(item.id);
+		if (!rare) return { value: null, basis: null };
+		const est = await auctionEstimate(env, rare, SANTA_WORLD);
+		return { value: est.value, basis: est.basis };
+	}
+	if (item.kind === "item") {
+		const { results } = await env.DB.prepare(
+			"SELECT price, currency, stackSize FROM listings WHERE world = ? AND baseItem = ? AND lower(itemName) = lower(?) AND lower(currency) != 'display'"
+		).bind(SANTA_WORLD, item.baseItem, item.name).all();
+		const per = results.map((r) => priceInDiamonds(r) / (r.stackSize || 1)).filter((p) => isFinite(p) && p > 0).sort((a, b) => a - b);
+		if (!per.length) return { value: null, basis: null };
+		const mid = per.length % 2 ? per[(per.length - 1) / 2] : (per[per.length / 2 - 1] + per[per.length / 2]) / 2;
+		return { value: Math.round(mid * 100) / 100, basis: `${per.length} shop${per.length === 1 ? "" : "s"} on ${SANTA_WORLD}` };
+	}
+	return { value: null, basis: null };
+}
+
+/** Firefly shops and marketplace posts selling a wishlist item, cheapest first. */
+async function santaWhereToBuy(env, item, marketplace) {
+	let rows = [];
+	if (item.kind === "rare") {
+		const word = String(item.name).split(/[^A-Za-z0-9']+/).sort((a, b) => b.length - a.length)[0] || item.name;
+		const { results } = await env.DB.prepare(
+			"SELECT * FROM listings WHERE world = ? AND itemName LIKE ? AND lower(currency) != 'display'"
+		).bind(SANTA_WORLD, `%${word}%`).all();
+		rows = results.filter((r) => santaNorm(r.itemName) === santaNorm(item.name));
+	} else if (item.kind === "item") {
+		const { results } = await env.DB.prepare(
+			"SELECT * FROM listings WHERE world = ? AND baseItem = ? AND lower(itemName) = lower(?) AND lower(currency) != 'display'"
+		).bind(SANTA_WORLD, item.baseItem, item.name).all();
+		rows = results;
+	}
+	const perItem = (r) => priceInDiamonds(r) / (r.stackSize || 1);
+	const shops = rows.sort((a, b) => perItem(a) - perItem(b)).slice(0, 8).map((r) => ({
+		id: r.id || null, seller: r.seller, priceLabel: r.priceLabel, stackSize: r.stackSize, amount: r.amount,
+		position: r.position, lastSeen: r.lastSeen, perItemDia: Math.round(perItem(r) * 100) / 100,
+	}));
+	const target = item.kind === "text" ? "" : santaNorm(item.name);
+	const posts = !target ? [] : marketplace.filter((m) => m.type === "selling" && m.world === SANTA_WORLD && santaNorm(m.itemName) === target).slice(0, 5).map((m) => ({
+		id: m.id, seller: m.seller, quantity: m.quantity,
+		askingPrice: m.askingPrice, askingCurrency: m.askingCurrency, startingBid: m.startingBid, startingBidCurrency: m.startingBidCurrency,
+	}));
+	return { shops, shopCount: rows.length, posts };
+}
+
+// ---- public endpoints ----
+
+async function handleSantaEvent(request, env) {
+	const ev = await santaCurrentEvent(env);
+	if (!ev) return json({ event: null });
+	const { results } = await env.DB.prepare("SELECT category, COUNT(*) AS n FROM santaEntries WHERE eventId = ? GROUP BY category").bind(ev.id).all();
+	const counts = { total: 0, high: 0, low: 0, both: 0 };
+	for (const r of results) { counts[r.category] = r.n; counts.total += r.n; }
+	return json({ event: santaEventPublic(ev), counts });
+}
+
+async function handleSantaValue(request, env, ctx) {
+	return cachedGet(request, ctx, 600, async () => {
+		const p = new URL(request.url).searchParams;
+		const kind = p.get("kind");
+		if (kind === "rare") return santaItemValue(env, { kind, id: p.get("id") || "" });
+		if (kind === "item") return santaItemValue(env, { kind, baseItem: String(p.get("baseItem") || "").toLowerCase(), name: p.get("name") || "" });
+		return { value: null, basis: null };
+	});
+}
+
+/** The signed-in player's entry for this year (by account, or their verified Minecraft name). */
+async function santaFindMine(env, ev, admin) {
+	let e = await env.DB.prepare("SELECT * FROM santaEntries WHERE eventId = ? AND accountId = ?").bind(ev.id, admin.id).first();
+	if (!e && admin.mcVerified && admin.mcUsername) {
+		e = await env.DB.prepare("SELECT * FROM santaEntries WHERE eventId = ? AND lower(mcUsername) = lower(?) AND accountId IS NULL").bind(ev.id, admin.mcUsername).first();
+	}
+	return e;
+}
+
+async function handleSantaMine(request, env) {
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	const ev = await santaCurrentEvent(env);
+	if (!ev) return json({ entry: null });
+	const e = await santaFindMine(env, ev, auth.admin);
+	return json({
+		entry: e ? santaEntryPublic(e, false) : null,
+		revealToken: e && ev.pairsGeneratedAt ? e.revealToken : null,
+		account: { mcUsername: auth.admin.mcUsername || null, mcVerified: !!auth.admin.mcVerified, discord: auth.admin.contactDiscord || null },
+	});
+}
+
+async function handleSantaSignup(request, env) {
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const ev = await santaCurrentEvent(env);
+	if (!ev || santaPhase(ev) !== "signups") return json({ error: "Sign-ups aren't open right now." }, 400);
+	if (body.agreed !== true) return json({ error: "Please confirm the rules first." }, 400);
+
+	// Signing in is optional; it lets them edit later.
+	let admin = null;
+	if ((request.headers.get("Authorization") || "").startsWith("Bearer ")) {
+		const auth = await requireAnyAdmin(request, env);
+		if (!auth.ok) return json({ error: "Your sign-in has expired. Sign in again, or reload the page to continue without signing in." }, 401);
+		admin = auth.admin;
+	}
+	const verifiedName = admin && admin.mcVerified && admin.mcUsername ? admin.mcUsername : null;
+	const mcUsername = verifiedName || String(body.mcUsername || "").trim();
+	if (!MC_USERNAME.test(mcUsername)) return json({ error: "That doesn't look like a Minecraft username." }, 400);
+
+	const clean = await santaCleanEntry(env, body, mcUsername);
+	if (clean.error) return json({ error: clean.error }, 400);
+	const v = clean.value;
+	const now = new Date().toISOString();
+
+	let existing = admin ? await santaFindMine(env, ev, admin) : null;
+	const sameName = await env.DB.prepare("SELECT * FROM santaEntries WHERE eventId = ? AND lower(mcUsername) = lower(?)").bind(ev.id, mcUsername).first();
+	if (!existing && sameName) {
+		return json({ error: admin
+			? `${sameName.mcUsername} is already signed up. If that's you, sign in with the account linked to that Minecraft name to change it.`
+			: `${sameName.mcUsername} is already signed up. Sign in to change your entry.` }, 409);
+	}
+	if (existing && sameName && sameName.id !== existing.id) {
+		return json({ error: `${sameName.mcUsername} is already signed up by someone else.` }, 409);
+	}
+
+	if (existing) {
+		await env.DB.prepare(
+			`UPDATE santaEntries SET mcUsername = ?, accountId = ?, mcVerified = ?, discord = ?, category = ?, excludes = ?, wishlist = ?, about = ?, updatedAt = ? WHERE id = ?`
+		).bind(mcUsername, admin.id, verifiedName ? 1 : 0, v.discord, v.category, JSON.stringify(v.excludes), JSON.stringify(v.wishlist), v.about, now, existing.id).run();
+		if (ev.pairsGeneratedAt) await santaSyncPools(env, ev.id, existing.id, v.category);
+		const e = await env.DB.prepare("SELECT * FROM santaEntries WHERE id = ?").bind(existing.id).first();
+		return json({ ok: true, updated: true, entry: santaEntryPublic(e, false), event: santaEventPublic(ev) });
+	}
+
+	const id = newId();
+	await env.DB.prepare(
+		`INSERT INTO santaEntries (id, eventId, mcUsername, accountId, mcVerified, discord, category, excludes, wishlist, about, revealToken, createdAt, updatedAt)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	).bind(id, ev.id, mcUsername, admin ? admin.id : null, verifiedName ? 1 : 0, v.discord, v.category, JSON.stringify(v.excludes),
+		JSON.stringify(v.wishlist), v.about, newToken(), now, now).run();
+	const e = await env.DB.prepare("SELECT * FROM santaEntries WHERE id = ?").bind(id).first();
+	return json({ ok: true, updated: false, entry: santaEntryPublic(e, false), linkedToAccount: !!admin, event: santaEventPublic(ev) });
+}
+
+async function handleSantaWithdraw(request, env) {
+	const auth = await requireAnyAdmin(request, env);
+	if (!auth.ok) return auth.response;
+	const ev = await santaCurrentEvent(env);
+	if (!ev || santaPhase(ev) !== "signups") return json({ error: "Sign-ups are closed. Ask a Secret Santa admin to take you out." }, 400);
+	const e = await santaFindMine(env, ev, auth.admin);
+	if (!e) return json({ error: "You're not signed up." }, 404);
+	await santaSyncPools(env, ev.id, e.id, null);
+	await env.DB.prepare("DELETE FROM santaEntries WHERE id = ?").bind(e.id).run();
+	return json({ ok: true });
+}
+
+async function handleSantaReveal(request, env) {
+	const token = new URL(request.url).searchParams.get("token") || "";
+	if (!/^[0-9a-f]{64}$/.test(token)) return json({ error: "This link isn't valid." }, 404);
+	const me = await env.DB.prepare("SELECT * FROM santaEntries WHERE revealToken = ?").bind(token).first();
+	if (!me) return json({ error: "This link isn't valid (anymore). Ask a Secret Santa admin for yours." }, 404);
+	const ev = await env.DB.prepare("SELECT * FROM santaEvents WHERE id = ?").bind(me.eventId).first();
+	const out = { event: santaEventPublic(ev), you: { mcUsername: me.mcUsername, category: me.category }, assignments: [] };
+	if (!ev.pairsGeneratedAt) return json(out);
+
+	const { results: gifts } = await env.DB.prepare("SELECT * FROM santaGifts WHERE eventId = ? AND giverId = ?").bind(ev.id, me.id).all();
+	let marketplace = null;
+	for (const pool of SANTA_POOLS) {
+		const g = gifts.find((x) => x.pool === pool);
+		if (!g) {
+			if (santaPools(me.category).includes(pool)) out.assignments.push({ pool, recipient: null, status: null });
+			continue;
+		}
+		const r = await env.DB.prepare("SELECT * FROM santaEntries WHERE id = ?").bind(g.recipientId).first();
+		if (!r) continue;
+		if (marketplace === null) {
+			const { results } = await env.DB.prepare(
+				`SELECT ml.*, a.username AS accountUsername, a.mcUsername AS accountMcUsername FROM marketplaceListings ml JOIN admins a ON a.id = ml.accountId
+				 WHERE ml.status = 'active' AND ml.expiresAt > ? AND ml.world = ?`
+			).bind(new Date().toISOString(), SANTA_WORLD).all();
+			marketplace = results.map((m) => ({ ...m, seller: m.accountMcUsername || m.accountUsername }));
+		}
+		const wishlist = [];
+		for (const w of santaParse(r.wishlist, [])) {
+			const item = { ...w };
+			if (w.kind === "rare" || w.kind === "item") {
+				Object.assign(item, await santaItemValue(env, w), await santaWhereToBuy(env, w, marketplace));
+			} else if (w.kind === "mapart") {
+				const m = await env.DB.prepare("SELECT * FROM maparts WHERE id = ?").bind(w.id).first();
+				if (m) Object.assign(item, { slug: m.slug, artist: m.artist || null, whereToBuy: m.whereToBuy || null, notForSale: !!m.notForSale, price: m.price == null ? null : m.price, imageHash: m.imageHash || w.imageHash || null });
+				item.posts = marketplace.filter((p) => p.type === "selling" && santaNorm(p.itemName) === santaNorm(w.name)).slice(0, 5)
+					.map((p) => ({ id: p.id, seller: p.seller, quantity: p.quantity, askingPrice: p.askingPrice, askingCurrency: p.askingCurrency, startingBid: p.startingBid, startingBidCurrency: p.startingBidCurrency }));
+			}
+			wishlist.push(item);
+		}
+		out.assignments.push({
+			pool, status: g.status, statusUpdatedAt: g.statusUpdatedAt || null,
+			recipient: { mcUsername: r.mcUsername, about: r.about || "", wishlist },
+		});
+	}
+	return json(out);
+}
+
+// ---- admin (permission "secretSanta") ----
+
+async function santaAdminEvent(env, body) {
+	const id = String(body.eventId || "");
+	const ev = id ? await env.DB.prepare("SELECT * FROM santaEvents WHERE id = ?").bind(id).first() : await santaCurrentEvent(env);
+	return ev;
+}
+
+async function handleSantaAdminState(request, env) {
+	const auth = await requireAdminAuth(request, env, "secretSanta");
+	if (!auth.ok) return auth.response;
+	const id = new URL(request.url).searchParams.get("eventId") || "";
+	const { results: events } = await env.DB.prepare("SELECT id FROM santaEvents ORDER BY id DESC").all();
+	const ev = id ? await env.DB.prepare("SELECT * FROM santaEvents WHERE id = ?").bind(id).first() : await santaCurrentEvent(env);
+	if (!ev) return json({ events: events.map((e) => e.id), event: null, entries: [], gifts: [] });
+	const { entries, gifts } = await santaLoad(env, ev.id);
+	return json({
+		events: events.map((e) => e.id), event: { ...santaEventPublic(ev), pairsGeneratedAt: ev.pairsGeneratedAt, closedEarlyAt: ev.closedEarlyAt },
+		entries: entries.map((e) => santaEntryPublic(e, true)),
+		gifts: gifts.map((g) => ({ pool: g.pool, giverId: g.giverId, recipientId: g.recipientId, status: g.status, statusUpdatedAt: g.statusUpdatedAt })),
+	});
+}
+
+async function handleSantaAdminEvent(request, env) {
+	const auth = await requireAdminAuth(request, env, "secretSanta");
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const now = new Date().toISOString();
+
+	if (body.action === "create") {
+		const year = String(body.year || "");
+		if (!/^20\d{2}$/.test(year)) return json({ error: "Enter a year like 2027." }, 400);
+		if (await env.DB.prepare("SELECT id FROM santaEvents WHERE id = ?").bind(year).first()) return json({ error: `${year} already exists.` }, 409);
+		await env.DB.prepare(
+			"INSERT INTO santaEvents (id, world, signupOpenDate, signupCloseDate, giftsDueDate, openDate, dropOff, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		).bind(year, SANTA_WORLD, `${year}-11-01`, `${year}-11-30`, `${year}-12-20`, `${year}-12-25`, "/pw xmas", now, now).run();
+		return json({ ok: true, eventId: year });
+	}
+
+	const ev = await santaAdminEvent(env, body);
+	if (!ev) return json({ error: "Event not found" }, 404);
+	if (body.action === "close") {
+		await env.DB.prepare("UPDATE santaEvents SET closedEarlyAt = ?, updatedAt = ? WHERE id = ?").bind(now, now, ev.id).run();
+	} else if (body.action === "reopen") {
+		if (Date.now() >= santaDayEnd(ev.signupCloseDate)) return json({ error: "The sign-up close date has passed. Move it later first, then reopen." }, 400);
+		await env.DB.prepare("UPDATE santaEvents SET closedEarlyAt = NULL, updatedAt = ? WHERE id = ?").bind(now, ev.id).run();
+	} else if (body.action === "save") {
+		const d = {};
+		for (const k of ["signupOpenDate", "signupCloseDate", "giftsDueDate", "openDate"]) {
+			d[k] = String(body[k] || "");
+			if (!SANTA_DATE.test(d[k]) || isNaN(Date.parse(d[k]))) return json({ error: "Every date needs to be filled in." }, 400);
+		}
+		if (!(d.signupOpenDate <= d.signupCloseDate && d.signupCloseDate <= d.giftsDueDate && d.giftsDueDate <= d.openDate)) {
+			return json({ error: "The dates need to be in order: sign-ups open, sign-ups close, gifts due, gifts opened." }, 400);
+		}
+		const dropOff = String(body.dropOff || "").trim().slice(0, 80) || null;
+		await env.DB.prepare(
+			"UPDATE santaEvents SET signupOpenDate = ?, signupCloseDate = ?, giftsDueDate = ?, openDate = ?, dropOff = ?, updatedAt = ? WHERE id = ?"
+		).bind(d.signupOpenDate, d.signupCloseDate, d.giftsDueDate, d.openDate, dropOff, now, ev.id).run();
+	} else {
+		return json({ error: "Unknown action" }, 400);
+	}
+	return json({ ok: true });
+}
+
+async function handleSantaAdminEntry(request, env) {
+	const auth = await requireAdminAuth(request, env, "secretSanta");
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const ev = await santaAdminEvent(env, body);
+	if (!ev) return json({ error: "Event not found" }, 404);
+	const now = new Date().toISOString();
+
+	if (body.action === "remove") {
+		const e = await env.DB.prepare("SELECT * FROM santaEntries WHERE id = ? AND eventId = ?").bind(String(body.id || ""), ev.id).first();
+		if (!e) return json({ error: "Entry not found" }, 404);
+		const notes = await santaSyncPools(env, ev.id, e.id, null);
+		await env.DB.prepare("DELETE FROM santaEntries WHERE id = ?").bind(e.id).run();
+		return json({ ok: true, notes });
+	}
+
+	const mcUsername = String(body.mcUsername || "").trim();
+	if (!MC_USERNAME.test(mcUsername)) return json({ error: "That doesn't look like a Minecraft username." }, 400);
+	const clean = await santaCleanEntry(env, body, mcUsername);
+	if (clean.error) return json({ error: clean.error }, 400);
+	const v = clean.value;
+	const sameName = await env.DB.prepare("SELECT id FROM santaEntries WHERE eventId = ? AND lower(mcUsername) = lower(?)").bind(ev.id, mcUsername).first();
+
+	if (body.id) {
+		const e = await env.DB.prepare("SELECT * FROM santaEntries WHERE id = ? AND eventId = ?").bind(String(body.id), ev.id).first();
+		if (!e) return json({ error: "Entry not found" }, 404);
+		if (sameName && sameName.id !== e.id) return json({ error: `${mcUsername} is already signed up.` }, 409);
+		// a changed name is no longer the verified one
+		const verified = e.mcVerified && e.mcUsername.toLowerCase() === mcUsername.toLowerCase() ? 1 : 0;
+		await env.DB.prepare(
+			"UPDATE santaEntries SET mcUsername = ?, mcVerified = ?, discord = ?, category = ?, excludes = ?, wishlist = ?, about = ?, updatedAt = ? WHERE id = ?"
+		).bind(mcUsername, verified, v.discord, v.category, JSON.stringify(v.excludes), JSON.stringify(v.wishlist), v.about, now, e.id).run();
+		const notes = ev.pairsGeneratedAt ? await santaSyncPools(env, ev.id, e.id, v.category) : [];
+		return json({ ok: true, notes });
+	}
+	if (sameName) return json({ error: `${mcUsername} is already signed up.` }, 409);
+	await env.DB.prepare(
+		`INSERT INTO santaEntries (id, eventId, mcUsername, accountId, mcVerified, discord, category, excludes, wishlist, about, revealToken, addedBy, createdAt, updatedAt)
+		 VALUES (?, ?, ?, NULL, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	).bind(newId(), ev.id, mcUsername, v.discord, v.category, JSON.stringify(v.excludes), JSON.stringify(v.wishlist), v.about, newToken(), auth.admin.username, now, now).run();
+	return json({ ok: true });
+}
+
+async function handleSantaAdminGenerate(request, env) {
+	const auth = await requireAdminAuth(request, env, "secretSanta");
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const ev = await santaAdminEvent(env, body);
+	if (!ev) return json({ error: "Event not found" }, 404);
+	const pools = SANTA_POOLS.includes(body.pool) ? [body.pool] : SANTA_POOLS;
+	const { entries, gifts } = await santaLoad(env, ev.id);
+
+	// Keep each giver's status (e.g. "confirmed": they still want to play) through a regenerate.
+	const oldStatus = new Map(gifts.map((g) => [g.pool + "|" + g.giverId, g]));
+	const loops = {};
+	for (const pool of pools) {
+		const people = entries.filter((e) => santaPools(e.category).includes(pool));
+		if (!people.length) { loops[pool] = []; continue; }
+		const other = SANTA_POOLS.find((p) => p !== pool);
+		const avoid = new Set([
+			...gifts.filter((g) => g.pool === other && !pools.includes(other)).map((g) => g.giverId + ">" + g.recipientId),
+			...(loops[other] || []).map(([a, b]) => a.id + ">" + b.id),
+		]);
+		const loop = santaLoop(people, avoid);
+		if (!loop) return json({ error: santaLoopError(pool, people) }, 400);
+		loops[pool] = loop;
+	}
+
+	const now = new Date().toISOString();
+	const stmts = [];
+	for (const pool of pools) {
+		stmts.push({ sql: "DELETE FROM santaGifts WHERE eventId = ? AND pool = ?", args: [ev.id, pool] });
+		for (const [a, b] of loops[pool]) {
+			const prev = oldStatus.get(pool + "|" + a.id);
+			stmts.push({
+				sql: "INSERT INTO santaGifts (eventId, pool, giverId, recipientId, status, statusUpdatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+				args: [ev.id, pool, a.id, b.id, prev ? prev.status : "unsubmitted", prev ? prev.statusUpdatedAt : null],
+			});
+		}
+	}
+	// Making pairs closes sign-ups.
+	stmts.push({
+		sql: "UPDATE santaEvents SET pairsGeneratedAt = ?, closedEarlyAt = COALESCE(closedEarlyAt, ?), updatedAt = ? WHERE id = ?",
+		args: [now, santaPhase(ev) === "signups" || santaPhase(ev) === "before" ? now : null, now, ev.id],
+	});
+	await santaRun(env, stmts);
+	return json({ ok: true, pools: Object.fromEntries(pools.map((p) => [p, loops[p].length])) });
+}
+
+/** Adds someone without a pair into a pool's existing loop: A -> new -> B. */
+async function handleSantaAdminFitIn(request, env) {
+	const auth = await requireAdminAuth(request, env, "secretSanta");
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const ev = await santaAdminEvent(env, body);
+	if (!ev) return json({ error: "Event not found" }, 404);
+	const pool = String(body.pool || "");
+	if (!SANTA_POOLS.includes(pool)) return json({ error: "Unknown pool" }, 400);
+	const { entries, gifts } = await santaLoad(env, ev.id);
+	const byId = new Map(entries.map((e) => [e.id, e]));
+	const n = byId.get(String(body.id || ""));
+	if (!n || !santaPools(n.category).includes(pool)) return json({ error: "That person isn't in this pool." }, 400);
+	const loop = gifts.filter((g) => g.pool === pool);
+	if (loop.some((g) => g.giverId === n.id || g.recipientId === n.id)) return json({ error: `${n.mcUsername} already has a pair here.` }, 400);
+
+	const stmts = [];
+	let notes = [];
+	if (!loop.length) {
+		// nobody paired yet: pair with the one other unpaired person, if there's exactly one
+		const others = entries.filter((e) => e.id !== n.id && santaPools(e.category).includes(pool));
+		if (others.length !== 1) return json({ error: "Generate pairs for this pool instead." }, 400);
+		const o = others[0];
+		if (!santaCanGive(n, o) || !santaCanGive(o, n)) return json({ error: `${n.mcUsername} and ${o.mcUsername} asked not to be matched.` }, 400);
+		stmts.push({ sql: "INSERT INTO santaGifts (eventId, pool, giverId, recipientId, status) VALUES (?, ?, ?, ?, 'unsubmitted')", args: [ev.id, pool, n.id, o.id] });
+		stmts.push({ sql: "INSERT INTO santaGifts (eventId, pool, giverId, recipientId, status) VALUES (?, ?, ?, ?, 'unsubmitted')", args: [ev.id, pool, o.id, n.id] });
+		notes.push(`${n.mcUsername} and ${o.mcUsername} make gifts for each other.`);
+	} else {
+		// prefer a giver whose gift isn't made yet, since their recipient changes
+		const fits = santaShuffle(loop.filter((g) => santaCanGive(byId.get(g.giverId), n) && santaCanGive(n, byId.get(g.recipientId))));
+		const g = fits.find((x) => x.status === "unsubmitted" || x.status === "confirmed") || null;
+		if (!g) {
+			return json({ error: fits.length
+				? `Every place ${n.mcUsername} could go is next to someone whose gift is already submitted. Regenerate the pool instead.`
+				: `${n.mcUsername} can't be placed without breaking someone's "don't match me with" list.` }, 400);
+		}
+		stmts.push({ sql: "UPDATE santaGifts SET recipientId = ? WHERE eventId = ? AND pool = ? AND giverId = ?", args: [n.id, ev.id, pool, g.giverId] });
+		stmts.push({ sql: "INSERT INTO santaGifts (eventId, pool, giverId, recipientId, status) VALUES (?, ?, ?, ?, 'unsubmitted')", args: [ev.id, pool, n.id, g.recipientId] });
+		notes.push(`${byId.get(g.giverId).mcUsername} now makes their gift for ${n.mcUsername}, and ${n.mcUsername} makes one for ${byId.get(g.recipientId).mcUsername}.`);
+	}
+	await santaRun(env, stmts);
+	return json({ ok: true, notes });
+}
+
+async function handleSantaAdminGiftStatus(request, env) {
+	const auth = await requireAdminAuth(request, env, "secretSanta");
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const ev = await santaAdminEvent(env, body);
+	if (!ev) return json({ error: "Event not found" }, 404);
+	const status = String(body.status || "");
+	if (!SANTA_GIFT_STATUSES.includes(status)) return json({ error: "Unknown status" }, 400);
+	const now = new Date().toISOString();
+	const r = await env.DB.prepare("UPDATE santaGifts SET status = ?, statusUpdatedAt = ? WHERE eventId = ? AND pool = ? AND giverId = ?")
+		.bind(status, now, ev.id, String(body.pool || ""), String(body.giverId || "")).run();
+	if (!r.meta || !r.meta.changes) return json({ error: "Gift not found" }, 404);
+	return json({ ok: true, status, statusUpdatedAt: now });
+}
+
 const ROUTES = [
 	["POST", "/listings", handleUploadListings],
 	["GET", "/listings", handleGetListings],
@@ -7451,6 +8174,18 @@ const ROUTES = [
 	["POST", "/mapart/like", handleLikeMapart],
 	["GET", "/mapart/my-likes", handleGetMyMapartLikes],
 	["GET", "/auction/current", handleGetCurrentAuction],
+	["GET", "/secret-santa/event", handleSantaEvent],
+	["GET", "/secret-santa/value", handleSantaValue],
+	["GET", "/secret-santa/mine", handleSantaMine],
+	["POST", "/secret-santa/signup", handleSantaSignup],
+	["POST", "/secret-santa/withdraw", handleSantaWithdraw],
+	["GET", "/secret-santa/reveal", handleSantaReveal],
+	["GET", "/secret-santa/admin/state", handleSantaAdminState],
+	["POST", "/secret-santa/admin/event", handleSantaAdminEvent],
+	["POST", "/secret-santa/admin/entry", handleSantaAdminEntry],
+	["POST", "/secret-santa/admin/generate", handleSantaAdminGenerate],
+	["POST", "/secret-santa/admin/fit-in", handleSantaAdminFitIn],
+	["POST", "/secret-santa/admin/gift-status", handleSantaAdminGiftStatus],
 	["GET", "/auction/estimate", handleAuctionEstimate],
 	["POST", "/auction/submit", handleAuctionSubmit],
 	["GET", "/auction/lineup", handleGetAuctionLineup],

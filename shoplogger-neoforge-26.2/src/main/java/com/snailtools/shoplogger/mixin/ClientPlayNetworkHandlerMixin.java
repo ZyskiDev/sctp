@@ -1,6 +1,7 @@
 package com.snailtools.shoplogger.mixin;
 
 import com.snailtools.shoplogger.ShopAutoScanner;
+import com.snailtools.shoplogger.ShopScanner;
 import com.snailtools.shoplogger.SilentScreenCoordinator;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -30,6 +31,7 @@ public abstract class ClientPlayNetworkHandlerMixin {
 
 	@Inject(method = "handleContainerContent", at = @At("TAIL"))
 	private void shoplogger$onInventorySynced(ClientboundContainerSetContentPacket packet, CallbackInfo ci) {
+		ShopScanner.onContainerContent(packet.containerId()); // a shop the player opened themselves
 		if (SilentScreenCoordinator.isArmed()) {
 			SilentScreenCoordinator.onInventorySynced(packet.containerId(), (ClientPacketListener) (Object) this);
 		}

@@ -44,6 +44,7 @@ public class QolHookManager {
         if(butterflyGarden != null) butterflyGarden.onScreenRender(screen, graphics, mouseX, mouseY, a);
         if(questHelper != null) questHelper.onScreenRender(screen, graphics, mouseX, mouseY, a);
         if(storageSwitcher != null) storageSwitcher.onScreenRender(screen, graphics, mouseX, mouseY, a);
+        BuyConfirm.onScreenRender(screen, graphics, mouseX, mouseY, a);
     }
 
     public static void onKeyEvent(){

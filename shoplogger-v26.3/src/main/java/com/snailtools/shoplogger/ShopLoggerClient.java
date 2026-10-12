@@ -50,6 +50,10 @@ public class ShopLoggerClient implements ClientModInitializer {
 	private KeyMapping toggleMarkersKey;
 	private KeyMapping togglePrintKey;
 	private KeyMapping openLibraryKey;
+	private KeyMapping heldItemKey;
+	// X opens the library when it's let go; pressing C while it's held opens the held item's page instead
+	private boolean libraryKeyHeld = false;
+	private boolean libraryChordUsed = false;
 
 	/**
 	 * Set by /search when GUI mode is on, consumed on the next client tick.
@@ -113,6 +117,13 @@ public class ShopLoggerClient implements ClientModInitializer {
 				"key.shoplogger.open_library",
 				InputConstants.Type.KEYBOARD,
 				InputConstants.KEY_X,
+				KEY_CATEGORY
+		));
+
+		heldItemKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.shoplogger.open_held_item",
+				InputConstants.Type.KEYBOARD,
+				InputConstants.KEY_C, // pressed while holding the library key (X)
 				KEY_CATEGORY
 		));
 
@@ -256,15 +267,28 @@ public class ShopLoggerClient implements ClientModInitializer {
 				togglePrint(client);
 			}
 			EmptyHandItems.tick(client);
-			if (openLibraryKey != null && openLibraryKey.consumeClick()) {
-				if (EmptyHandItems.isCapturing()) {
-					// Settings > Empty hand > Add: X registers what's in your hand
-					EmptyHandItems.captureHeld(client);
-					client.setScreenAndShow(com.snailtools.shoplogger.gui.SettingsScreen.emptyHand(new com.snailtools.shoplogger.gui.HomeScreen()));
-				} else if (TeleportHighlight.getInstance().isArmed()) {
-					TeleportHighlight.getInstance().clear();
-				} else {
-					client.setScreenAndShow(new com.snailtools.shoplogger.gui.HomeScreen());
+			if (openLibraryKey != null && openLibraryKey.consumeClick()) libraryKeyHeld = true;
+			if (heldItemKey != null) {
+				while (heldItemKey.consumeClick()) {
+					if (!libraryKeyHeld) continue; // C on its own does nothing
+					libraryChordUsed = true;
+					com.snailtools.shoplogger.gui.HeldItemPage.open(client);
+				}
+			}
+			if (libraryKeyHeld && !openLibraryKey.isDown()) {
+				libraryKeyHeld = false;
+				boolean chord = libraryChordUsed;
+				libraryChordUsed = false;
+				if (!chord) {
+					if (EmptyHandItems.isCapturing()) {
+						// Settings > Empty hand > Add: X registers what's in your hand
+						EmptyHandItems.captureHeld(client);
+						client.setScreenAndShow(com.snailtools.shoplogger.gui.SettingsScreen.emptyHand(new com.snailtools.shoplogger.gui.HomeScreen()));
+					} else if (TeleportHighlight.getInstance().isArmed()) {
+						TeleportHighlight.getInstance().clear();
+					} else {
+						client.setScreenAndShow(new com.snailtools.shoplogger.gui.HomeScreen());
+					}
 				}
 			}
 			if (pendingSearchQuery != null) {

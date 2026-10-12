@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your Secret Santa - SCTP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/secret-santa/santa.css">
+<link rel="stylesheet" href="/themes/christmas.css">
+<script src="/themes/christmas.js" defer></script>
+<link rel="stylesheet" href="/site.css">
+<style>
+	.secret{display:flex;gap:14px;align-items:center;background:linear-gradient(135deg,rgba(226,59,69,.18),rgba(226,59,69,.05));border:1px solid rgba(226,59,69,.5);border-radius:14px;padding:14px 18px;}
+	.secret .big{font-size:30px;line-height:1;}
+	.secret b{display:block;font-size:16px;}
+	.secret span{color:var(--muted);font-size:14px;}
+
+	.person{display:flex;gap:16px;align-items:center;margin:4px 0 16px;}
+	.person .kicker{font:700 12px/1.3 var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:0;}
+	.person h2{font-size:28px;margin:2px 0 4px;overflow-wrap:anywhere;}
+	.gift-status{display:flex;gap:12px;align-items:flex-start;background:var(--panel-alt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 18px;font-size:14px;}
+	.gift-status.todo{border-color:rgba(226,163,61,.6);}
+	.gift-status.late{border-color:var(--bad);}
+	.gift-status.done{border-color:rgba(67,192,138,.6);}
+	.gift-status .icon{font-size:22px;line-height:1.1;}
+	.sub-h{font:700 12px/1.3 var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px;}
+	.about{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel-alt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0;}
+
+	.wishes{display:flex;flex-direction:column;gap:8px;}
+	details.wish{background:var(--panel-alt);border:1px solid var(--line);border-radius:12px;}
+	details.wish[open]{border-color:var(--accent);}
+	details.wish summary{display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;list-style:none;}
+	details.wish summary::-webkit-details-marker{display:none;}
+	details.wish .nm{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;}
+	details.wish .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--muted);}
+	details.wish .val{color:var(--gold);font-family:var(--font-mono);}
+	details.wish .chev{color:var(--muted);transition:transform .15s;flex:0 0 auto;}
+	details.wish[open] .chev{transform:rotate(180deg);}
+	.buy{padding:0 12px 12px;display:flex;flex-direction:column;gap:10px;font-size:13.5px;}
+	.buy h4{margin:4px 0 0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+	.shops{width:100%;border-collapse:collapse;}
+	.shops-wrap{overflow-x:auto;}
+	.shops th{text-align:left;font-size:11.5px;color:var(--muted);font-weight:600;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap;}
+	.shops td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums;}
+	.shops tr:last-child td{border-bottom:none;}
+	.shops .pos{font-family:var(--font-mono);font-size:12.5px;white-space:nowrap;}
+	.mapart-pic{width:96px;max-width:100%;image-rendering:pixelated;border-radius:8px;border:1px solid var(--line);}
+	.how-to{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+	@media (max-width:700px){.how-to{grid-template-columns:1fr;}}
+	.how-to div{background:var(--panel-alt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;}
+	.how-to b{display:block;font-size:14.5px;margin-bottom:2px;}
+</style>
+</head>
+<body>
+
+<header class="site">
+	<div class="wrap header-row">
+		<div class="brand-row">
+			<div class="brand-mark" aria-hidden="true">&#127873;</div>
+			<div><h1>Your Secret Santa</h1><p class="tag" id="tagline">Snailcraft &middot; Firefly</p></div>
+		</div>
+		<div id="siteNavMount"></div>
+	</div>
+</header>
+
+<main class="wrap" id="main">
+	<section class="card"><p class="muted" style="margin:0;">Unwrapping&hellip;</p></section>
+</main>
+
+<script src="/site-nav.js" defer></script>
+<script src="/account-widget.js" defer></script>
+<script src="/secret-santa/santa.js"></script>
+<script>
+(function(){
+	"use strict";
+	var S = window.SANTA, $ = S.$, esc = S.esc;
+	var STATUS_LABEL = { unsubmitted: "Not submitted yet", confirmed: "Not submitted yet", submitted: "Submitted", placed: "Under the tree" };
+
+	var token = (location.hash || "").replace(/^#/, "").trim();
+	if(!/^[0-9a-f]{64}$/.test(token)){
+		show('<section class="card"><h2>This link isn\'t complete</h2><p class="lead" style="margin:0;">Open the full link a Secret Santa admin sent you, or <a href="/secret-santa/">sign in on the Secret Santa page</a> to find yours.</p></section>');
+		return;
+	}
+	S.api("/secret-santa/reveal?token=" + encodeURIComponent(token), { auth: false }).then(render).catch(function(err){
+		show('<section class="card"><h2>Hmm, that didn\'t work</h2><p class="lead" style="margin:0;">' + esc(err.message) + '</p></section>');
+	});
+
+	function show(html){ $("main").innerHTML = html; }
+
+	function render(d){
+		var ev = d.event;
+		document.title = "Your Secret Santa " + ev.id + " - SCTP";
+		$("tagline").innerHTML = "Snailcraft &middot; Firefly &middot; Christmas " + esc(ev.id);
+		var html = secretBanner(d);
+		if(!ev.pairsGenerated){
+			html += '<section class="card cane"><span class="firefly"><span class="dot"></span>Firefly only</span>' +
+				'<h2 style="margin-top:12px;">Hi ' + esc(d.you.mcUsername) + '! Pairs haven\'t been made yet.</h2>' +
+				'<p class="lead" style="margin:0;">Sign-ups close at the end of ' + esc(S.fmtDay(ev.signupCloseDate)) + '. Once pairs are made, this same link shows who you\'re making a gift for. Keep it somewhere safe.</p></section>';
+			show(html + howTo(ev, d.you.category === "both"));
+			return;
+		}
+		var two = d.assignments.length > 1;
+		d.assignments.forEach(function(a){ html += assignment(ev, a, two); });
+		show(html + howTo(ev, two));
+	}
+
+	function secretBanner(d){
+		return '<section class="secret"><span class="big" aria-hidden="true">&#129323;</span><div><b>Shh&hellip; keep it a secret!</b>' +
+			'<span>This page is just for you, ' + esc(d.you.mcUsername) + '. Don\'t share the link or tell anyone who you got. That\'s the fun of it.</span></div></section>';
+	}
+
+	function assignment(ev, a, two){
+		var cat = S.CATEGORY[a.pool];
+		if(!a.recipient){
+			return '<section class="card cane"><span class="pill">' + esc(cat.label) + ' &middot; ' + esc(cat.short) + '</span>' +
+				'<h2 style="margin-top:12px;">You don\'t have a ' + esc(cat.label.toLowerCase()) + ' person yet</h2>' +
+				'<p class="lead" style="margin:0;">A Secret Santa admin still has to fit you in. Check this page again soon.</p></section>';
+		}
+		var r = a.recipient;
+		var html = '<section class="card cane">' +
+			'<div class="person" style="margin-top:8px;">' + S.avatar(r.mcUsername, 64) + '<div>' +
+				'<p class="kicker">' + (two ? esc(cat.label) + ' gift &middot; ' : '') + 'You\'re Secret Santa for</p>' +
+				'<h2>' + esc(r.mcUsername) + '</h2>' +
+				'<span class="pill accent">' + esc(cat.label) + ': worth ' + esc(cat.short.replace("+", " or more")) + '</span></div></div>' +
+			giftStatus(ev, a);
+		html += '<p class="sub-h">About ' + esc(r.mcUsername) + '</p>' +
+			(r.about ? '<p class="about">' + esc(r.about) + '</p>' : '<p class="muted small" style="margin:0;">They didn\'t write anything about themselves.</p>');
+		html += '<p class="sub-h">Their wishlist</p>' +
+			(r.wishlist.length ? '<div class="wishes">' + r.wishlist.map(wishItem).join("") + '</div>' +
+				'<p class="muted small" style="margin:8px 0 0;">Open an item to see where to get it on Firefly. Values are SCTP\'s suggestions from current Firefly listings.</p>'
+				: '<p class="muted small" style="margin:0;">Their wishlist is empty, so surprise them! The about section above might help.</p>');
+		return html + '</section>';
+	}
+
+	function giftStatus(ev, a){
+		var due = Date.parse(ev.giftsDueAt), left = Math.ceil((due - Date.now()) / 86400000);
+		var where = ev.dropOff ? '<b>' + esc(ev.dropOff) + '</b> on Firefly' : 'the drop-off on Firefly';
+		var cls, icon, text;
+		if(a.status === "placed"){ cls = "done"; icon = "&#127876;"; text = "<b>Your gift is under the tree.</b> Thank you! It gets opened on " + esc(S.fmtDay(ev.openDate)) + "."; }
+		else if(a.status === "submitted"){ cls = "done"; icon = "&#127873;"; text = "<b>We've got your gift.</b> Thank you! It goes under the tree before " + esc(S.fmtDay(ev.openDate)) + "."; }
+		else if(Date.now() > due){ cls = "late"; icon = "&#9888;&#65039;"; text = "<b>Your gift was due on " + esc(S.fmtDay(ev.giftsDueDate)) + ".</b> Drop it off at " + where + " as soon as you can, or message a Secret Santa admin."; }
+		else {
+			cls = "todo"; icon = "&#9203;";
+			var days = left <= 1 ? "today is the last day" : left + " days left";
+			text = "<b>Reminder: your gift isn't submitted yet</b> (" + days + "). Make it worth " + esc(S.CATEGORY[a.pool].short.replace("+", " or more")) +
+				" and drop it off at " + where + " by the end of " + esc(S.fmtDay(ev.giftsDueDate)) + ".";
+		}
+		return '<div class="gift-status ' + cls + '"><span class="icon" aria-hidden="true">' + icon + '</span><div><span class="pill' + (cls === "done" ? " good" : " warn") + '">' + esc(STATUS_LABEL[a.status] || a.status) + '</span>' +
+			(a.status === "confirmed" ? ' <span class="pill good">Confirmed you\'re playing</span>' : '') +
+			'<div style="margin-top:6px;">' + text + '</div></div></div>';
+	}
+
+	function wishItem(w){
+		var name = S.wishName(w);
+		var meta = '<span class="ss-kind">' + esc(S.KIND_LABEL[w.kind]) + '</span>';
+		if(w.value != null) meta += '<span class="val" title="SCTP\'s suggested value, from ' + esc(w.basis || "Firefly listings") + '">' + esc(S.fmtValue(w, w.value)) + '</span>';
+		var where = "";
+		if(w.kind === "rare" || w.kind === "item"){
+			var n = (w.shopCount || 0) + (w.posts ? w.posts.length : 0);
+			meta += '<span>' + (n ? n + ' place' + (n === 1 ? '' : 's') + ' to buy' : 'not for sale right now') + '</span>';
+		}
+		return '<details class="wish"><summary>' + S.wishIcon(w) + '<span style="flex:1;min-width:0;"><span class="nm">' + esc(name) + '</span><span class="meta">' + meta + '</span></span>' +
+			'<span class="chev" aria-hidden="true">&#9662;</span></summary><div class="buy">' + buyInfo(w) + '</div></details>';
+	}
+
+	function buyInfo(w){
+		var html = "";
+		if(w.kind === "rare" || w.kind === "item"){
+			if(w.shops && w.shops.length){
+				html += '<h4>Firefly shops' + (w.shopCount > w.shops.length ? ' (cheapest ' + w.shops.length + ' of ' + w.shopCount + ')' : '') + '</h4>' +
+					'<div class="shops-wrap"><table class="shops"><thead><tr><th>Seller</th><th>Price</th><th>In stock</th><th>Location</th><th></th></tr></thead><tbody>' +
+					w.shops.map(function(s){
+						return '<tr><td>' + esc(s.seller) + '</td><td>' + esc(s.priceLabel) + (s.stackSize > 1 ? ' <span class="muted">/ ' + esc(s.stackSize) + '</span>' : '') + '</td>' +
+							'<td>' + esc(s.amount) + '</td><td class="pos">' + esc(s.position) + '</td>' +
+							'<td>' + (s.id ? '<a href="/search/?listing=' + encodeURIComponent(s.id) + '" target="_blank" rel="noopener">View</a>' : '') + '</td></tr>';
+					}).join("") + '</tbody></table></div>';
+			} else {
+				html += '<p class="muted" style="margin:0;">No Firefly shop has this right now. <a href="/search/?q=' + encodeURIComponent(w.name) + '" target="_blank" rel="noopener">Search SCTP</a> to check again later.</p>';
+			}
+		}
+		if(w.kind === "mapart"){
+			html += '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;"><img class="mapart-pic" src="' + esc(S.mapartImage(w.id, w.imageHash)) + '" alt="">' +
+				'<div>' + (w.artist ? '<div>By <b>' + esc(w.artist) + '</b></div>' : '') +
+				(w.notForSale ? '<div class="muted">Marked as not for sale. Maybe the artist can make you one?</div>'
+					: (w.whereToBuy ? '<div>Where to buy: <b>' + esc(w.whereToBuy) + '</b></div>' : '') + (w.price != null ? '<div>Price: <b>' + esc(w.price) + '</b></div>' : '')) +
+				(w.slug ? '<div style="margin-top:6px;"><a href="/mapart/' + encodeURIComponent(w.slug) + '" target="_blank" rel="noopener">Open on SCTP</a></div>' : '') +
+				'</div></div>';
+		}
+		if(w.posts && w.posts.length){
+			html += '<h4>Marketplace posts</h4><ul style="margin:0;padding-left:18px;">' + w.posts.map(function(p){
+				var price = p.askingPrice != null ? S.fmtMoney(p.askingPrice, p.askingCurrency) : p.startingBid != null ? "bids from " + S.fmtMoney(p.startingBid, p.startingBidCurrency) : "make an offer";
+				return '<li>' + esc(p.seller) + (p.quantity > 1 ? ' &middot; ' + esc(p.quantity) + '&times;' : '') + ' &middot; ' + esc(price) +
+					' &middot; <a href="/marketplace/#listing=' + encodeURIComponent(p.id) + '" target="_blank" rel="noopener">View</a></li>';
+			}).join("") + '</ul>';
+		}
+		if(w.kind === "text"){
+			html += '<p style="margin:0;">A wish in their own words. <a href="/search/?q=' + encodeURIComponent(w.text) + '" target="_blank" rel="noopener">Search SCTP for it</a></p>';
+		}
+		return html;
+	}
+
+	function howTo(ev, two){
+		var where = ev.dropOff ? esc(ev.dropOff) + ' on Firefly' : 'the drop-off on Firefly';
+		return '<section class="card"><h2>Making your gift' + (two ? 's' : '') + '</h2><p class="lead">Everything happens on <b>Firefly</b>.</p><div class="how-to">' +
+			'<div><b>&#127873; Make it</b>Between 1 December and ' + esc(S.fmtDay(ev.giftsDueDate)) + '. Match the value: 48 DB or more for high value, 16 DB or more for low value.</div>' +
+			'<div><b>&#128205; Drop it off</b>At ' + where + ' by the end of ' + esc(S.fmtDay(ev.giftsDueDate)) + '. This page shows when we have it.</div>' +
+			'<div><b>&#128140; Add a note?</b>If you like, put a note in the gift. Gifts stay anonymous, so sign it only if you want them to know.</div>' +
+			'</div><p class="muted small" style="margin:12px 0 0;">Gifts get opened on ' + esc(S.fmtDay(ev.openDate)) + '. Merry Christmas! &#127876;</p></section>';
+	}
+})();
+</script>
+</body>
+</html>

@@ -32,6 +32,14 @@ public class ShopScanner {
 	 * container the player might open (their own storage, an ender chest).
 	 */
 	private static AbstractContainerMenu currentShopHandler = null;
+	private static ShopSign currentShopSign = null;
+	// The open shop still waiting for its contents (see onContainerContent).
+	private static BlockPos awaitingContentsPos = null;
+
+	/** The sign of the shop screen that's open right now (for BuyConfirm), or null if this isn't one. */
+	public static ShopSign currentShopSign(AbstractContainerMenu handler) {
+		return handler != null && handler == currentShopHandler ? currentShopSign : null;
+	}
 
 	public static boolean isCurrentShopScreen(AbstractContainerMenu handler) {
 		return handler != null && handler == currentShopHandler;
@@ -54,6 +62,7 @@ public class ShopScanner {
 
 	/** Call this from ScreenEvents.AFTER_INIT when a container screen opens. */
 	public void onContainerScreenOpened(AbstractContainerMenu handler) {
+		if (handler == currentShopHandler) return; // the same screen re-initialised (window resize), not a new open
 		if (pendingSign == null || pendingContainerPos == null) {
 			currentShopHandler = null; // opened a container with no shop sign on its front; ignore
 			return;
@@ -68,7 +77,22 @@ public class ShopScanner {
 			return;
 		}
 		currentShopHandler = handler;
+		currentShopSign = sign;
+		// The screen opens before the server sends what's in the chest, so the
+		// slots are still empty here; the scan runs once they arrive.
+		awaitingContentsPos = containerPos;
+	}
 
+	/** Called after the server fills a container's slots (ClientPlayNetworkHandlerMixin). */
+	public static void onContainerContent(int containerId) {
+		AbstractContainerMenu handler = currentShopHandler;
+		BlockPos containerPos = awaitingContentsPos;
+		if (handler == null || containerPos == null || handler.containerId != containerId) return;
+		awaitingContentsPos = null;
+		scan(handler, currentShopSign, containerPos);
+	}
+
+	private static void scan(AbstractContainerMenu handler, ShopSign sign, BlockPos containerPos) {
 		Minecraft client = Minecraft.getInstance();
 		if (WorldSelection.ensureSet(client)) {
 			List<ShopEntry> entries = ShopEntryFactory.build(handler, sign, containerPos);

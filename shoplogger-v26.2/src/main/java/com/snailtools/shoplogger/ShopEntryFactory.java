@@ -205,7 +205,7 @@ public final class ShopEntryFactory {
 	 * correct per-disc texture automatically, the same way it already does
 	 * for every other item, no separate texture special-case needed.
 	 */
-	private static String displayNameFor(ItemStack stack) {
+	public static String displayNameFor(ItemStack stack) {
 		if (stack.getItem() == Items.ENCHANTED_BOOK) {
 			ItemEnchantments enchantments = stack.get(DataComponents.STORED_ENCHANTMENTS);
 			if (enchantments != null && !enchantments.isEmpty()) {

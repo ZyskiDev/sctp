@@ -4,6 +4,7 @@
   "package": "com.snailtools.shoplogger.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "BuyConfirmMixin",
     "ClientPlayNetworkHandlerMixin",
     "EmptyHandMixin",
     "GuiScreenMixin",

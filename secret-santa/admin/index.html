@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Secret Santa admin - SCTP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/secret-santa/santa.css">
+<link rel="stylesheet" href="/themes/christmas.css">
+<script src="/themes/christmas.js" defer></script>
+<link rel="stylesheet" href="/site.css">
+<style>
+	.wrap{max-width:1180px;}
+	.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+	.bar select,.bar input{background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 12px;font:14px var(--font-body);}
+	.dates{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+	@media (max-width:900px){.dates{grid-template-columns:1fr 1fr;}}
+	.dates .field{margin:0;}
+	.dates input{width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 10px;font:14px var(--font-body);color-scheme:dark;}
+	.stats{display:flex;gap:10px;flex-wrap:wrap;}
+	.stat{background:var(--panel-alt);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-width:110px;}
+	.stat .n{font:700 22px/1.1 var(--font-display);font-variant-numeric:tabular-nums;}
+	.stat .l{color:var(--muted);font-size:12px;}
+	.tbl-wrap{overflow-x:auto;margin-top:12px;}
+	table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;}
+	.tbl th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;}
+	.tbl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;}
+	.tbl tr:last-child td{border-bottom:none;}
+	.who{display:flex;gap:8px;align-items:center;white-space:nowrap;}
+	.who .ss-head{width:24px;height:24px;}
+	.acts{display:flex;gap:6px;flex-wrap:wrap;}
+	.acts button{padding:6px 10px;font-size:12px;}
+	.more{max-width:280px;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;}
+	.more details summary{cursor:pointer;color:var(--text);}
+	.pool-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;}
+	.pool-head h3{margin:0;font-family:var(--font-display);font-size:17px;}
+	select.status{background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 8px;font:13px var(--font-body);}
+	select.status[data-v=submitted],select.status[data-v=placed]{border-color:rgba(67,192,138,.6);}
+	select.status[data-v=confirmed]{border-color:rgba(var(--accent-rgb),.6);}
+	.unpaired{margin-top:10px;background:rgba(226,163,61,.08);border:1px solid rgba(226,163,61,.45);border-radius:10px;padding:10px 12px;font-size:13.5px;}
+	.unpaired .row{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap;}
+	.notes{margin:10px 0 0;padding-left:18px;font-size:13.5px;}
+	.arrow{color:var(--gold);padding:0 4px;}
+</style>
+</head>
+<body>
+
+<header class="site">
+	<div class="wrap header-row">
+		<div class="brand-row">
+			<div class="brand-mark" aria-hidden="true">&#127877;</div>
+			<div><h1>Secret Santa admin</h1><p class="tag">Sign-ups, pairs and gifts &middot; Firefly</p></div>
+		</div>
+		<div id="siteNavMount"></div>
+	</div>
+</header>
+
+<main class="wrap" id="main">
+	<section class="card" id="gate"><p class="muted" style="margin:0;">Loading&hellip;</p></section>
+
+	<div id="app" hidden style="display:flex;flex-direction:column;gap:18px;">
+		<section class="card cane">
+			<div class="bar" style="justify-content:space-between;margin-top:6px;">
+				<div class="bar"><label for="eventSel" class="muted small">Year</label><select id="eventSel"></select><button type="button" class="btn-ghost" id="newYear">New year</button></div>
+				<div class="bar"><span id="phasePill"></span><button type="button" class="btn-ghost" id="closeBtn"></button></div>
+			</div>
+			<p class="small muted" id="phaseText" style="margin:10px 0 16px;"></p>
+			<div class="dates">
+				<div class="field"><label for="dOpen">Sign-ups open</label><input type="date" id="dOpen"><p class="help">from the start of this day</p></div>
+				<div class="field"><label for="dClose">Sign-ups close</label><input type="date" id="dClose"><p class="help">at the end of this day</p></div>
+				<div class="field"><label for="dDue">Gifts due</label><input type="date" id="dDue"><p class="help">by the end of this day</p></div>
+				<div class="field"><label for="dOpenGifts">Gifts opened</label><input type="date" id="dOpenGifts"><p class="help">from the start of this day</p></div>
+				<div class="field"><label for="dropOff">Drop-off</label><input type="text" id="dropOff" maxlength="80" placeholder="/pw xmas" style="width:100%;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 10px;font:14px var(--font-body);"><p class="help">shown as "… on Firefly"</p></div>
+			</div>
+			<div class="bar" style="margin-top:12px;"><button type="button" class="btn" id="saveEvent">Save dates</button><span class="muted small">All days are Dutch time.</span></div>
+		</section>
+
+		<section class="card">
+			<div class="bar" style="justify-content:space-between;">
+				<h2 style="margin:0;">Sign-ups</h2>
+				<div class="bar"><input type="search" id="filter" placeholder="Filter by name or Discord"><button type="button" class="btn" id="addBtn">Add player</button></div>
+			</div>
+			<div class="stats" id="stats" style="margin-top:12px;"></div>
+			<div class="tbl-wrap"><table class="tbl" id="entries"></table></div>
+		</section>
+
+		<section class="card">
+			<div class="bar" style="justify-content:space-between;">
+				<div><h2 style="margin:0;">Pairs</h2><p class="lead" style="margin:2px 0 0;">One loop per pool: everyone makes one gift and gets one. Making pairs closes sign-ups. Reveal links work as soon as pairs exist and stay the same when you regenerate.</p></div>
+				<button type="button" class="btn" id="genAll">Generate pairs</button>
+			</div>
+			<ul class="notes" id="notes" hidden></ul>
+			<div id="pools"></div>
+		</section>
+	</div>
+</main>
+
+<script src="/site-nav.js" defer></script>
+<script src="/account-widget.js" defer></script>
+<script src="/secret-santa/santa.js"></script>
+<script>
+(function(){
+	"use strict";
+	var S = window.SANTA, $ = S.$, esc = S.esc;
+	var STATUSES = [["unsubmitted", "Unsubmitted"], ["confirmed", "Confirmed (still playing)"], ["submitted", "Submitted"], ["placed", "Placed"]];
+	var POOL_LABEL = { high: "High value (48 DB+)", low: "Low value (16 DB+)" };
+	var data = null, eventId = "";
+
+	function toast(msg){
+		var t = document.createElement("div");
+		t.className = "toast"; t.textContent = msg;
+		document.body.appendChild(t);
+		setTimeout(function(){ t.remove(); }, 3200);
+	}
+	function showNotes(list){
+		var ul = $("notes");
+		ul.hidden = !(list && list.length);
+		ul.innerHTML = (list || []).map(function(n){ return "<li>" + esc(n) + "</li>"; }).join("");
+	}
+	function gate(html){ $("gate").hidden = false; $("gate").innerHTML = html; $("app").hidden = true; }
+
+	function load(){
+		if(!S.session()){
+			gate('<h2>Sign in</h2><p class="lead">Sign in with an account that has Secret Santa access.</p><button type="button" class="btn" id="gateIn">Sign in</button>');
+			$("gateIn").onclick = function(){ if(window.sctpAccount) window.sctpAccount.openLogin(); };
+			return Promise.resolve();
+		}
+		return S.api("/secret-santa/admin/state" + (eventId ? "?eventId=" + encodeURIComponent(eventId) : "")).then(function(d){
+			data = d;
+			if(!d.event){ gate('<h2>No Secret Santa yet</h2><p class="lead">Create the first year.</p><button type="button" class="btn" id="gateNew">New year</button>'); $("gateNew").onclick = newYear; return; }
+			eventId = d.event.id;
+			$("gate").hidden = true; $("app").hidden = false;
+			render();
+		}).catch(function(err){
+			gate('<h2>' + (err.status === 403 ? "No access" : "Couldn't load") + '</h2><p class="lead" style="margin:0;">' +
+				(err.status === 403 ? "Your account doesn't have the Secret Santa permission. A head admin can give it to you in the admin panel." : esc(err.message)) + '</p>');
+		});
+	}
+
+	function byId(){ var m = {}; data.entries.forEach(function(e){ m[e.id] = e; }); return m; }
+	function revealLink(e){ return location.origin + "/secret-santa/reveal/#" + e.revealToken; }
+	function copy(text, what){
+		(navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function(){ toast(what + " copied"); })
+			.catch(function(){ window.prompt("Copy this:", text); });
+	}
+
+	// ---------------- event ----------------
+	function render(){
+		var ev = data.event;
+		$("eventSel").innerHTML = data.events.map(function(id){ return '<option value="' + esc(id) + '"' + (id === ev.id ? " selected" : "") + '>' + esc(id) + '</option>'; }).join("");
+		$("dOpen").value = ev.signupOpenDate; $("dClose").value = ev.signupCloseDate; $("dDue").value = ev.giftsDueDate; $("dOpenGifts").value = ev.openDate;
+		$("dropOff").value = ev.dropOff || "";
+		var phase = {
+			before: ["Sign-ups not open yet", ""], signups: ["Sign-ups open", "good"], making: ["Making gifts", "accent"],
+			waiting: ["Waiting for Christmas", "accent"], opened: ["Gifts opened", ""]
+		}[ev.phase];
+		$("phasePill").innerHTML = '<span class="pill ' + phase[1] + '">' + phase[0] + '</span>';
+		var closed = ev.closedEarly;
+		$("closeBtn").textContent = closed ? "Reopen sign-ups" : "Close sign-ups now";
+		$("closeBtn").hidden = !(ev.phase === "signups" || ev.phase === "before" || closed);
+		$("phaseText").innerHTML = closed
+			? "Sign-ups were closed early on " + esc(S.fmtStamp(ev.closedEarlyAt)) + (ev.pairsGeneratedAt ? " (by making pairs)" : "") + "."
+			: ev.phase === "signups" ? "The form is open. It closes at the end of " + esc(S.fmtDay(ev.signupCloseDate)) + "."
+			: ev.phase === "before" ? "The form opens on " + esc(S.fmtDay(ev.signupOpenDate)) + "." : "";
+		renderEntries();
+		renderPools();
+	}
+	$("eventSel").addEventListener("change", function(){ eventId = this.value; load(); });
+	$("newYear").addEventListener("click", newYear);
+	function newYear(){
+		var next = data && data.events.length ? String(Math.max.apply(null, data.events.map(Number)) + 1) : String(new Date().getFullYear());
+		var m = S.modal('<h2>New Secret Santa year</h2><div class="field"><label for="nyYear">Year</label><input type="text" id="nyYear" value="' + next + '" maxlength="4"></div>' +
+			'<p class="muted small">It starts with the usual dates (sign-ups 1–30 November, gifts due 20 December, opened 25 December) and drop-off /pw xmas. You can change them after.</p>' +
+			'<div class="actions"><button type="button" class="btn-ghost" data-a="back">Cancel</button><button type="button" class="btn" data-a="ok">Create</button></div>');
+		m.el.querySelector("[data-a=back]").onclick = m.close;
+		m.el.querySelector("[data-a=ok]").onclick = function(){
+			S.api("/secret-santa/admin/event", { body: { action: "create", year: $("nyYear").value.trim() } }).then(function(r){ m.close(); eventId = r.eventId; load(); toast("Created " + r.eventId); })
+				.catch(function(err){ toast(err.message); });
+		};
+	}
+	$("saveEvent").addEventListener("click", function(){
+		S.api("/secret-santa/admin/event", { body: { action: "save", eventId: eventId, signupOpenDate: $("dOpen").value, signupCloseDate: $("dClose").value, giftsDueDate: $("dDue").value, openDate: $("dOpenGifts").value, dropOff: $("dropOff").value } })
+			.then(function(){ toast("Saved"); load(); }).catch(function(err){ toast(err.message); });
+	});
+	$("closeBtn").addEventListener("click", function(){
+		var reopen = data.event.closedEarly;
+		var warn = reopen && data.event.pairsGeneratedAt ? " Pairs already exist: anyone who signs up now has no pair until you fit them in or regenerate." : "";
+		if(!confirm((reopen ? "Reopen sign-ups?" : "Close sign-ups now? Nobody can sign up or change their entry after this.") + warn)) return;
+		S.api("/secret-santa/admin/event", { body: { action: reopen ? "reopen" : "close", eventId: eventId } }).then(function(){ toast(reopen ? "Sign-ups reopened" : "Sign-ups closed"); load(); })
+			.catch(function(err){ toast(err.message); });
+	});
+
+	// ---------------- sign-ups ----------------
+	function renderEntries(){
+		var es = data.entries, f = $("filter").value.trim().toLowerCase();
+		var c = { total: es.length, high: 0, low: 0, both: 0 };
+		es.forEach(function(e){ c[e.category]++; });
+		var st = {}; data.gifts.forEach(function(g){ st[g.status] = (st[g.status] || 0) + 1; });
+		$("stats").innerHTML = [[c.total, "players"], [c.high + c.both, "in high value"], [c.low + c.both, "in low value"], [c.both, "doing both"]]
+			.concat(data.gifts.length ? [[data.gifts.length, "gifts to make"], [(st.submitted || 0) + (st.placed || 0), "submitted"], [st.placed || 0, "placed"]] : [])
+			.map(function(s){ return '<div class="stat"><div class="n">' + s[0] + '</div><div class="l">' + s[1] + '</div></div>'; }).join("");
+		var rows = es.filter(function(e){ return !f || e.mcUsername.toLowerCase().indexOf(f) >= 0 || e.discord.toLowerCase().indexOf(f) >= 0; });
+		$("entries").innerHTML = '<thead><tr><th>Player</th><th>Discord</th><th>Category</th><th>Don\'t match with</th><th>Wishlist</th><th>About</th><th>Signed up</th><th></th></tr></thead><tbody>' +
+			(rows.length ? rows.map(function(e){
+				var cat = S.CATEGORY[e.category];
+				var badge = e.mcVerified ? '<span class="verified" title="Signed in with a verified Minecraft account">&#10003;</span>'
+					: e.addedBy ? '<span class="pill" title="Added by ' + esc(e.addedBy) + '">admin</span>' : '<span class="pill warn" title="Not signed in with a verified Minecraft account">unverified</span>';
+				return '<tr><td><div class="who">' + S.avatar(e.mcUsername, 24) + '<b>' + esc(e.mcUsername) + '</b> ' + badge + '</div></td>' +
+					'<td>' + esc(e.discord) + '</td><td style="white-space:nowrap;">' + esc(cat.label) + '</td>' +
+					'<td class="more">' + (e.excludes.length ? esc(e.excludes.join(", ")) : "—") + '</td>' +
+					'<td class="more">' + (e.wishlist.length ? '<details><summary>' + e.wishlist.length + ' item' + (e.wishlist.length === 1 ? '' : 's') + '</summary>' + esc(e.wishlist.map(S.wishName).join(", ")) + '</details>' : "—") + '</td>' +
+					'<td class="more">' + (e.about ? '<details><summary>Read</summary>' + esc(e.about) + '</details>' : "—") + '</td>' +
+					'<td class="muted" style="white-space:nowrap;">' + esc(S.fmtStamp(e.createdAt)) + '</td>' +
+					'<td><div class="acts"><button type="button" class="btn-ghost" data-link="' + e.id + '">Copy link</button><button type="button" class="btn-ghost" data-edit="' + e.id + '">Edit</button><button type="button" class="btn-danger" data-rm="' + e.id + '">Remove</button></div></td></tr>';
+			}).join("") : '<tr><td colspan="8" class="muted">' + (es.length ? "Nobody matches that filter." : "No sign-ups yet.") + '</td></tr>') + '</tbody>';
+	}
+	$("filter").addEventListener("input", renderEntries);
+	$("entries").addEventListener("click", function(e){
+		var b = e.target.closest("button");
+		if(!b) return;
+		var m = byId();
+		if(b.dataset.link) copy(revealLink(m[b.dataset.link]), m[b.dataset.link].mcUsername + "'s reveal link");
+		if(b.dataset.edit) editEntry(m[b.dataset.edit]);
+		if(b.dataset.rm){
+			var en = m[b.dataset.rm];
+			if(!confirm("Remove " + en.mcUsername + " from Secret Santa " + eventId + "?" + (data.event.pairsGeneratedAt ? " They're taken out of the pairs: whoever was making a gift for them makes it for their person instead." : ""))) return;
+			S.api("/secret-santa/admin/entry", { body: { action: "remove", eventId: eventId, id: en.id } }).then(function(r){ toast("Removed " + en.mcUsername); showNotes(r.notes); load(); })
+				.catch(function(err){ toast(err.message); });
+		}
+	});
+	$("addBtn").addEventListener("click", function(){ editEntry(null); });
+
+	function editEntry(en){
+		var m = S.modal('<h2>' + (en ? "Edit " + esc(en.mcUsername) : "Add a player") + '</h2>' +
+			'<div class="row2"><div class="field"><label for="eName">Minecraft username</label><input type="text" id="eName" maxlength="17" value="' + esc(en ? en.mcUsername : "") + '"></div>' +
+			'<div class="field"><label for="eDiscord">Discord username</label><input type="text" id="eDiscord" maxlength="64" value="' + esc(en ? en.discord : "") + '"></div></div>' +
+			'<div class="field"><span class="label">Category</span><div class="cats">' + ["high", "low", "both"].map(function(k){
+				var c = S.CATEGORY[k];
+				return '<label class="cat"><input type="radio" name="eCat" value="' + k + '"' + (en && en.category === k ? " checked" : "") + '><span class="t">' + c.label + '</span><span class="v">' + c.short + '</span></label>';
+			}).join("") + '</div>' + (en && data.event.pairsGeneratedAt ? '<p class="help" style="margin-top:6px;">Changing the category takes them out of a pool they leave (their giver gets their person instead). Fit them into a pool they join from the Pairs section.</p>' : '') + '</div>' +
+			'<div class="field"><span class="label">Don\'t match with</span><div id="eExcl"></div></div>' +
+			'<div class="field"><span class="label">Wishlist</span><div id="eWish"></div></div>' +
+			'<div class="field"><label for="eAbout">About them</label><textarea id="eAbout" maxlength="500">' + esc(en ? en.about : "") + '</textarea></div>' +
+			'<p class="form-error" id="eErr" hidden></p>' +
+			'<div class="actions"><button type="button" class="btn-ghost" data-a="back">Cancel</button><button type="button" class="btn" data-a="ok">' + (en ? "Save" : "Add") + '</button></div>');
+		m.el.querySelector(".ss-modal").classList.add("wide");
+		var excl = S.nameChips($("eExcl"), { list: en ? en.excludes : [], max: 5, self: function(){ return $("eName").value.trim(); } });
+		var wish = S.wishEditor($("eWish"), { list: en ? en.wishlist : [] });
+		m.el.querySelector("[data-a=back]").onclick = m.close;
+		m.el.querySelector("[data-a=ok]").onclick = function(){
+			var cat = (m.el.querySelector("input[name=eCat]:checked") || {}).value;
+			var err = $("eErr");
+			if(!cat){ err.textContent = "Choose a category."; err.hidden = false; return; }
+			S.api("/secret-santa/admin/entry", { body: { eventId: eventId, id: en ? en.id : null, mcUsername: $("eName").value.trim(), discord: $("eDiscord").value.trim(),
+				category: cat, excludes: excl.get(), wishlist: wish.get(), about: $("eAbout").value.trim() } })
+				.then(function(r){ m.close(); toast(en ? "Saved" : "Added"); showNotes(r.notes); load(); })
+				.catch(function(e2){ err.textContent = e2.message; err.hidden = false; });
+		};
+	}
+
+	// ---------------- pairs ----------------
+	function renderPools(){
+		var m = byId(), html = "";
+		$("genAll").textContent = data.event.pairsGeneratedAt ? "Regenerate all pairs" : "Generate pairs";
+		if(!data.event.pairsGeneratedAt){
+			$("pools").innerHTML = '<p class="muted" style="margin:14px 0 0;">No pairs yet. Generating them closes sign-ups and makes everyone\'s reveal link work.</p>';
+			return;
+		}
+		["high", "low"].forEach(function(pool){
+			var gifts = data.gifts.filter(function(g){ return g.pool === pool; }).sort(function(a, b){ return (m[a.giverId] || {}).mcUsername > (m[b.giverId] || {}).mcUsername ? 1 : -1; });
+			var members = data.entries.filter(function(e){ return e.category === pool || e.category === "both"; });
+			var paired = {}; gifts.forEach(function(g){ paired[g.giverId] = true; });
+			var unpaired = members.filter(function(e){ return !paired[e.id]; });
+			html += '<div class="pool-head"><h3>' + POOL_LABEL[pool] + ' &middot; ' + gifts.length + ' gift' + (gifts.length === 1 ? '' : 's') + '</h3>' +
+				'<button type="button" class="btn-ghost" data-regen="' + pool + '">Regenerate this pool</button></div>';
+			html += gifts.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Makes a gift</th><th></th><th>For</th><th>Gift status</th><th>Updated</th><th></th></tr></thead><tbody>' +
+				gifts.map(function(g){
+					var a = m[g.giverId] || { mcUsername: "?" }, b = m[g.recipientId] || { mcUsername: "?" };
+					return '<tr><td><div class="who">' + S.avatar(a.mcUsername, 24) + esc(a.mcUsername) + '</div></td><td class="arrow">&rarr;</td>' +
+						'<td><div class="who">' + S.avatar(b.mcUsername, 24) + esc(b.mcUsername) + '</div></td>' +
+						'<td><select class="status" data-pool="' + pool + '" data-giver="' + g.giverId + '" data-v="' + g.status + '" aria-label="Gift status for ' + esc(a.mcUsername) + '">' +
+							STATUSES.map(function(s){ return '<option value="' + s[0] + '"' + (s[0] === g.status ? " selected" : "") + '>' + s[1] + '</option>'; }).join("") + '</select></td>' +
+						'<td class="muted" style="white-space:nowrap;">' + (g.statusUpdatedAt ? esc(S.fmtStamp(g.statusUpdatedAt)) : "") + '</td>' +
+						'<td><button type="button" class="btn-ghost" data-link="' + g.giverId + '" style="padding:6px 10px;font-size:12px;">Copy ' + esc(a.mcUsername) + '\'s link</button></td></tr>';
+				}).join("") + '</tbody></table></div>' : '<p class="muted small">Nobody in this pool has a pair.</p>';
+			if(unpaired.length){
+				html += '<div class="unpaired"><b>No pair yet in this pool:</b>' + unpaired.map(function(e){
+					return '<div class="row">' + S.avatar(e.mcUsername, 24) + esc(e.mcUsername) + '<button type="button" class="btn-ghost" data-fit="' + e.id + '" data-pool="' + pool + '" style="padding:6px 10px;font-size:12px;">Fit into the loop</button></div>';
+				}).join("") + '<p class="muted small" style="margin:6px 0 0;">Fitting someone in changes one other person\'s recipient (someone whose gift isn\'t submitted yet). Or regenerate the pool.</p></div>';
+			}
+		});
+		$("pools").innerHTML = html;
+	}
+	function generate(pool){
+		var gifts = data.gifts.filter(function(g){ return !pool || g.pool === pool; });
+		var made = gifts.filter(function(g){ return g.status === "submitted" || g.status === "placed"; }).length;
+		var msg = data.event.pairsGeneratedAt
+			? "Regenerate " + (pool ? "the " + POOL_LABEL[pool] + " pool" : "all pairs") + "? Everyone in it gets a new person. Reveal links stay the same and show the new person."
+			: "Generate pairs? This closes sign-ups and everyone's reveal link starts working.";
+		if(made) msg += "\n\nCareful: " + made + " gift" + (made === 1 ? " is" : "s are") + " already submitted or placed for the current pairs.";
+		if(!confirm(msg)) return;
+		S.api("/secret-santa/admin/generate", { body: { eventId: eventId, pool: pool || null } }).then(function(r){
+			showNotes([]);
+			toast("Pairs made: " + Object.keys(r.pools).map(function(p){ return r.pools[p] + " " + p; }).join(", "));
+			load();
+		}).catch(function(err){ showNotes([err.message]); toast("Couldn't make pairs"); });
+	}
+	$("genAll").addEventListener("click", function(){ generate(null); });
+	$("pools").addEventListener("click", function(e){
+		var b = e.target.closest("button");
+		if(!b) return;
+		if(b.dataset.regen) generate(b.dataset.regen);
+		if(b.dataset.link){ var en = byId()[b.dataset.link]; copy(revealLink(en), en.mcUsername + "'s reveal link"); }
+		if(b.dataset.fit){
+			S.api("/secret-santa/admin/fit-in", { body: { eventId: eventId, pool: b.dataset.pool, id: b.dataset.fit } }).then(function(r){ showNotes(r.notes); load(); })
+				.catch(function(err){ showNotes([err.message]); });
+		}
+	});
+	$("pools").addEventListener("change", function(e){
+		var s = e.target.closest("select.status");
+		if(!s) return;
+		S.api("/secret-santa/admin/gift-status", { body: { eventId: eventId, pool: s.dataset.pool, giverId: s.dataset.giver, status: s.value } }).then(function(r){
+			s.dataset.v = r.status;
+			var g = data.gifts.find(function(x){ return x.pool === s.dataset.pool && x.giverId === s.dataset.giver; });
+			if(g){ g.status = r.status; g.statusUpdatedAt = r.statusUpdatedAt; }
+			renderEntries();
+			var cell = s.closest("td").nextElementSibling; if(cell) cell.textContent = S.fmtStamp(r.statusUpdatedAt);
+			toast("Status saved");
+		}).catch(function(err){ toast(err.message); load(); });
+	});
+
+	window.sctpOnAccountChange = function(){ load(); };
+	load();
+})();
+</script>
+</body>
+</html>
