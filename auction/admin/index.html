@@ -230,9 +230,7 @@
 				.catch(function(){ window.prompt("Copy this code:", a.accessCode); });
 		};
 		if($("fDelete")) $("fDelete").onclick = function(){
-			if(!confirm("Delete \"" + a.title + "\"?
-
-It disappears from this menu and from Shop Logger, and is set to finished. Its entries, results and statistics are kept.")) return;
+			if(!confirm("Delete \"" + a.title + "\"?\n\nIt disappears from this menu and from Shop Logger, and is set to finished. Its entries, results and statistics are kept.")) return;
 			api("/admin/auctions/delete", { method: "POST", body: { id: a.id } }).then(function(res){
 				if(!res.ok){ $("fMsg").innerHTML = '<span class="err">' + esc(res.d.error || "Couldn't delete") + '</span>'; return; }
 				selectedId = null;

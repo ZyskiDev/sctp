@@ -23,6 +23,7 @@
 		] },
 		{ title: "Collect & explore", links: [
 			{ href: "/collection/", label: "My collection & wishlist" },
+			{ href: "/world/", label: "Firefly world map" },
 			{ href: "/roadmap/", label: "Roadmap" },
 			{ href: "/onboarding/update", label: "What's new" }
 		] },

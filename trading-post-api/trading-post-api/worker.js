@@ -10,9 +10,6 @@
 //   POST /bug-reports             body: {title, details, area: "website"|"mod", world?, pageUrl?, submitterName?} -> appends to bugReports
 //   POST /player-reports          body: {reportedUsername, world, reason, details, reporterName?} -> appends to playerReports
 //   POST /shared-shop-requests    -> appends to sharedShopRequests
-//   POST /world-map/claim         body: {squareId, username}  -> claims a map square
-//   POST /world-map/unclaim       body: {squareId, username}  -> releases a claimed square
-//   POST /world-map/complete      body: {squareId, username}  -> marks a claimed square done
 //
 // Public, unauthenticated, cached (CACHE_TTL_SECONDS at the edge):
 //   GET /listings          -> full listings array
@@ -22,7 +19,7 @@
 //   GET /shared-shops      -> approved shared-shop entries
 //   GET /rare-items        -> {firefly: [...], honeybee: [...]}
 //   GET /faq               -> faq entries
-//   GET /world-map         -> {squareId: {status, username, claimedAt, completedAt}}
+//   GET /world-tiles/v1/<level>/<x>_<z>.webp -> Firefly world map tile (from R2, see handleWorldTile)
 //   GET /update-notice     -> {enabled, minVersion, message} — the mod checks this on
 //     join and prints `message` to chat if its own version is below minVersion (see
 //     UpdateNoticeCheck in the mod and the "updateNotice" permission bucket below).
@@ -147,8 +144,6 @@
 //   POST /admin/faq/add                      body: {question, answer}
 //   POST /admin/faq/update                   body: {id, question, answer}
 //   POST /admin/faq/delete                   body: {id}
-// Permission bucket "worldMap":
-//   POST /admin/world-map/set                body: {squareId, status, username} -> force-set, bypasses username match
 // Permission bucket "manualListings":
 //   POST /admin/listings/manual-add          body: {seller, world, entries: [{itemName, price, currency, position, priceLabel?}]}
 //   GET  /admin/listings/manual              -> lists manually-added listings (lastSeen "M001" etc instead of a timestamp)
@@ -259,8 +254,6 @@ const EDITABLE_LISTING_FIELDS = new Set([
 	"itemName", "baseItem", "price", "priceLabel", "stackSize",
 	"amount", "stacksInStock", "currency", "seller", "world", "position", "bundled",
 ]);
-const WORLD_MAP_STATUSES = new Set(["unclaimed", "claimed", "done"]);
-const WORLD_MAP_GRID_SIZE = 49; // leaf squares per axis, see /world for the full grid math
 
 // ---- forms (see the "Forms" doc-comment block above) ----
 const FORM_QUESTION_TYPES = new Set(["short_text", "paragraph", "multiple_choice", "checkboxes", "dropdown", "number", "date", "rating", "yes_no"]);
@@ -489,13 +482,6 @@ function isVersionAtLeast(version, min) {
 	return true;
 }
 
-function isValidSquareId(id) {
-	const m = /^(\d{1,2})_(\d{1,2})$/.exec(String(id || ""));
-	if (!m) return false;
-	const col = parseInt(m[1], 10), row = parseInt(m[2], 10);
-	return col >= 0 && col < WORLD_MAP_GRID_SIZE && row >= 0 && row < WORLD_MAP_GRID_SIZE;
-}
-
 // Real Minecraft usernames: 1-16 chars, letters/digits/underscore only.
 function isValidUsername(name) {
 	return /^[A-Za-z0-9_]{1,16}$/.test(String(name || ""));
@@ -585,7 +571,7 @@ async function firstBannedItem(env, seller, itemNames) {
 // granted. The old shared ADMIN_KEY master-key bypass was removed once real
 // accounts existed — see requireAnyAdmin.
 const ADMIN_PERMISSION_BUCKETS = new Set([
-	"reports", "sharedShopRequests", "faq", "worldMap", "manualListings", "blockedSellers", "marketplaceListings", "updateNotice",
+	"reports", "sharedShopRequests", "faq", "manualListings", "blockedSellers", "marketplaceListings", "updateNotice",
 	"suggestions", "bugReports", "playerReports", "manageMapart", "manageForms", "auctions", "siteNotice", "secretSanta",
 ]);
 
@@ -2321,17 +2307,6 @@ async function handleGetFaqPublic(request, env, ctx) {
 	});
 }
 
-async function handleGetWorldMap(request, env, ctx) {
-	return cachedGet(request, ctx, CACHE_TTL_SECONDS, async () => {
-		const { results } = await env.DB.prepare("SELECT * FROM worldMap").all();
-		const out = {};
-		for (const r of results) {
-			out[r.squareId] = { status: r.status, username: r.username, claimedAt: r.claimedAt, completedAt: r.completedAt };
-		}
-		return out;
-	});
-}
-
 async function handleListReports(request, env) {
 	const auth = await requireAnyPermission(request, env, ["reports", "manageMapart"]);
 	if (!auth.ok) return auth.response;
@@ -2830,131 +2805,9 @@ async function handleDeleteFaq(request, env) {
 	}
 }
 
-async function handleClaimSquare(request, env) {
-	if (!isAuthorized(request, env.API_KEY)) return json({ error: "Unauthorized" }, 401);
-
-	let body;
-	try {
-		body = await request.json();
-	} catch (e) {
-		return json({ error: "Invalid JSON body" }, 400);
-	}
-
-	const squareId = String(body.squareId || "");
-	const username = String(body.username || "").trim();
-	if (!isValidSquareId(squareId)) return json({ error: "Invalid squareId" }, 400);
-	if (!isValidUsername(username)) return json({ error: "Invalid username" }, 400);
-
-	try {
-		const existing = await env.DB.prepare("SELECT status FROM worldMap WHERE squareId = ?").bind(squareId).first();
-		if (existing) return json({ error: "Square is already claimed" }, 409);
-		await env.DB.prepare(
-			"INSERT INTO worldMap (squareId, status, username, claimedAt, completedAt) VALUES (?, 'claimed', ?, ?, NULL)"
-		).bind(squareId, username, new Date().toISOString()).run();
-	} catch (e) {
-		return json({ error: String(e) }, 502);
-	}
-
-	return json({ ok: true, status: "claimed" });
-}
-
-async function handleUnclaimSquare(request, env) {
-	if (!isAuthorized(request, env.API_KEY)) return json({ error: "Unauthorized" }, 401);
-
-	let body;
-	try {
-		body = await request.json();
-	} catch (e) {
-		return json({ error: "Invalid JSON body" }, 400);
-	}
-
-	const squareId = String(body.squareId || "");
-	const username = String(body.username || "").trim();
-	if (!isValidSquareId(squareId)) return json({ error: "Invalid squareId" }, 400);
-	if (!username) return json({ error: "username is required" }, 400);
-
-	try {
-		const existing = await env.DB.prepare("SELECT status, username FROM worldMap WHERE squareId = ?").bind(squareId).first();
-		if (!existing || existing.status !== "claimed") return json({ error: "Square is not claimed" }, 409);
-		if (existing.username.toLowerCase() !== username.toLowerCase()) return json({ error: "Username doesn't match the claim on this square" }, 403);
-		await env.DB.prepare("DELETE FROM worldMap WHERE squareId = ?").bind(squareId).run();
-	} catch (e) {
-		return json({ error: String(e) }, 502);
-	}
-
-	return json({ ok: true, status: "unclaimed" });
-}
-
-async function handleCompleteSquare(request, env) {
-	if (!isAuthorized(request, env.API_KEY)) return json({ error: "Unauthorized" }, 401);
-
-	let body;
-	try {
-		body = await request.json();
-	} catch (e) {
-		return json({ error: "Invalid JSON body" }, 400);
-	}
-
-	const squareId = String(body.squareId || "");
-	const username = String(body.username || "").trim();
-	if (!isValidSquareId(squareId)) return json({ error: "Invalid squareId" }, 400);
-	if (!username) return json({ error: "username is required" }, 400);
-
-	try {
-		const existing = await env.DB.prepare("SELECT status, username FROM worldMap WHERE squareId = ?").bind(squareId).first();
-		if (!existing || existing.status !== "claimed") return json({ error: "Square is not claimed" }, 409);
-		if (existing.username.toLowerCase() !== username.toLowerCase()) return json({ error: "Username doesn't match the claim on this square" }, 403);
-		await env.DB.prepare("UPDATE worldMap SET status = 'done', completedAt = ? WHERE squareId = ?").bind(new Date().toISOString(), squareId).run();
-	} catch (e) {
-		return json({ error: String(e) }, 502);
-	}
-
-	return json({ ok: true, status: "done" });
-}
-
 // Admin override — unlike the public claim/unclaim/complete endpoints, this
 // doesn't check that the submitted username matches the existing claim; it
 // just sets whatever status/owner the admin typed in.
-async function handleAdminSetSquare(request, env) {
-	const auth = await requireAdminAuth(request, env, "worldMap");
-	if (!auth.ok) return auth.response;
-
-	let body;
-	try {
-		body = await request.json();
-	} catch (e) {
-		return json({ error: "Invalid JSON body" }, 400);
-	}
-
-	const squareId = String(body.squareId || "");
-	const status = String(body.status || "");
-	const username = String(body.username || "").trim();
-	if (!isValidSquareId(squareId)) return json({ error: "Invalid squareId" }, 400);
-	if (!WORLD_MAP_STATUSES.has(status)) return json({ error: "Invalid status" }, 400);
-	if (status !== "unclaimed" && !isValidUsername(username)) return json({ error: "Invalid username" }, 400);
-
-	try {
-		if (status === "unclaimed") {
-			await env.DB.prepare("DELETE FROM worldMap WHERE squareId = ?").bind(squareId).run();
-			return json({ ok: true });
-		}
-
-		const existing = await env.DB.prepare("SELECT claimedAt, completedAt FROM worldMap WHERE squareId = ?").bind(squareId).first();
-		const now = new Date().toISOString();
-		const claimedAt = (existing && existing.claimedAt) || now;
-		const completedAt = status === "done" ? ((existing && existing.completedAt) || now) : null;
-
-		await env.DB.prepare(
-			`INSERT INTO worldMap (squareId, status, username, claimedAt, completedAt) VALUES (?, ?, ?, ?, ?)
-			 ON CONFLICT(squareId) DO UPDATE SET status=excluded.status, username=excluded.username, claimedAt=excluded.claimedAt, completedAt=excluded.completedAt`
-		).bind(squareId, status, username, claimedAt, completedAt).run();
-	} catch (e) {
-		return json({ error: String(e) }, 502);
-	}
-
-	return json({ ok: true });
-}
-
 // GET /roadmap — public, cached. Proxies the project's public Trello board
 // (SCTP roadmap) enriched with its "Amazing Fields" Power-Up data (Where/
 // What/When tags, Progress, Details) — see roadmap/index.html. The Amazing
@@ -7356,6 +7209,53 @@ async function handleAdminAuctionResult(request, env) {
 	return json({ ok: true, ...r });
 }
 
+// ---------------- Firefly world map (/world) ----------------
+//
+// View-only map of the whole Firefly world, made from Xaero's World Map files
+// (map data by Firebluster). Tiles live in R2 under world/firefly/<version>/
+// <level>/<x>_<z>.webp: level 0 is one region (512 blocks) at 1 px per block,
+// each level up covers twice as much. /world/tiles.json on the site lists
+// which tiles exist. Uploads come from the local tiler with WORLD_TILE_KEY.
+const WORLD_TILE_PATH = /^\/world-tiles\/(v\d+)\/([0-7])\/(\d{1,3})_(\d{1,3})\.webp$/;
+
+async function handleWorldTile(request, env, ctx) {
+	const url = new URL(request.url);
+	if (request.method === "POST" && url.pathname === "/world-tiles/upload") return handleWorldTileUpload(request, env);
+	const m = WORLD_TILE_PATH.exec(url.pathname);
+	if (request.method !== "GET" || !m) return json({ error: "Not found" }, 404);
+	const cache = caches.default;
+	const hit = await cache.match(request);
+	if (hit) return hit;
+	const obj = await env.SNAPSHOTS.get(`world/firefly/${m[1]}/${m[2]}/${m[3]}_${m[4]}.webp`);
+	if (!obj) return new Response("Not found", { status: 404, headers: { ...corsHeaders(), "Cache-Control": "public, max-age=3600" } });
+	const res = new Response(obj.body, {
+		headers: { ...corsHeaders(), "Content-Type": "image/webp", "Cache-Control": "public, max-age=31536000, immutable" },
+	});
+	ctx.waitUntil(cache.put(request, res.clone()));
+	return res;
+}
+
+// POST /world-tiles/upload (Bearer WORLD_TILE_KEY): a batch of tiles, each
+// [u16 name length][name "v1/3/10_12.webp"][u32 size][webp bytes].
+async function handleWorldTileUpload(request, env) {
+	if (!env.WORLD_TILE_KEY || !isAuthorized(request, env.WORLD_TILE_KEY)) return json({ error: "Unauthorized" }, 401);
+	const buf = new Uint8Array(await request.arrayBuffer());
+	const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+	let p = 0, n = 0;
+	const puts = [];
+	while (p < buf.length) {
+		const nameLen = view.getUint16(p); p += 2;
+		const name = new TextDecoder().decode(buf.subarray(p, p + nameLen)); p += nameLen;
+		const size = view.getUint32(p); p += 4;
+		if (!/^v\d+\/[0-7]\/\d{1,3}_\d{1,3}\.webp$/.test(name) || p + size > buf.length) return json({ error: "Bad tile " + name }, 400);
+		puts.push(env.SNAPSHOTS.put("world/firefly/" + name, buf.slice(p, p + size), { httpMetadata: { contentType: "image/webp" } }));
+		p += size; n++;
+		if (n > 100) return json({ error: "At most 100 tiles per batch" }, 400);
+	}
+	await Promise.all(puts);
+	return json({ ok: true, stored: n });
+}
+
 // ---------------- in-game auction hosting (Shop Logger) ----------------
 //
 // The mod signs in with the player's Minecraft name (POST /mod/auction-login,
@@ -8353,7 +8253,6 @@ const ROUTES = [
 	["GET", "/shared-shops", handleGetSharedShops],
 	["GET", "/rare-items", handleGetRareItems],
 	["GET", "/faq", handleGetFaqPublic],
-	["GET", "/world-map", handleGetWorldMap],
 	["GET", "/roadmap", handleGetRoadmap],
 	["GET", "/update-notice", handleGetUpdateNotice],
 	["GET", "/admin/update-notice", handleAdminGetUpdateNotice],
@@ -8361,10 +8260,6 @@ const ROUTES = [
 	["GET", "/site-notice", handleGetSiteNotice],
 	["GET", "/admin/site-notice", handleAdminGetSiteNotice],
 	["POST", "/admin/site-notice/set", handleAdminSetSiteNotice],
-	["POST", "/world-map/claim", handleClaimSquare],
-	["POST", "/world-map/unclaim", handleUnclaimSquare],
-	["POST", "/world-map/complete", handleCompleteSquare],
-	["POST", "/admin/world-map/set", handleAdminSetSquare],
 	["POST", "/admin/listings/manual-add", handleAdminAddManualListings],
 	["GET", "/admin/listings/manual", handleAdminListManualListings],
 	["POST", "/admin/listings/manual-delete", handleAdminDeleteManualListing],
@@ -8532,6 +8427,8 @@ export default {
 		if (request.method === "OPTIONS") {
 			return new Response(null, { headers: corsHeaders() });
 		}
+
+		if (url.pathname.startsWith("/world-tiles/")) return handleWorldTile(request, env, ctx);
 
 		for (const [method, path, handler] of ROUTES) {
 			if (request.method === method && url.pathname === path) {
