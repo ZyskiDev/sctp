@@ -3988,7 +3988,7 @@ const MAPART_LIKES_SQL = "(SELECT COUNT(*) FROM mapartLikes ml WHERE ml.mapartId
 
 function mapartPublic(m) {
 	return {
-		id: m.id, slug: m.slug, title: m.title, artist: m.artist || null,
+		id: m.id, slug: m.slug, title: m.title, artist: m.artist || null, originalArtist: m.originalArtist || null,
 		whereToBuy: resolveMapartWhereToBuy(m), notForSale: !!m.notForSale, price: m.price || null, commissioned: !!m.commissioned, commissionedBy: m.commissionedBy || null,
 		category: m.category || null, keywords: parseMapartKeywords(m.keywords), mapType: m.mapType || null,
 		world: m.world, width: m.width, height: m.height,
@@ -4317,7 +4317,7 @@ async function handleUpdateMapart(request, env) {
 	const canManage = isHead || adminHasPermission(base.admin, "manageMapart");
 	if (!isHead && !owns && !canManage) return json({ error: "Claim this mapart first to edit it." }, 403);
 	if (!isHead && !owns && (body.title !== undefined || body.whereToBuy !== undefined || body.notForSale !== undefined || body.price !== undefined || body.commissioned !== undefined || body.commissionedBy !== undefined || body.keywords !== undefined || body.mapType !== undefined)) {
-		return json({ error: "Mapart managers can only change the artist, world and category." }, 403);
+		return json({ error: "Mapart managers can only change the artist, original artist, world and category." }, 403);
 	}
 	if (body.world !== undefined && !canManage) return json({ error: "Only mapart managers can move a mapart to another world." }, 403);
 
@@ -4340,6 +4340,11 @@ async function handleUpdateMapart(request, env) {
 		const a = cleanMapartArtist(body.artist);
 		if (a.error) return json({ error: a.error }, 400);
 		sets.push("artist = ?"); vals.push(a.value);
+	}
+	if (body.originalArtist !== undefined) {
+		// who made the original art this piece is based on
+		const oa = String(body.originalArtist || "").trim().replace(/\s+/g, " ").slice(0, 60);
+		sets.push("originalArtist = ?"); vals.push(oa || null);
 	}
 	if (body.price !== undefined) {
 		const p = cleanMapartPrice(body.price);
@@ -5118,6 +5123,8 @@ async function handleSubmitMapart(request, env) {
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 1, 1, ?, ?, ?, ?, ?, ?)`
 	).bind(id, slug, world, leadMapId, title, JSON.stringify([title]), title, artist, whereToBuy || null, body.notForSale ? 1 : 0, cleanedPrice.value, cleanedCommission.commissioned, cleanedCommission.commissionedBy, uploadHash || null, category, width, height, imageHash,
 		auth.admin.id, now, auth.admin.id, now, now, now, cleanedKeywords.value, cleanedType.value).run();
+	const originalArtist = String(body.originalArtist || "").trim().replace(/\s+/g, " ").slice(0, 60);
+	if (originalArtist) await env.DB.prepare("UPDATE maparts SET originalArtist = ? WHERE id = ?").bind(originalArtist, id).run();
 	try {
 		await env.SNAPSHOTS.put(`mapart/${id}.png`, pngBytes, { httpMetadata: { contentType: "image/png" } });
 	} catch (e) {
@@ -7256,7 +7263,7 @@ async function handleAdminListAuctions(request, env) {
 		`SELECT a.*,
 		   (SELECT COUNT(*) FROM auctionItems i WHERE i.auctionId = a.id AND i.status != 'removed') AS itemCount,
 		   (SELECT COUNT(*) FROM auctionItems i WHERE i.auctionId = a.id AND i.status = 'sold') AS soldCount
-		 FROM auctions a ORDER BY a.auctionAt DESC`
+		 FROM auctions a WHERE a.deletedAt IS NULL ORDER BY a.auctionAt DESC`
 	).all();
 	return json({ auctions: results });
 }
@@ -7296,8 +7303,8 @@ async function handleAdminSaveAuction(request, env) {
 	}
 	const id = newId();
 	await env.DB.prepare(
-		"INSERT INTO auctions (id, title, type, hostName, dropOff, world, auctionAt, status, perPersonLimit, totalLimit, cutPercent, notes, createdAt, createdBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	).bind(id, title, type, hostName, dropOff, world, at.toISOString(), status, perPersonLimit, totalLimit, cutPercent, notes, new Date().toISOString(), auth.admin.username).run();
+		"INSERT INTO auctions (id, title, type, hostName, dropOff, world, auctionAt, status, perPersonLimit, totalLimit, cutPercent, notes, accessCode, createdAt, createdBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	).bind(id, title, type, hostName, dropOff, world, at.toISOString(), status, perPersonLimit, totalLimit, cutPercent, notes, newAuctionCode(), new Date().toISOString(), auth.admin.username).run();
 	return json({ ok: true, id });
 }
 
@@ -7344,11 +7351,134 @@ async function handleAdminAuctionResult(request, env) {
 	const status = String(body.status || "");
 	if (!AUCTION_ITEM_STATUSES.has(status)) return json({ error: "Unknown status." }, 400);
 
+	const r = await setAuctionItemResult(env, item, status, body.soldDia);
+	if (r.error) return json({ error: r.error }, 400);
+	return json({ ok: true, ...r });
+}
+
+// ---------------- in-game auction hosting (Shop Logger) ----------------
+//
+// The mod signs in with the player's Minecraft name (POST /mod/auction-login,
+// trusted like /mod/login, no sctp.nl account needed). A player can run an
+// auction in-game when they're its host (auctions.hostName) or added it with
+// its code from the auction admin page (auctionModAccess). In game: /sold,
+// /unsold and /info on the held item, /auction <username> to enter a held
+// shulker, and an Auctions screen with every lot and the payouts.
+
+const MOD_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+// /sold and /unsold work from an hour before the auction starts until it's finished.
+const AUCTION_LIVE_EARLY_MS = 60 * 60 * 1000;
+
+function newAuctionCode() {
+	const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I
+	const bytes = crypto.getRandomValues(new Uint8Array(8));
+	return [...bytes].map((b) => abc[b % abc.length]).join("");
+}
+function cleanAuctionCode(s) { return String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+
+async function handleModAuctionLogin(request, env) {
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const username = String(body.username || "").trim();
+	if (!MC_USERNAME.test(username)) return json({ error: "Bad login request." }, 400);
+	const token = newToken();
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + MOD_SESSION_TTL_MS).toISOString();
+	await env.DB.prepare("INSERT INTO modSessions (token, mcUsername, createdAt, expiresAt) VALUES (?, ?, ?, ?)").bind(token, username, now.toISOString(), expiresAt).run();
+	// tidy up old sessions now and then
+	if (Math.random() < 0.05) await env.DB.prepare("DELETE FROM modSessions WHERE expiresAt < ?").bind(now.toISOString()).run();
+	return json({ token, mcUsername: username, expiresAt });
+}
+
+async function requireModUser(request, env) {
+	const auth = request.headers.get("Authorization") || "";
+	const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+	if (!token) return { ok: false, response: json({ error: "Not signed in", code: "login" }, 401) };
+	const s = await env.DB.prepare("SELECT * FROM modSessions WHERE token = ?").bind(token).first();
+	if (!s || Date.parse(s.expiresAt) < Date.now()) return { ok: false, response: json({ error: "Not signed in", code: "login" }, 401) };
+	return { ok: true, mcUsername: s.mcUsername, mcKey: s.mcUsername.toLowerCase().replace(/^\./, "") };
+}
+
+function auctionIsLive(a, now = Date.now()) {
+	return a.status !== "finished" && !a.deletedAt && now >= Date.parse(a.auctionAt) - AUCTION_LIVE_EARLY_MS;
+}
+
+function auctionForMod(a, mcKey) {
+	return {
+		...auctionPublic(a),
+		isHost: !!a.hostName && a.hostName.toLowerCase().replace(/^\./, "") === mcKey,
+		live: auctionIsLive(a),
+		canEnter: a.status !== "finished" && !a.deletedAt,
+	};
+}
+
+/** The auction, if this Minecraft player may run it in-game; else null. */
+async function modAuction(env, mcKey, auctionId) {
+	const a = await env.DB.prepare("SELECT * FROM auctions WHERE id = ? AND deletedAt IS NULL").bind(String(auctionId || "")).first();
+	if (!a) return null;
+	if (a.hostName && a.hostName.toLowerCase().replace(/^\./, "") === mcKey) return a;
+	const access = await env.DB.prepare("SELECT 1 AS x FROM auctionModAccess WHERE auctionId = ? AND mcKey = ?").bind(a.id, mcKey).first();
+	return access ? a : null;
+}
+
+async function handleModAuctions(request, env) {
+	const auth = await requireModUser(request, env);
+	if (!auth.ok) return auth.response;
+	const { results } = await env.DB.prepare(
+		`SELECT a.*,
+		   (SELECT COUNT(*) FROM auctionItems i WHERE i.auctionId = a.id AND i.status != 'removed') AS itemCount,
+		   (SELECT COUNT(*) FROM auctionItems i WHERE i.auctionId = a.id AND i.status = 'sold') AS soldCount
+		 FROM auctions a
+		 WHERE a.deletedAt IS NULL AND (lower(ltrim(a.hostName, '.')) = ? OR a.id IN (SELECT auctionId FROM auctionModAccess WHERE mcKey = ?))
+		 ORDER BY a.auctionAt DESC LIMIT 30`
+	).bind(auth.mcKey, auth.mcKey).all();
+	return json({
+		mcUsername: auth.mcUsername,
+		auctions: results.map((a) => ({ ...auctionForMod(a, auth.mcKey), itemCount: a.itemCount, soldCount: a.soldCount })),
+	});
+}
+
+async function handleModAuctionAddCode(request, env) {
+	const auth = await requireModUser(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const code = cleanAuctionCode(body.code);
+	if (code.length < 4) return json({ error: "Enter the code from the auction admin page." }, 400);
+	const a = await env.DB.prepare("SELECT * FROM auctions WHERE accessCode = ? AND deletedAt IS NULL").bind(code).first();
+	if (!a) return json({ error: "No auction has that code." }, 404);
+	await env.DB.prepare("INSERT OR IGNORE INTO auctionModAccess (auctionId, mcKey, addedAt) VALUES (?, ?, ?)").bind(a.id, auth.mcKey, new Date().toISOString()).run();
+	return json({ ok: true, auction: auctionForMod(a, auth.mcKey) });
+}
+
+function auctionItemForMod(i) {
+	return {
+		id: i.id, batchId: i.batchId, seller: i.mcUsername, rareId: i.rareId, itemName: i.itemName, texture: i.texture || null, quantity: i.quantity || 1,
+		startDia: i.startDia, minDia: i.minDia, hostPicks: !!i.hostPicks, estimateDia: i.estimateDia,
+		status: i.status, soldDia: i.soldDia, cutDia: i.cutDia, payoutDia: i.payoutDia, createdAt: i.createdAt,
+	};
+}
+
+async function handleModAuctionItems(request, env) {
+	const auth = await requireModUser(request, env);
+	if (!auth.ok) return auth.response;
+	const a = await modAuction(env, auth.mcKey, new URL(request.url).searchParams.get("auctionId"));
+	if (!a) return json({ error: "You don't have access to that auction." }, 403);
+	const { results } = await env.DB.prepare("SELECT * FROM auctionItems WHERE auctionId = ? AND status != 'removed' ORDER BY createdAt, lower(mcUsername)").bind(a.id).all();
+	return json({ auction: auctionForMod(a, auth.mcKey), items: results.map(auctionItemForMod) });
+}
+
+/**
+ * Sets an entry's outcome: sold (with a price, cut and payout), unsold, or back
+ * to entered. Tells the player when the outcome changed. Shared by the admin
+ * page and the mod. Returns {error} or {soldDia, cutDia, payoutDia}.
+ */
+async function setAuctionItemResult(env, item, status, soldIn) {
 	const auction = await env.DB.prepare("SELECT title, cutPercent FROM auctions WHERE id = ?").bind(item.auctionId).first();
 	let soldDia = null, cutDia = null, payoutDia = null;
 	if (status === "sold") {
-		soldDia = Math.round(Number(body.soldDia));
-		if (!(soldDia > 0)) return json({ error: "Enter what it sold for." }, 400);
+		soldDia = Math.round(Number(soldIn));
+		if (!(soldDia > 0)) return { error: "Enter what it sold for." };
 		cutDia = auctionCut(soldDia, auction ? auction.cutPercent : null);
 		payoutDia = soldDia - cutDia;
 	}
@@ -7364,7 +7494,123 @@ async function handleAdminAuctionResult(request, env) {
 			: `Your ${item.quantity > 1 ? item.quantity + "× " : ""}${item.itemName} didn't sell${where}. ${item.quantity > 1 ? "They" : "It"} will be returned to you.`;
 		await notifyAccount(env, item.accountId, "auctionResult", message, item.id);
 	}
-	return json({ ok: true, soldDia, cutDia, payoutDia });
+	return { soldDia, cutDia, payoutDia };
+}
+
+async function handleModAuctionResult(request, env) {
+	const auth = await requireModUser(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const item = await env.DB.prepare("SELECT * FROM auctionItems WHERE id = ?").bind(String(body.itemId || "")).first();
+	if (!item || item.status === "removed") return json({ error: "That lot isn't in this auction." }, 404);
+	const a = await modAuction(env, auth.mcKey, item.auctionId);
+	if (!a) return json({ error: "You don't have access to that auction." }, 403);
+	const status = String(body.status || "");
+	if (!["sold", "unsold", "entered"].includes(status)) return json({ error: "Unknown status." }, 400);
+	if (a.status === "finished") return json({ error: "This auction is finished." }, 400);
+	if (status !== "entered" && !auctionIsLive(a)) return json({ error: "This auction hasn't started yet." }, 400);
+	const r = await setAuctionItemResult(env, item, status, body.soldDia);
+	if (r.error) return json({ error: r.error }, 400);
+	const updated = await env.DB.prepare("SELECT * FROM auctionItems WHERE id = ?").bind(item.id).first();
+	return json({ ok: true, item: auctionItemForMod(updated), previous: { status: item.status, soldDia: item.soldDia } });
+}
+
+/**
+ * POST /mod/auctions/enter {auctionId, mcUsername, items: [{name, count}], mode?}
+ * The host enters a held shulker for a player. Items are matched to rares by
+ * name; counts of the same rare are one lot. When that player already has
+ * entries, the first call returns them with needsChoice, and the mod asks:
+ * add (keep theirs and add these), override (replace theirs) or merge (only
+ * add rares they don't have yet). New lots are "let the host pick".
+ */
+async function handleModAuctionEnter(request, env) {
+	const auth = await requireModUser(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const a = await modAuction(env, auth.mcKey, body.auctionId);
+	if (!a) return json({ error: "You don't have access to that auction." }, 403);
+	if (a.status === "finished") return json({ error: "This auction is finished." }, 400);
+	const mcUsername = String(body.mcUsername || "").trim();
+	if (!MC_USERNAME.test(mcUsername)) return json({ error: "That doesn't look like a Minecraft username." }, 400);
+
+	const catalog = await getRareCatalog();
+	const byNorm = new Map();
+	for (const r of catalog.items) { const k = santaNorm(r.name); if (k && !byNorm.has(k)) byNorm.set(k, r); }
+	const counts = new Map(), unknown = [];
+	for (const it of Array.isArray(body.items) ? body.items : []) {
+		const name = String(it && it.name || "").trim();
+		const count = Math.max(1, Math.min(9999, Math.round(Number(it && it.count)) || 1));
+		const rare = byNorm.get(santaNorm(name));
+		if (!rare) { if (name && !unknown.includes(name)) unknown.push(name); continue; }
+		counts.set(rare.id, { rare, count: (counts.get(rare.id) ? counts.get(rare.id).count : 0) + count });
+	}
+	const incoming = [...counts.values()].map((c) => ({ rareId: c.rare.id, itemName: c.rare.name, quantity: c.count }));
+	if (!incoming.length) return json({ error: unknown.length ? "None of the items in this shulker are rares SCTP knows." : "The shulker is empty.", unknown }, 400);
+
+	const { results: existingRows } = await env.DB.prepare(
+		"SELECT * FROM auctionItems WHERE auctionId = ? AND lower(mcUsername) = lower(?) AND status != 'removed'"
+	).bind(a.id, mcUsername).all();
+	const mode = String(body.mode || "");
+	if (existingRows.length && !["add", "override", "merge"].includes(mode)) {
+		return json({ needsChoice: true, existing: existingRows.map(auctionItemForMod), incoming, unknown });
+	}
+	let toAdd = incoming;
+	const stmts = [];
+	if (mode === "override") {
+		const touched = existingRows.filter((r) => r.status !== "entered");
+		if (touched.length) return json({ error: `${mcUsername} already has ${touched.length} lot${touched.length === 1 ? "" : "s"} sold or unsold here, so their entries can't be replaced. Use merge or add.` }, 400);
+		for (const r of existingRows) stmts.push(env.DB.prepare("UPDATE auctionItems SET status = 'removed', updatedAt = ? WHERE id = ?").bind(new Date().toISOString(), r.id));
+	} else if (mode === "merge") {
+		const have = new Set(existingRows.map((r) => r.rareId));
+		toAdd = incoming.filter((x) => !have.has(x.rareId));
+		if (!toAdd.length) return json({ ok: true, added: [], skipped: incoming.length, unknown, message: `Everything in this shulker is already entered for ${mcUsername}.` });
+	}
+	if (stmts.length) await env.DB.batch(stmts);
+	const account = await env.DB.prepare("SELECT id FROM admins WHERE mcVerified = 1 AND lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))").bind(mcUsername).first();
+	const result = await saveAuctionItems(env, a, mcUsername, account ? account.id : null, toAdd.map((x) => ({ rareId: x.rareId, quantity: x.quantity, hostPicks: true })));
+	if (result.error) return json({ error: result.error }, 400);
+	return json({ ok: true, added: result.saved, skipped: incoming.length - toAdd.length, replaced: mode === "override" ? existingRows.length : 0, unknown, linkedToAccount: !!account });
+}
+
+// POST /admin/auctions/delete {id} ("auctions"): takes an auction out of the
+// admin menu and the in-game list. It's set to finished; its entries and
+// results stay for price estimates and players' My Auctions.
+async function handleAdminDeleteAuction(request, env) {
+	const auth = await requireAdminAuth(request, env, "auctions");
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const now = new Date().toISOString();
+	const r = await env.DB.prepare("UPDATE auctions SET deletedAt = ?, status = 'finished' WHERE id = ? AND deletedAt IS NULL").bind(now, String(body.id || "")).run();
+	if (!r.meta || !r.meta.changes) return json({ error: "Auction not found" }, 404);
+	return json({ ok: true });
+}
+
+// GET /rares/base-items (public, cached) -> {rareId: "minecraft:elytra", ...}
+// The Minecraft item each rare is most often listed as in scanned shops, so
+// rares can be searched by base item. Rares never seen in a shop are missing.
+async function handleRareBaseItems(request, env, ctx) {
+	return cachedGet(request, ctx, 6 * 3600, async () => {
+		const catalog = await getRareCatalog();
+		const want = new Map();
+		for (const r of catalog.items) { const k = santaNorm(r.name); if (k) want.set(k, r.id); }
+		const { results } = await env.DB.prepare(
+			"SELECT itemName, baseItem, COUNT(*) AS n FROM listings WHERE baseItem IS NOT NULL AND baseItem != '' GROUP BY itemName, baseItem"
+		).all();
+		const tally = new Map();
+		for (const row of results) {
+			const id = want.get(santaNorm(row.itemName));
+			if (!id) continue;
+			if (!tally.has(id)) tally.set(id, new Map());
+			const t = tally.get(id);
+			t.set(row.baseItem, (t.get(row.baseItem) || 0) + row.n);
+		}
+		const out = {};
+		for (const [id, t] of tally) out[id] = [...t].sort((x, y) => y[1] - x[1])[0][0];
+		return out;
+	});
 }
 
 // ---------------- Secret Santa (Firefly only) ----------------
@@ -8196,6 +8442,14 @@ const ROUTES = [
 	["POST", "/admin/auctions/add-items", handleAdminAddAuctionItems],
 	["POST", "/admin/auctions/result", handleAdminAuctionResult],
 	["POST", "/admin/auctions/item-price", handleAdminAuctionItemPrice],
+	["POST", "/admin/auctions/delete", handleAdminDeleteAuction],
+	["POST", "/mod/auction-login", handleModAuctionLogin],
+	["GET", "/mod/auctions", handleModAuctions],
+	["POST", "/mod/auctions/add-code", handleModAuctionAddCode],
+	["GET", "/mod/auctions/items", handleModAuctionItems],
+	["POST", "/mod/auctions/result", handleModAuctionResult],
+	["POST", "/mod/auctions/enter", handleModAuctionEnter],
+	["GET", "/rares/base-items", handleRareBaseItems],
 	["GET", "/mapart/of-the-day", handleGetMapartOfTheDay],
 	["POST", "/admin/mapart/otd/reroll", handleAdminRerollMapartOfTheDay],
 	["POST", "/mapart/search-image", handleSearchMapartImage],

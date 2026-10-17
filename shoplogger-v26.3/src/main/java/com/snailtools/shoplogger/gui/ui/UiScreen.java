@@ -56,11 +56,11 @@ public abstract class UiScreen extends Screen {
 		}
 		titleLeft = x + 19;
 
-		int navCount = Section.values().length;
+		int navCount = Section.nav().size();
 		int navStart = width - 6 - navCount * NAV_W;
 		if (showNav()) {
 			int nx = navStart;
-			for (Section s : Section.values()) {
+			for (Section s : Section.nav()) {
 				Section target = s;
 				addRenderableWidget(new UiButton(nx, 4, NAV_W - 2, 20, "", UiButton.Style.NAV, () -> go(target))
 						.icon(s.icon())

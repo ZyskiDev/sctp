@@ -24,6 +24,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
+import com.snailtools.shoplogger.gui.data.FilterMemory;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -69,7 +70,7 @@ public class ItemDetailScreen extends UiScreen {
 		this.rareData = rareData;
 		this.icon = isRare ? ItemStack.EMPTY : Draw.stackFor(baseItem);
 		ShopWorld detected = WorldSelection.get();
-		this.worldFilter = detected != null ? detected.label() : ALL_WORLDS;
+		this.worldFilter = FilterMemory.get("item", "world", detected != null ? detected.label() : ALL_WORLDS, List.of(ALL_WORLDS, "Firefly", "Honeybee"));
 	}
 
 	@Override
@@ -79,7 +80,7 @@ public class ItemDetailScreen extends UiScreen {
 		// world filter lives in the header card, top-right
 		int chipW = Math.min(140, w / 3);
 		addRenderableWidget(new UiChip<>(x + w - chipW - 8, y + 11, chipW, 18, "World", List.of(ALL_WORLDS, "Firefly", "Honeybee"), worldFilter,
-				v -> v, v -> { worldFilter = v; rebuild(); }));
+				v -> v, v -> { worldFilter = v; FilterMemory.set("item", "world", v); rebuild(); }));
 
 		// tabs
 		int ty = y + 46;
@@ -145,6 +146,9 @@ public class ItemDetailScreen extends UiScreen {
 					if (baseItem != null && baseItem.equalsIgnoreCase(l.baseItem) && name.equalsIgnoreCase(l.itemName)) matched.add(l);
 				}
 			}
+			// cheapest first; same price: newest first
+			matched.sort(java.util.Comparator.<Listing>comparingDouble(Listing::pricePerItemInDiamonds)
+					.thenComparing((a, b) -> String.valueOf(b.lastSeen).compareTo(String.valueOf(a.lastSeen))));
 			allMatches = matched;
 			loading = false;
 			rebuild(); // updates the Listings tab count

@@ -648,8 +648,9 @@
 	// low-high by default, text columns A-Z, recency newest-first).
 	function compareListingsBy(key, a, b){
 		switch(key){
-			case "price-asc": return pricePerItem(a) - pricePerItem(b);
-			case "price-desc": return pricePerItem(b) - pricePerItem(a);
+			// same price: newest first
+			case "price-asc": return (pricePerItem(a) - pricePerItem(b)) || compareListingsBy("recent", a, b);
+			case "price-desc": return (pricePerItem(b) - pricePerItem(a)) || compareListingsBy("recent", a, b);
 			case "stock-asc": return a.amount - b.amount;
 			case "stock-desc": return b.amount - a.amount;
 			case "item-az": return (a.itemNameDisplay||a.itemName).localeCompare(b.itemNameDisplay||b.itemName);
@@ -738,6 +739,7 @@
 							'<h1>' + esc(m.title) + '</h1>' +
 							'<p class="by">' + (m.artist ? (m.commissioned ? 'built by ' : 'by ') + artistsHtml : (m.commissioned ? 'Builder unknown' : 'Unknown artist')) + '</p>' +
 							(m.commissioned && m.commissionedBy ? '<p class="by" style="margin-top:-8px;font-size:14px;color:var(--muted);">commissioned by <a href="/s/' + encodeURIComponent(m.commissionedBy) + '">' + esc(m.commissionedBy) + '</a></p>' : '') +
+							(m.originalArtist ? '<p class="by" style="margin-top:-8px;font-size:14px;color:var(--muted);">original art by ' + esc(m.originalArtist) + '</p>' : '') +
 							'<div class="mapart-pills">' +
 								(m.category ? '<span class="mapart-pill cat">' + esc(m.category) + '</span>' : '<span class="mapart-pill">no category</span>') +
 								'<span class="mapart-pill">' + esc(m.world) + '</span>' +
@@ -814,6 +816,7 @@
 			var names = m.artist ? m.artist.split(" & ").map(function(a){ return a.trim(); }).filter(Boolean) : [];
 			var details = [m.world + (m.width * m.height > 1 ? "  \u00b7  " + m.width + "\u00d7" + m.height + " maps" : "") + (m.category ? "  \u00b7  " + m.category : "")];
 			if(m.commissioned && m.commissionedBy) details.push("commissioned by " + m.commissionedBy);
+			if(m.originalArtist) details.push("original art by " + m.originalArtist);
 			if(m.price) details.push("Price: " + m.price);
 			window.sctpShare.open({
 				modalTitle: "Make an image of this mapart", type: "feature", eyebrow: "Mapart",
@@ -1060,13 +1063,38 @@
 			var c = String(r.currency||"").toLowerCase();
 			if(c && c !== "display") found[c] = true;
 		});
-		Object.keys(found).sort().forEach(function(c){ currencyFilters[c] = true; });
+		var saved = savedSellerFilters();
+		Object.keys(found).sort().forEach(function(c){ currencyFilters[c] = saved && saved.currency && saved.currency.hasOwnProperty(c) ? !!saved.currency[c] : true; });
+	}
+
+	// Seller page filters are remembered in this browser until "Reset all filters".
+	// Until someone picks a sort, it's most recent with an empty search box and
+	// cheapest first once something's typed.
+	var SELLER_FILTERS_KEY = "sctp_seller_filters_v1";
+	var SELLER_FILTER_IDS = ["fBulk","fPriceMin","fPriceMax","fMinStock"];
+	var sellerSortChosen = false;
+	function savedSellerFilters(){
+		try { return JSON.parse(localStorage.getItem(SELLER_FILTERS_KEY) || "null"); } catch(e){ return null; }
+	}
+	function saveSellerFilters(){
+		try {
+			var st = { v: {}, hideDisplay: document.getElementById("fHideDisplay").checked, sort: sellerSortChosen ? document.getElementById("fSort").value : null, currency: currencyFilters };
+			SELLER_FILTER_IDS.forEach(function(id){ st.v[id] = document.getElementById(id).value; });
+			localStorage.setItem(SELLER_FILTERS_KEY, JSON.stringify(st));
+		} catch(e){}
+	}
+	function restoreSellerFilters(){
+		var st = savedSellerFilters();
+		if(!st) return;
+		SELLER_FILTER_IDS.forEach(function(id){ if(st.v && st.v[id] != null) document.getElementById(id).value = st.v[id]; });
+		document.getElementById("fHideDisplay").checked = !!st.hideDisplay;
+		if(st.sort){ document.getElementById("fSort").value = st.sort; sellerSortChosen = true; }
 	}
 
 	// ---------------- shell + filters ----------------
 	function renderApp(){
 		var currencyChecks = Object.keys(currencyFilters).sort().map(function(c){
-			return '<label class="f-checkbox"><input type="checkbox" class="f-currency" data-c="'+esc(c)+'" checked> '+esc(currencyLabel(c))+'</label>';
+			return '<label class="f-checkbox"><input type="checkbox" class="f-currency" data-c="'+esc(c)+'"'+(currencyFilters[c] ? ' checked' : '')+'> '+esc(currencyLabel(c))+'</label>';
 		}).join("");
 
 		var html = '<div class="layout">'+
@@ -1107,11 +1135,13 @@
 			setConvert(this.checked);
 			applyFilters();
 		});
-		["fSearch","fBulk","fHideDisplay","fPriceMin","fPriceMax","fMinStock","fSort"].forEach(function(id){
+		["fSearch","fBulk","fHideDisplay","fPriceMin","fPriceMax","fMinStock"].forEach(function(id){
 			var el = document.getElementById(id);
 			el.addEventListener("input", applyFilters);
 			el.addEventListener("change", applyFilters);
 		});
+		document.getElementById("fSort").addEventListener("change", function(){ sellerSortChosen = true; applyFilters(); });
+		restoreSellerFilters();
 		document.querySelectorAll(".f-currency").forEach(function(cb){
 			cb.addEventListener("change", function(){
 				currencyFilters[cb.getAttribute("data-c")] = cb.checked;
@@ -1126,6 +1156,8 @@
 			document.getElementById("fPriceMax").value = "";
 			document.getElementById("fMinStock").value = "";
 			document.getElementById("fSort").value = "recent";
+			sellerSortChosen = false;
+			try { localStorage.removeItem(SELLER_FILTERS_KEY); } catch(e){}
 			document.querySelectorAll(".f-currency").forEach(function(cb){ cb.checked = true; currencyFilters[cb.getAttribute("data-c")] = true; });
 			applyFilters();
 		});
@@ -1139,7 +1171,9 @@
 		var priceMin = document.getElementById("fPriceMin").value;
 		var priceMax = document.getElementById("fPriceMax").value;
 		var minStock = document.getElementById("fMinStock").value;
+		if(!sellerSortChosen) document.getElementById("fSort").value = q ? "price-asc" : "recent";
 		activeSort = document.getElementById("fSort").value;
+		saveSellerFilters();
 
 		filtered = allListings.filter(function(r){
 			if(q && r.itemNameDisplay.toLowerCase().indexOf(q) === -1 && r.baseItem.toLowerCase().indexOf(q) === -1) return false;
@@ -1169,7 +1203,9 @@
 	// other.
 	function setSort(key){
 		activeSort = key;
+		sellerSortChosen = true;
 		document.getElementById("fSort").value = key;
+		saveSellerFilters();
 		filtered.sort(function(a,b){ return compareListingsBy(activeSort, a, b); });
 		page = 1;
 		renderTable();
@@ -1243,7 +1279,8 @@
 		var isEnchantedBookDirectory = false; // the generic /items/enchanted_book page with no ?name= — see loadItem
 		var itemKey = null;
 		var currentListings = []; // both worlds, normalized
-		var worldFilter = ""; // "" = both, else "Firefly" or "Honeybee"
+		var worldFilter = ""; // "" = both, else "Firefly" or "Honeybee" (remembered)
+		try { worldFilter = localStorage.getItem("sctp_item_world") || ""; if(worldFilter !== "Firefly" && worldFilter !== "Honeybee") worldFilter = ""; } catch(e){}
 		// Vanilla items are usually traded by the stack, so their price charts
 		// read more naturally per stack of 64 than per single item (rare items
 		// are almost always sold individually, so they default to per-item) —
@@ -1314,8 +1351,8 @@
 						'<label class="conv-toggle" title="On: other currencies are converted to diamonds. Off: raw prices in each listing\'s own currency."><input type="checkbox" id="itemConvert"'+(convertOn() ? ' checked' : '')+'> Convert currencies to diamond-equivalent</label>'+
 						'<select id="itemWorldFilter" class="world-filter">'+
 							'<option value="">All worlds</option>'+
-							'<option value="Firefly">Firefly</option>'+
-							'<option value="Honeybee">Honeybee</option>'+
+							'<option value="Firefly"'+(worldFilter === "Firefly" ? ' selected' : '')+'>Firefly</option>'+
+							'<option value="Honeybee"'+(worldFilter === "Honeybee" ? ' selected' : '')+'>Honeybee</option>'+
 						'</select>'+
 					'</div>'+
 					'<div id="itemTableArea"></div>'+
@@ -1344,6 +1381,7 @@
 			}
 			document.getElementById("itemWorldFilter").addEventListener("change", function(){
 				worldFilter = this.value;
+				try { localStorage.setItem("sctp_item_world", worldFilter); } catch(e){}
 				renderItemTable();
 			});
 			document.getElementById("itemConvert").addEventListener("change", function(){
@@ -1525,7 +1563,9 @@
 		}
 
 		var itemPage = 1;
-		var itemSort = "recent";
+		// cheapest first (then newest) unless a column sort was picked before; the world filter is remembered too
+		var itemSort = "price-asc";
+		try { itemSort = localStorage.getItem("sctp_item_sort") || "price-asc"; } catch(e){}
 
 		// Price check for rares: a general value per world (median of what it's
 		// currently listed for, in diamond-equivalent per item) — a ballpark, not a quote.
@@ -1593,7 +1633,7 @@
 
 			itemPage = renderPaginatedRows(area, pag, rows, itemPage, headerHtml, buildRow,
 				function onPageChange(p){ itemPage = p; renderItemTable(); },
-				function onSortClick(key){ itemSort = key; itemPage = 1; renderItemTable(); });
+				function onSortClick(key){ itemSort = key; itemPage = 1; try { localStorage.setItem("sctp_item_sort", key); } catch(e){} renderItemTable(); });
 		}
 
 		// The generic /items/enchanted_book page (no ?name=) — since there's no

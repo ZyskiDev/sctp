@@ -256,12 +256,12 @@
 	</div>
 
 	<section class="news">
-		<div><div class="kicker">What's new</div><h3>SCTP 2.4</h3></div>
+		<div><div class="kicker">What's new</div><h3>SCTP 2.5</h3></div>
 		<ul>
-			<li>Rare-dle in-game, plus empty-hand clicks</li>
-			<li>Double chest shops and see-through highlights</li>
-			<li>Real sales in every statistic</li>
-			<li>Rare auctions and wishlists</li>
+			<li>A confirm before expensive buys</li>
+			<li>X + I: the item page for what you're holding</li>
+			<li>Sorting that follows your search, and remembered filters</li>
+			<li>Find rares by base item, and auctions run in-game</li>
 		</ul>
 		<a class="pbtn" href="/onboarding/update">Everything that's new &rarr;</a>
 	</section>
@@ -278,7 +278,7 @@
 (function(){
 	"use strict";
 	var API = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
-	var JARS = { "fabric|26.2": "shoplogger-26.2-2.4.jar", "fabric|26.3": "shoplogger-26.3-2.4.jar", "neoforge|26.2": "shoplogger-neoforge-26.2-2.4.jar", "neoforge|26.3": "shoplogger-neoforge-26.3-2.4.jar" };
+	var JARS = { "fabric|26.2": "shoplogger-26.2-2.5.jar", "fabric|26.3": "shoplogger-26.3-2.5.jar", "neoforge|26.2": "shoplogger-neoforge-26.2-2.5.jar", "neoforge|26.3": "shoplogger-neoforge-26.3-2.5.jar" };
 	function $(id){ return document.getElementById(id); }
 	function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]; }); }
 	function num(n){ return Number(n || 0).toLocaleString(); }

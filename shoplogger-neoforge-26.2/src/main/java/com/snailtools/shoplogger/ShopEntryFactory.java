@@ -261,7 +261,7 @@ public final class ShopEntryFactory {
 	}
 
 	/** Returns the item stacks inside a shulker box, or null if this isn't a (non-empty) shulker box. */
-	private static List<ItemStack> readShulkerContents(ItemStack stack) {
+	public static List<ItemStack> readShulkerContents(ItemStack stack) {
 		if (!(stack.getItem() instanceof BlockItem blockItem)) return null;
 		if (!(blockItem.getBlock() instanceof ShulkerBoxBlock)) return null;
 

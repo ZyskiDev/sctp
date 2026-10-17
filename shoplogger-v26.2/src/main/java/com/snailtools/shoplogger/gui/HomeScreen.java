@@ -63,7 +63,9 @@ public class HomeScreen extends UiScreen {
 		y += 28;
 
 		// section tiles
-		Section[] tiles = { Section.LISTINGS, Section.VANILLA, Section.RARES, Section.RAREDLE, Section.WATCHLIST, Section.MARKET, Section.MAPART, Section.SETTINGS };
+		Section[] tiles = com.snailtools.shoplogger.auction.AuctionHost.isShown()
+				? new Section[] { Section.LISTINGS, Section.VANILLA, Section.RARES, Section.RAREDLE, Section.WATCHLIST, Section.MARKET, Section.MAPART, Section.AUCTIONS, Section.SETTINGS }
+				: new Section[] { Section.LISTINGS, Section.VANILLA, Section.RARES, Section.RAREDLE, Section.WATCHLIST, Section.MARKET, Section.MAPART, Section.SETTINGS };
 		int cols = w >= 520 ? 4 : w >= 330 ? 3 : 2;
 		int rows = (tiles.length + cols - 1) / cols;
 		int footerH = 24;
@@ -105,6 +107,7 @@ public class HomeScreen extends UiScreen {
 			case WATCHLIST -> "Get pinged when items show up";
 			case MARKET -> "Buy & sell posts from the site";
 			case MAPART -> "Mapart near you & uploads";
+			case AUCTIONS -> "Your auctions: lots & payouts";
 			case SETTINGS -> "Scanning, alerts & more";
 			default -> s.description;
 		};

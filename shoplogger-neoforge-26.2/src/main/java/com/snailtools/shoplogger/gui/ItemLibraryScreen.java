@@ -140,6 +140,8 @@ public class ItemLibraryScreen extends UiScreen {
 				return null;
 			});
 		} else {
+			WebDataClient.fetchRareBaseItems().thenAccept(m -> minecraft.execute(() -> { rareBaseItems = m; if (!loading) refreshList(); }))
+					.exceptionally(ex -> null);
 			WebDataClient.fetchRareCatalog().thenAccept(items -> minecraft.execute(() -> {
 				rareItems = items;
 				loading = false;
@@ -234,8 +236,13 @@ public class ItemLibraryScreen extends UiScreen {
 		minecraft.setScreenAndShow(detail);
 	}
 
+	// rare id -> base item ("minecraft:elytra"), so "elytra" or "netherite sword" finds rares made from it
+	private static java.util.Map<String, String> rareBaseItems = java.util.Map.of();
+
 	private static boolean matchesSearch(RareItem it, String q) {
 		if (it.name != null && it.name.toLowerCase(Locale.ROOT).contains(q)) return true;
+		String base = it.id == null ? null : rareBaseItems.get(it.id);
+		if (base != null && (base.contains(q) || base.replace("minecraft:", "").replace('_', ' ').contains(q))) return true;
 		if (it.effect != null && it.effect.toLowerCase(Locale.ROOT).contains(q)) return true;
 		if (it.obtainedFrom != null && it.obtainedFrom.toLowerCase(Locale.ROOT).contains(q)) return true;
 		if (it.typeSlot != null && it.typeSlot.toLowerCase(Locale.ROOT).contains(q)) return true;

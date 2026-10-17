@@ -12,7 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 /**
- * Hold X (Open Item Library) and press C: opens the item page for whatever is
+ * Hold X (Open Item Library) and press I: opens the item page for whatever is
  * in your main hand. A rare (matched by name against the rare catalog, the
  * same way listings are) opens its rare page; anything else opens the vanilla
  * item page under the name a shop scan would log it as.

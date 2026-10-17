@@ -139,7 +139,7 @@
 
 	<div id="rarePane" hidden>
 		<div class="rare-search-row">
-			<input type="text" class="item-search" id="rareSearch" placeholder="Search rare items or effects…">
+			<input type="text" class="item-search" id="rareSearch" placeholder="Search rare items, effects or base item…">
 			<p class="rare-credit">Thanks to LadyMaledicte &amp; Hornzilla for their amazing work on the rare library!</p>
 		</div>
 		<div class="rare-filters" id="rareFilters">
@@ -274,7 +274,9 @@
 
 		var filtered = allRareItems.filter(function(it){
 			if(q){
-				var haystack = (it.name + " " + (it.effect||"")).toLowerCase();
+				// the base item too ("elytra", "minecraft:netherite_sword", "netherite sword")
+				var base = rareBaseItems[it.id] || "";
+				var haystack = (it.name + " " + (it.effect||"") + " " + base + " " + base.replace(/^minecraft:/, "").replace(/_/g, " ")).toLowerCase();
 				if(haystack.indexOf(q) === -1) return false;
 			}
 			for(var i = 0; i < RARE_FILTER_FIELDS.length; i++){
@@ -293,9 +295,19 @@
 		renderRareGrid(filtered);
 	}
 
+	// rare id -> the Minecraft item it's usually listed as in shops (from the API), for searching by base item
+	var rareBaseItems = {};
+	function loadRareBaseItems(){
+		fetch("https://snailcraft-trading-post.snailcraft-trading-post.workers.dev/rares/base-items")
+			.then(function(r){ return r.ok ? r.json() : {}; })
+			.then(function(d){ rareBaseItems = d || {}; if(document.getElementById("rareSearch").value.trim()) applyRareFilters(); })
+			.catch(function(){});
+	}
+
 	async function loadRareItems(){
 		if(rareLoaded) return;
 		rareLoaded = true;
+		loadRareBaseItems();
 		try {
 			var res = await fetch("/data/rare-items.json");
 			allRareItems = res.ok ? await res.json() : [];

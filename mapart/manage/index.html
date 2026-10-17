@@ -155,6 +155,7 @@
 						<div class="field"><label>Price (optional)</label><input type="text" id="upPrice" maxlength="60" placeholder="e.g. 5 diamonds"></div>
 						<div class="field full"><label class="check"><input type="checkbox" id="upCommissioned"> This was a commission (artist = who built it)</label></div>
 						<div class="field full" id="upCommByRow" hidden><label>Commissioned by</label><input type="text" id="upCommBy" maxlength="40" placeholder="Who it was built for"></div>
+						<div class="field full"><label for="upOrigArtist">Original art by <span style="color:var(--muted);font-weight:400;">(optional &mdash; credit whoever made the artwork this map is based on)</span></label><input type="text" id="upOrigArtist" maxlength="60" placeholder="e.g. the artist of the painting or pixel art"></div>
 						<div class="field full"><label class="check"><input type="checkbox" id="upNotForSale"> Not for sale (hides where-to-buy)</label></div>
 						<div class="field full"><label class="check"><input type="checkbox" id="upSmooth" checked> Smooth resize (turn off for pixel art so edges stay sharp)</label></div>
 					</div>
@@ -265,6 +266,7 @@
 						'<div class="field"><label>Title</label><input type="text" data-f="title" maxlength="100" value="' + esc(m.title) + '"></div>' +
 						'<div class="field full"><label data-artist-label>' + (m.commissioned ? 'Built by' : 'Artist(s) / seller') + ' &mdash; use the arrow for collabs</label><div data-artist-host></div></div>' +
 						'<div class="field full"><label class="check"><input type="checkbox" data-f="commissioned"' + (m.commissioned ? ' checked' : '') + '> This was a commission</label></div>' +
+						'<div class="field full"><label>Original art by <span style="color:var(--muted);font-weight:400;">(optional &mdash; credit whoever made the artwork this map is based on)</span></label><input type="text" data-f="originalArtist" maxlength="60" value="' + esc(m.originalArtist || '') + '" placeholder="e.g. the artist of the painting or pixel art"></div>' +
 						'<div class="field full" data-comm-by' + (m.commissioned ? '' : ' hidden') + '><label>Commissioned by</label><input type="text" data-f="commissionedBy" maxlength="40" value="' + esc(m.commissionedBy || '') + '" placeholder="Who it was built for"></div>' +
 						'<div class="field"><label>Category</label><select data-f="category"><option value="">No category</option>' +
 							CATEGORIES.map(function(c){ return '<option value="' + c + '"' + (m.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join("") + '</select></div>' +
@@ -310,6 +312,7 @@
 					price: card.querySelector('[data-f="price"]').value,
 					commissioned: commBox.checked,
 					commissionedBy: card.querySelector('[data-f="commissionedBy"]').value,
+					originalArtist: card.querySelector('[data-f="originalArtist"]').value,
 					category: card.querySelector('[data-f="category"]').value || null,
 					mapType: card.querySelector('[data-f="mapType"]').value || null,
 					keywords: card.querySelector('[data-f="keywords"]').value,
@@ -597,6 +600,7 @@
 					price: document.getElementById("upPrice").value.trim(),
 					commissioned: document.getElementById("upCommissioned").checked,
 					commissionedBy: document.getElementById("upCommBy").value.trim(),
+					originalArtist: document.getElementById("upOrigArtist").value.trim(),
 					world: document.getElementById("upWorld").value,
 					category: upCatSel.value || null,
 					mapType: document.getElementById("upType").value || null,

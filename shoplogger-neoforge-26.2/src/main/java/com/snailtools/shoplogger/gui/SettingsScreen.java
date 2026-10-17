@@ -176,6 +176,8 @@ public class SettingsScreen extends UiScreen {
 							"Upload", () -> ShopUploader.uploadAsync(minecraft, true)));
 			case EMPTY_HAND -> emptyHandRows();
 			case ADVANCED -> List.of(
+					SettingRow.toggle("Auctions on the dashboard", "Run rare auctions in-game: the Auctions screen, /sold, /unsold, /info, /auction (rejoin for the commands)",
+							com.snailtools.shoplogger.auction.AuctionHost::isShown, com.snailtools.shoplogger.auction.AuctionHost::setShown),
 					SettingRow.toggle("Show scan wait (temporary)", "Show the scanner's wait time, in ms, top-right",
 							TempScanWaitOverlay::isEnabled, TempScanWaitOverlay::setEnabled));
 		};

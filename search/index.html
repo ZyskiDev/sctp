@@ -1178,6 +1178,38 @@
 	var SORT_ASCENDING = { "item-az": 1, "price-asc": 1, "stock-asc": 1, "seller-az": 1, "recent-asc": 1 };
 	var activeSorts = ["recent"];
 
+	// Sorting: until someone picks a sort themselves, it's most recent while the
+	// search box is empty and cheapest first (then most recent) once something's
+	// typed. A sort they pick, and every filter, is remembered in this browser
+	// until "Reset filters". The search text itself isn't remembered.
+	var FILTERS_KEY = "sctp_search_filters_v1";
+	var sortChosen = false;
+	var FILTER_VALUE_IDS = ["fWorld","fBulk","fPriceMin","fPriceMax","fPriceUnit","fMinStock","fExcludeItems","fExcludeSellers","avgThresholdDir","avgThresholdValue","avgThresholdUnit"];
+	var FILTER_CHECK_IDS = ["fHideDisplay","scopeItemName","scopeBaseItem","scopeSeller","scopeExactOnly"];
+	function autoSort(){
+		if(sortChosen) return;
+		var want = document.getElementById("searchInput").value.trim() ? ["price-asc", "recent"] : ["recent"];
+		if(want.join() !== activeSorts.join()){ activeSorts = want; syncSortMenuCheckboxes(); }
+	}
+	function saveFilters(){
+		try {
+			var st = { sorts: sortChosen ? activeSorts : null, currency: currencyFilters, v: {}, c: {} };
+			FILTER_VALUE_IDS.forEach(function(id){ var el = document.getElementById(id); if(el) st.v[id] = el.value; });
+			FILTER_CHECK_IDS.forEach(function(id){ var el = document.getElementById(id); if(el) st.c[id] = el.checked; });
+			localStorage.setItem(FILTERS_KEY, JSON.stringify(st));
+		} catch(e){}
+	}
+	function restoreFilters(){
+		try {
+			var st = JSON.parse(localStorage.getItem(FILTERS_KEY) || "null");
+			if(!st) return;
+			Object.keys(st.v || {}).forEach(function(id){ var el = document.getElementById(id); if(el && FILTER_VALUE_IDS.indexOf(id) !== -1) el.value = st.v[id]; });
+			Object.keys(st.c || {}).forEach(function(id){ var el = document.getElementById(id); if(el && FILTER_CHECK_IDS.indexOf(id) !== -1) el.checked = !!st.c[id]; });
+			if(st.sorts && st.sorts.length){ activeSorts = st.sorts.slice(); sortChosen = true; }
+			if(st.currency && typeof st.currency === "object") currencyFilters = st.currency;
+		} catch(e){}
+	}
+
 	// ---------------- helpers ----------------
 	function normHeader(h){
 		return String(h||"").toLowerCase().replace(/[^a-z0-9]/g,"");
@@ -1766,6 +1798,7 @@
 	// Used by the clickable table-header shortcuts — replaces whatever sort
 	// criteria were active with just this one.
 	function setSortOnly(key){
+		sortChosen = true;
 		activeSorts = [key];
 		syncSortMenuCheckboxes();
 		applyFilters();
@@ -1869,6 +1902,8 @@
 	// user is currently browsing — only an actual filter/search/sort change
 	// should jump back to page 1.
 	function applyFilters(preservePage){
+		autoSort();
+		saveFilters();
 		var q = document.getElementById("searchInput").value.trim().toLowerCase();
 		updateRareNotice(q);
 		var world = document.getElementById("fWorld").value;
@@ -2356,10 +2391,10 @@
 
 	// ---------------- download modal ----------------
 	var DOWNLOAD_JARS = {
-		"fabric|26.2": "/shoplogger-26.2-2.4.jar",
-		"fabric|26.3": "/shoplogger-26.3-2.4.jar",
-		"neoforge|26.2": "/shoplogger-neoforge-26.2-2.4.jar",
-		"neoforge|26.3": "/shoplogger-neoforge-26.3-2.4.jar"
+		"fabric|26.2": "/shoplogger-26.2-2.5.jar",
+		"fabric|26.3": "/shoplogger-26.3-2.5.jar",
+		"neoforge|26.2": "/shoplogger-neoforge-26.2-2.5.jar",
+		"neoforge|26.3": "/shoplogger-neoforge-26.3-2.5.jar"
 	};
 	var dlLoader = "fabric";
 	var dlVersion = "26.2";
@@ -2919,6 +2954,8 @@
 		searchScopeMenu.classList.remove("open");
 		searchScopeBtn.setAttribute("aria-expanded", "false");
 	});
+	restoreFilters();
+	syncSortMenuCheckboxes();
 	["scopeItemName","scopeBaseItem","scopeSeller","scopeExactOnly"].forEach(function(id){
 		document.getElementById(id).addEventListener("change", function(){ applyFilters(); });
 	});
@@ -2970,6 +3007,7 @@
 	Array.prototype.forEach.call(sortDropdownMenu.querySelectorAll("input[type=checkbox]"), function(cb){
 		cb.addEventListener("change", function(){
 			var key = cb.getAttribute("data-sort");
+			sortChosen = true;
 			if(cb.checked){
 				// Opposite-direction sorts on the same field don't make sense together —
 				// checking one always turns off its pair (e.g. Price ↑ turns off Price ↓).
@@ -3007,6 +3045,8 @@
 		document.getElementById("fExcludeItems").value = "";
 		document.getElementById("fExcludeSellers").value = "";
 		activeSorts = ["recent"];
+		sortChosen = false; // back to the automatic sort
+		try { localStorage.removeItem(FILTERS_KEY); } catch(e){}
 		syncSortMenuCheckboxes();
 		document.getElementById("scopeItemName").checked = true;
 		document.getElementById("scopeBaseItem").checked = true;

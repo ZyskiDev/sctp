@@ -20,6 +20,7 @@ import net.minecraft.client.gui.screens.Screen;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import com.snailtools.shoplogger.gui.data.FilterMemory;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -59,11 +60,15 @@ public class MarketplaceScreen extends UiScreen {
 	private boolean requested = false;
 	private long searchChangedAtMillis = -1;
 
+	private static final List<String> SORTS = List.of(FilterMemory.AUTO_SORT, "Newest", "Price low-high");
+	private String keepSort = FilterMemory.get("market", "sort", FilterMemory.AUTO_SORT, SORTS);
+
 	public MarketplaceScreen(Screen parent) {
 		super("Marketplace", parent, Section.MARKET);
 		if (keepWorld == null) {
 			ShopWorld detected = WorldSelection.get();
-			keepWorld = detected != null ? detected.label() : BOTH_WORLDS;
+			keepWorld = FilterMemory.get("market", "world", detected != null ? detected.label() : BOTH_WORLDS, List.of(BOTH_WORLDS, "Firefly", "Honeybee"));
+			keepType = FilterMemory.get("market", "type", keepType, List.of(ANY_TYPE, SELLING, LOOKING_FOR));
 		}
 	}
 
@@ -80,11 +85,14 @@ public class MarketplaceScreen extends UiScreen {
 				() -> UiLinks.open("https://sctp.nl/marketplace/")).tooltip("Posting and bidding happen on the website"));
 		y += 26;
 
-		int chipW = Math.min(150, (w - 6) / 2);
+		int chipW = Math.min(150, (w - 12) / 3);
 		addRenderableWidget(new UiChip<>(x, y, chipW, 18, "World", List.of(BOTH_WORLDS, "Firefly", "Honeybee"), keepWorld,
-				v -> v, v -> { keepWorld = v; refreshList(); }));
+				v -> v, v -> { keepWorld = v; FilterMemory.set("market", "world", v); refreshList(); }));
 		addRenderableWidget(new UiChip<>(x + chipW + 6, y, chipW, 18, "Show", List.of(ANY_TYPE, SELLING, LOOKING_FOR), keepType,
-				v -> v, v -> { keepType = v; refreshList(); }));
+				v -> v, v -> { keepType = v; FilterMemory.set("market", "type", v); refreshList(); }));
+		addRenderableWidget(new UiChip<>(x + 2 * (chipW + 6), y, chipW, 18, "Sort", SORTS, keepSort,
+				v -> FilterMemory.AUTO_SORT.equals(v) ? (FilterMemory.autoIsCheapest(keepQuery) ? "Auto: cheapest" : "Auto: newest") : v,
+				v -> { keepSort = v; FilterMemory.set("market", "sort", v); refreshList(); }));
 		y += 24;
 
 		hintY = y + 1;
@@ -158,8 +166,17 @@ public class MarketplaceScreen extends UiScreen {
 		if (list == null) return;
 		list.clearAllEntries();
 		String q = search.value().trim().toLowerCase(Locale.ROOT);
+		String sort = FilterMemory.AUTO_SORT.equals(keepSort) ? (q.isEmpty() ? "Newest" : "Price low-high") : keepSort;
+		List<MarketplaceListing> ordered = new java.util.ArrayList<>(listings);
+		java.util.Comparator<MarketplaceListing> newest = (a, b) -> String.valueOf(b.createdAt).compareTo(String.valueOf(a.createdAt));
+		if ("Price low-high".equals(sort)) {
+			// posts without a price go last; same price: newest first
+			ordered.sort(java.util.Comparator.<MarketplaceListing>comparingDouble(l -> l.priceInfo() == null ? Double.MAX_VALUE : l.diamondValue()).thenComparing(newest));
+		} else {
+			ordered.sort(newest);
+		}
 
-		for (MarketplaceListing l : listings) {
+		for (MarketplaceListing l : ordered) {
 			if (!q.isEmpty() && !l.itemName.toLowerCase(Locale.ROOT).contains(q)) continue;
 			boolean selling = "selling".equals(l.type);
 			// Cross-world posts show up under either world

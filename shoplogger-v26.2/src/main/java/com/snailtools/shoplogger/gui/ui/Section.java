@@ -1,5 +1,6 @@
 package com.snailtools.shoplogger.gui.ui;
 
+import com.snailtools.shoplogger.gui.AuctionsScreen;
 import com.snailtools.shoplogger.gui.HomeScreen;
 import com.snailtools.shoplogger.gui.ItemLibraryScreen;
 import com.snailtools.shoplogger.gui.ListingsScreen;
@@ -24,6 +25,7 @@ public enum Section {
 	WATCHLIST("Watchlist", "Items you're watching", Items.SPYGLASS, WatchlistScreen::new),
 	MARKET("Marketplace", "Player marketplace", Items.EMERALD, MarketplaceScreen::new),
 	MAPART("Mapart", "Mapart scanner", Items.FILLED_MAP, MapartPreviewScreen::new),
+	AUCTIONS("Auctions", "Run rare auctions in-game", Items.BELL, AuctionsScreen::new),
 	SETTINGS("Settings", "Settings", Items.COMPARATOR, SettingsScreen::new);
 
 	public final String label;
@@ -50,5 +52,12 @@ public enum Section {
 
 	public Screen open(Screen parent) {
 		return factory.apply(parent);
+	}
+
+	/** The sections in the top bar: Auctions only when it's turned on in Settings › Advanced. */
+	public static java.util.List<Section> nav() {
+		java.util.List<Section> out = new java.util.ArrayList<>();
+		for (Section s : values()) if (s != AUCTIONS || com.snailtools.shoplogger.auction.AuctionHost.isShown()) out.add(s);
+		return out;
 	}
 }

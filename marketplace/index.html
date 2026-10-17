@@ -32,7 +32,7 @@
 	main{padding:24px 0 70px;}
 	.toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:14px;}
 	.segmented{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
-	.segmented button{background:var(--panel-alt);border:none;color:var(--muted);padding:9px 16px;font-weight:600;font-size:13.5px;cursor:pointer;border-right:1px solid var(--line);font-family:inherit;}
+	.segmented button{background:var(--panel-alt);border:none;color:var(--muted);padding:9px 16px;font-weight:600;font-size:13.5px;cursor:pointer;border-right:1px solid var(--line);font-family:inherit;white-space:nowrap;}
 	.segmented button:last-child{border-right:none;}
 	.segmented button.active{background:var(--accent);color:var(--accent-ink);}
 	#marketSeg button{flex:1;text-align:center;}
@@ -169,11 +169,15 @@
 					<button type="button" data-v="Honeybee">Honeybee</button>
 					<button type="button" data-v="Cross-world">Cross-world</button>
 				</div>
-				<div style="display:flex;gap:10px;align-items:center;">
+				<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
 					<div class="segmented" id="typeSeg">
 						<button type="button" data-v="" class="active">All</button>
 						<button type="button" data-v="selling">Selling</button>
 						<button type="button" data-v="lookingFor">Looking for</button>
+					</div>
+					<div class="segmented" id="sortSeg" title="Until you pick one: newest while the search box is empty, cheapest first once you type">
+						<button type="button" data-v="recent" class="active">Newest</button>
+						<button type="button" data-v="price">Price &uarr;</button>
 					</div>
 					<button type="button" class="btn" id="newListingBtn">+ New Listing</button>
 				</div>
@@ -394,6 +398,23 @@
 
 	function currencyText(amount, currency){ return amount == null ? null : fmtNum(amount) + " " + esc(CURRENCY_LABELS[currency] || currency || "?"); }
 
+	// Sort: until someone picks one, newest while the search box is empty and
+	// cheapest first (then newest) once something's typed. Filters and a picked
+	// sort are remembered in this browser.
+	var MARKET_FILTERS_KEY = "sctp_market_filters_v1";
+	var sortPicked = null; // null = automatic, else "recent" | "price"
+	var DIA_PER = { diamond: 1, diamondblock: 9, diamondstack: 576 };
+	function listingDia(l){
+		var amt = l.type === "selling" ? (l.askingPrice != null ? l.askingPrice : l.startingBid) : l.budget;
+		var cur = l.type === "selling" ? (l.askingPrice != null ? l.askingCurrency : l.startingBidCurrency) : l.budgetCurrency;
+		if(amt == null) return Infinity; // no price: last
+		return amt * (DIA_PER[String(cur || "").toLowerCase()] || 1);
+	}
+	function saveMarketFilters(){
+		try { localStorage.setItem(MARKET_FILTERS_KEY, JSON.stringify({ world: worldFilter, type: typeFilter, sort: sortPicked, jobWorld: jobWorldFilter, jobType: jobTypeFilter })); } catch(e){}
+	}
+	function setSegActive(id, v){ document.querySelectorAll("#" + id + " button").forEach(function(b){ b.classList.toggle("active", b.dataset.v === v); }); }
+
 	function renderListings(){
 		var grid = document.getElementById("listingsGrid");
 		var q = itemSearch.trim().toLowerCase();
@@ -403,11 +424,16 @@
 			if(q && l.itemName.toLowerCase().indexOf(q) === -1) return false;
 			return true;
 		});
+		var sortNow = sortPicked || (q ? "price" : "recent");
+		setSegActive("sortSeg", sortNow);
+		var newest = function(a, b){ return (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0); };
+		rows.sort(sortNow === "price" ? function(a, b){ return (listingDia(a) - listingDia(b)) || newest(a, b); } : newest);
+		saveMarketFilters();
 		document.getElementById("listingsEmpty").hidden = rows.length > 0;
 		grid.innerHTML = rows.map(function(l){
 			var priceLine = l.type === "selling"
 				? (l.askingPrice != null ? currencyText(l.askingPrice, l.askingCurrency) + " (asking)" : "No asking price set")
-				: currencyText(l.budget, l.budgetCurrency) + " (budget)";
+				: (l.budget != null ? currencyText(l.budget, l.budgetCurrency) + " (budget)" : "No budget set");
 			var bidLine = "";
 			if(l.type === "selling"){
 				var parts = [];
@@ -453,6 +479,9 @@
 			worldFilter = btn.dataset.v;
 			renderListings();
 		});
+	});
+	document.querySelectorAll("#sortSeg button").forEach(function(btn){
+		btn.addEventListener("click", function(){ sortPicked = btn.dataset.v; renderListings(); });
 	});
 	document.querySelectorAll("#typeSeg button").forEach(function(btn){
 		btn.addEventListener("click", function(){
@@ -559,6 +588,7 @@
 			btn.classList.add("active");
 			jobWorldFilter = btn.dataset.v;
 			renderJobs();
+			saveMarketFilters();
 		});
 	});
 	document.querySelectorAll("#jobTypeSeg button").forEach(function(btn){
@@ -567,8 +597,20 @@
 			btn.classList.add("active");
 			jobTypeFilter = btn.dataset.v;
 			renderJobs();
+			saveMarketFilters();
 		});
 	});
+	(function restoreMarketFilters(){
+		try {
+			var st = JSON.parse(localStorage.getItem(MARKET_FILTERS_KEY) || "null");
+			if(!st) return;
+			if(typeof st.world === "string"){ worldFilter = st.world; setSegActive("worldSeg", worldFilter); }
+			if(typeof st.type === "string"){ typeFilter = st.type; setSegActive("typeSeg", typeFilter); }
+			if(st.sort === "recent" || st.sort === "price") sortPicked = st.sort;
+			if(typeof st.jobWorld === "string"){ jobWorldFilter = st.jobWorld; setSegActive("jobWorldSeg", jobWorldFilter); }
+			if(typeof st.jobType === "string"){ jobTypeFilter = st.jobType; setSegActive("jobTypeSeg", jobTypeFilter); }
+		} catch(e){}
+	})();
 
 	// ---------------- jobs: detail / express interest modal ----------------
 	function openJobDetail(id){

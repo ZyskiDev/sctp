@@ -184,7 +184,8 @@
 	function artistHtml(m){
 		var names = artistList(m);
 		var lead = m.commissioned ? 'built by ' : 'by ';
-		var tail = m.commissioned && m.commissionedBy ? '<div class="mapart-artist" style="font-size:12.5px;">commissioned by ' + esc(m.commissionedBy) + '</div>' : '';
+		var tail = (m.commissioned && m.commissionedBy ? '<div class="mapart-artist" style="font-size:12.5px;">commissioned by ' + esc(m.commissionedBy) + '</div>' : '') +
+			(m.originalArtist ? '<div class="mapart-artist" style="font-size:12.5px;">original art by ' + esc(m.originalArtist) + '</div>' : '');
 		if(!names.length) return (m.commissioned ? 'Builder unknown' : 'Unknown artist') + tail;
 		if(names.length === 1) return lead + esc(names[0]) + tail;
 		return lead + esc(names[0]) + ' <button type="button" class="artist-toggle" data-artists title="Show all ' + names.length + ' artists" aria-expanded="false"><span class="arr">&#9662;</span> +' + (names.length - 1) + '</button>' +

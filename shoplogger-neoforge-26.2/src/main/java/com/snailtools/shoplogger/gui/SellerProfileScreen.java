@@ -18,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import com.snailtools.shoplogger.gui.data.FilterMemory;
 import java.util.List;
 
 /** In-game equivalent of a seller's profile page: avatar, bio if set, and their current listings. */
@@ -39,7 +40,8 @@ public class SellerProfileScreen extends UiScreen {
 	public SellerProfileScreen(Screen parent, String username, String defaultWorld) {
 		super(username, parent, Section.LISTINGS);
 		this.username = username;
-		this.worldFilter = defaultWorld != null ? defaultWorld : ALL_WORLDS;
+		// opened from a listing: that listing's world; otherwise the last one picked here
+		this.worldFilter = defaultWorld != null ? defaultWorld : FilterMemory.get("seller", "world", ALL_WORLDS, List.of(ALL_WORLDS, "Firefly", "Honeybee"));
 	}
 
 	@Override
@@ -47,7 +49,7 @@ public class SellerProfileScreen extends UiScreen {
 		int x = contentX(), y = contentY(), w = contentW();
 		int chipW = Math.min(140, w / 3);
 		addRenderableWidget(new UiChip<>(x + w - chipW - 8, y + 6, chipW, 18, "World", List.of(ALL_WORLDS, "Firefly", "Honeybee"), worldFilter,
-				v -> v, v -> { worldFilter = v; refreshListingList(); }));
+				v -> v, v -> { worldFilter = v; FilterMemory.set("seller", "world", v); refreshListingList(); }));
 		String url = "https://sctp.nl/s/" + URLEncoder.encode(username, StandardCharsets.UTF_8);
 		addRenderableWidget(new UiButton(x + w - chipW - 8, y + 28, chipW, 16, "Profile on sctp.nl ↗", UiButton.Style.GHOST, () -> UiLinks.open(url))
 				.tooltip(url));

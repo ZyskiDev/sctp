@@ -23,6 +23,7 @@ public class QolHookManager {
 
     public static void onTick(){
         if(butterflyGarden != null) butterflyGarden.tick();
+        com.snailtools.shoplogger.auction.DutchClock.tick();
     }
 
     /** Returns true if an addon used the click, so the game shouldn't also get it. */
@@ -37,6 +38,7 @@ public class QolHookManager {
         if(butterflyGarden != null) butterflyGarden.onHUDRender(guiGraphics);
         if(questHelper != null) questHelper.onHUDRender(guiGraphics);
         TempScanWaitOverlay.onHudRender(guiGraphics); // TEMPORARY — see CHANGELOG 2.2
+        com.snailtools.shoplogger.auction.DutchClock.render(guiGraphics);
 
     }
 

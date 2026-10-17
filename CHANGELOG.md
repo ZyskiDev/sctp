@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.5 (mod 2.5)
+
+### Mod
+- **Confirm expensive buys** (on by default, Settings › Alerts): clicking an item in someone else's shop buys it straight away, so for shops priced at or above your threshold (32 DB by default) the first click does nothing except outline the slot in amber with "Click again to buy · <price>". Click the same item again within 4 seconds to buy it. Your own shops and cheaper shops work as before.
+- **Run auctions in-game** (Settings › Advanced › "Auctions on the dashboard", then rejoin): an Auctions screen lists the auctions you host (by your Minecraft name) and any you add with the code from the auction admin page. Each lot shows its seller, prices and status; click one to sell it at any price, mark it unsold or undo. A Payouts tab shows what to pay each seller after the cut. Commands, while holding the item:
+  - `/sold <price>` sells the lot. Prices can be written like `2stx63db`, `84db3dia`, `1stx`, `58db` or `4stx47db2dia` (a bare number is DB). The stack in your hand picks the lot size; if several sellers entered the same rare you get a list to pick from. A price below the seller's lowest limit asks you to run it again. Every sale has an [Undo] button.
+  - `/unsold` marks the lot as not sold.
+  - `/info` shows the seller, starting bid, lowest limit, SCTP's value and status. In a Dutch auction it also opens the **Dutch clock**: a popup that reads the nearest circle of 32 copper bulbs and shows the price right now (all lit = starting bid, none lit = lowest limit), the circle, and the price at each quarter. It stays until that lot is sold or unsold, and `/sold` without a price sells at the clock's price.
+  - `/auction <player>` while holding a shulker enters its rares for that player (you pick the prices). If they already entered online, you choose to ADD, OVERRIDE or MERGE (only add what's new).
+- **Rares by base item:** searching the rare library for "elytra" or "netherite sword" also finds rares made from that item (worked out from shop scans).
+- **Sorting and remembered filters:** Listings, Marketplace, item pages and seller profiles remember their filters. Sorting is "Auto" until you pick one: newest first with an empty search, cheapest first (then newest) once you type. Item pages list the cheapest first.
+- **Item page for what you're holding:** hold X and press I to open the item page (listings and price history) for the item in your hand; rares open their rare page. X on its own still opens the Item Library, now when you let go of it. Both keys can be changed in Controls.
+
+### Website
+- **Mapart credit:** mapart can credit the artist of the original art it's based on ("original art by …"), set by its owner or a mapart manager, shown on the mapart page and cards.
+- **Auctions:** the auction admin page shows each auction's in-game code for Shop Logger, and auctions can be deleted from the menu (they're set to finished; entries, results and statistics are kept).
+- **Rares updated** from the latest Snailcraft Items sheet: 5 new rares (Old Shabby Axe, Cursed Elytra, XV. The Devil, XVIII. The Moon, Haunted Snail House) and two names fixed (Snearth & Snoon, XVII. The Star (Reversed)). The item library's rare search also finds rares by base item.
+- **Sorting and remembered filters:** the search page, item pages, seller pages and the marketplace sort newest first while the search box is empty and cheapest first (then newest) once you type, until you pick a sort yourself. Your filters and picked sort are remembered in your browser until you reset them. The marketplace got a Newest / Price sort, and posts without a budget no longer show "null".
+
 ## 2.4 (mod 2.4)
 
 ### Mod
@@ -11,11 +30,9 @@
 - **Empty chests get grey markers:** a recently scanned shop with nothing for sale gets a grey particle on its sign instead of red.
 - **Ender chest ⇄ backpack:** the two arrows are now one icon button on the left that opens whichever one you're not in (a bundle for your backpack, an ender chest for /ec).
 - **Stock holograms** (off by default, Settings › Look & tools): a small line on the front of each scanned shop chest, under its sign: "64 in stock · 3m ago" or "Empty". It sits flat on the chest like sign text (it doesn't turn to follow you), only shows within 8 blocks, and only when you're in front of the chest.
-- **Confirm expensive buys** (on by default, Settings › Alerts): clicking an item in someone else's shop buys it straight away, so for shops priced at or above your threshold (32 DB by default) the first click does nothing except outline the slot in amber with "Click again to buy · <price>". Click the same item again within 4 seconds to buy it. Your own shops and cheaper shops work as before.
 - **Real sales:** every scan now also reports how much payment is sitting in the shop, so the website can tell real sales apart from sellers taking stock out (see Website).
 - **Popups instead of chat messages:** the welcome message for new players and "Shop Logger updated" now show as a small popup on your screen with a button (walkthrough or what's new) and an X, instead of a chat line that scrolls away. They wait until you're in the world with no menu open. "Update available" notices stay in chat.
 - **Hide display listings:** a "Display: Shown / Hidden" chip on the Listings screen and a Settings › Look & tools option leave out [DISPLAY] shops everywhere: listings, item pages, seller profiles and chat `/search`.
-- **Item page for what you're holding:** hold X and press C to open the item page (listings and price history) for the item in your hand; rares open their rare page. X on its own still opens the Item Library, now when you let go of it. Both keys can be changed in Controls.
 - **Fix: opening a shop yourself read it as empty.** The scan ran before the server had sent the chest's contents, so a shop you opened by hand got logged as empty (its listings dropped off the site until the next auto-scan), its stock hologram said "Empty", and your own shops could later report a sale that didn't happen. It now waits for the contents.
 
 ### Website

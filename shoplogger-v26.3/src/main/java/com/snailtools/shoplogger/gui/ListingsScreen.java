@@ -16,6 +16,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 
 import java.time.Instant;
+import com.snailtools.shoplogger.gui.data.FilterMemory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -31,7 +32,8 @@ public class ListingsScreen extends UiScreen {
 
 	private static final String ALL_WORLDS = "All worlds";
 	private static final String ANY_TYPE = "Any";
-	private static final List<String> SORTS = List.of("Most recent", "Price low-high", "Price high-low", "Stock high-low", "Item A-Z");
+	// "Auto": newest first with an empty search box, cheapest first once something's typed (see FilterMemory)
+	private static final List<String> SORTS = List.of(FilterMemory.AUTO_SORT, "Most recent", "Price low-high", "Price high-low", "Stock high-low", "Item A-Z");
 	// The real dataset can be ~18,000+ rows — re-filtering/re-sorting that on
 	// every keystroke felt slow. Wait for a short pause in typing instead.
 	private static final long SEARCH_DEBOUNCE_MS = 300;
@@ -48,8 +50,8 @@ public class ListingsScreen extends UiScreen {
 	// kept across rebuilds (resizing the window re-runs initContent)
 	private String keepQuery;
 	private String keepWorld;
-	private String keepType = ANY_TYPE;
-	private String keepSort = SORTS.get(0);
+	private String keepType = FilterMemory.get("listings", "type", ANY_TYPE, List.of(ANY_TYPE, "Bulk", "Bundled", "Single"));
+	private String keepSort = FilterMemory.get("listings", "sort", FilterMemory.AUTO_SORT, SORTS);
 
 	private List<Listing> allListings = List.of();
 	private boolean loading = true;
@@ -63,7 +65,7 @@ public class ListingsScreen extends UiScreen {
 		super("Listings", parent, Section.LISTINGS);
 		this.keepQuery = initialQuery;
 		ShopWorld detected = WorldSelection.get();
-		this.keepWorld = detected != null ? detected.label() : ALL_WORLDS;
+		this.keepWorld = FilterMemory.get("listings", "world", detected != null ? detected.label() : ALL_WORLDS, List.of(ALL_WORLDS, "Firefly", "Honeybee"));
 	}
 
 	@Override
@@ -79,11 +81,12 @@ public class ListingsScreen extends UiScreen {
 
 		int chipW = Math.min(120, (w - 18 - 90) / 4);
 		worldFilter = addRenderableWidget(new UiChip<>(x, y, chipW, 18, "World", List.of(ALL_WORLDS, "Firefly", "Honeybee"), keepWorld,
-				v -> v, v -> { keepWorld = v; refreshList(); }));
+				v -> v, v -> { keepWorld = v; FilterMemory.set("listings", "world", v); refreshList(); }));
 		typeFilter = addRenderableWidget(new UiChip<>(x + chipW + 6, y, chipW, 18, "Type", List.of(ANY_TYPE, "Bulk", "Bundled", "Single"), keepType,
-				v -> v, v -> { keepType = v; refreshList(); }));
+				v -> v, v -> { keepType = v; FilterMemory.set("listings", "type", v); refreshList(); }));
 		sortMode = addRenderableWidget(new UiChip<>(x + 2 * (chipW + 6), y, chipW, 18, "Sort", SORTS, keepSort,
-				v -> v, v -> { keepSort = v; refreshList(); }));
+				v -> FilterMemory.AUTO_SORT.equals(v) ? (FilterMemory.autoIsCheapest(keepQuery) ? "Auto: cheapest" : "Auto: newest") : v,
+				v -> { keepSort = v; FilterMemory.set("listings", "sort", v); refreshList(); }));
 		// same setting as Settings > "Hide display listings", so it sticks everywhere
 		addRenderableWidget(new UiChip<>(x + 3 * (chipW + 6), y, chipW, 18, "Display", List.of(Boolean.FALSE, Boolean.TRUE),
 				SearchPreferences.hideDisplayListings(), v -> v ? "Hidden" : "Shown",
@@ -160,9 +163,14 @@ public class ListingsScreen extends UiScreen {
 			filtered.add(l);
 		}
 
-		String sort = sortMode.getValue();
+		String picked = sortMode.getValue();
+		String sort = FilterMemory.AUTO_SORT.equals(picked) ? (q.isEmpty() ? "Most recent" : "Price low-high") : picked;
 		filtered.sort((a, b) -> switch (sort) {
-			case "Price low-high" -> Double.compare(a.pricePerItemInDiamonds(), b.pricePerItemInDiamonds());
+			case "Price low-high" -> {
+				// same price: newest first
+				int c = Double.compare(a.pricePerItemInDiamonds(), b.pricePerItemInDiamonds());
+				yield c != 0 ? c : parseInstant(b.lastSeen).compareTo(parseInstant(a.lastSeen));
+			}
 			case "Price high-low" -> Double.compare(b.pricePerItemInDiamonds(), a.pricePerItemInDiamonds());
 			case "Stock high-low" -> Integer.compare(b.amount, a.amount);
 			case "Item A-Z" -> a.itemName.compareToIgnoreCase(b.itemName);

@@ -48,6 +48,11 @@ public final class WebDataClient {
 		return getJson(SITE_BASE + "/data/rare-items.json", new TypeToken<List<RareItem>>() {}.getType());
 	}
 
+	/** Rare id -> the Minecraft item it's usually listed as in shops ("minecraft:elytra"), for searching rares by base item. */
+	public static CompletableFuture<java.util.Map<String, String>> fetchRareBaseItems() {
+		return getJson(API_BASE + "/rares/base-items", new TypeToken<java.util.Map<String, String>>() {}.getType());
+	}
+
 	public static CompletableFuture<List<SharedShop>> fetchSharedShops() {
 		return getJson(API_BASE + "/shared-shops", new TypeToken<List<SharedShop>>() {}.getType());
 	}

@@ -66,7 +66,7 @@ public class ShopLoggerClient {
 	private KeyMapping togglePrintKey;
 	private KeyMapping openLibraryKey;
 	private KeyMapping heldItemKey;
-	// X opens the library when it's let go; pressing C while it's held opens the held item's page instead
+	// X opens the library when it's let go; pressing I while it's held opens the held item's page instead
 	private boolean libraryKeyHeld = false;
 	private boolean libraryChordUsed = false;
 
@@ -149,7 +149,7 @@ public class ShopLoggerClient {
 		heldItemKey = new KeyMapping(
 				"key.shoplogger.open_held_item",
 				InputConstants.Type.KEYSYM,
-				GLFW.GLFW_KEY_C, // pressed while holding the library key (X)
+				GLFW.GLFW_KEY_I, // pressed while holding the library key (X)
 				KEY_CATEGORY
 		);
 		event.register(heldItemKey);
@@ -213,6 +213,17 @@ public class ShopLoggerClient {
 		dispatcher.register(LiteralArgumentBuilder.<CommandSourceStack>literal("search")
 				.then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("item", StringArgumentType.greedyString())
 						.executes(ShopLoggerClient::search)));
+
+		// In-game auction hosting (see AuctionCommands). Only with Settings › Advanced ›
+		// "Auctions on the dashboard" on, so /info and /sold stay the server's for everyone else.
+		if (com.snailtools.shoplogger.auction.AuctionHost.isShown()) {
+			for (String name : new String[] { "sold", "unsold", "info", "auction", "sctpauction" }) {
+				dispatcher.register(LiteralArgumentBuilder.<CommandSourceStack>literal(name)
+						.executes(ctx -> com.snailtools.shoplogger.auction.AuctionCommands.run(name, ""))
+						.then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("args", StringArgumentType.greedyString())
+								.executes(ctx -> com.snailtools.shoplogger.auction.AuctionCommands.run(name, StringArgumentType.getString(ctx, "args")))));
+			}
+		}
 
 		// Both client-only, used as the click targets on WatchlistAlert's chat
 		// message — never typed by hand, but registered as real commands (same
@@ -311,7 +322,7 @@ public class ShopLoggerClient {
 		if (openLibraryKey != null && openLibraryKey.consumeClick()) libraryKeyHeld = true;
 		if (heldItemKey != null) {
 			while (heldItemKey.consumeClick()) {
-				if (!libraryKeyHeld) continue; // C on its own does nothing
+				if (!libraryKeyHeld) continue; // I on its own does nothing
 				libraryChordUsed = true;
 				com.snailtools.shoplogger.gui.HeldItemPage.open(client);
 			}
