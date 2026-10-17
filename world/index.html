@@ -96,7 +96,7 @@
 				<canvas id="map" aria-label="Map of the Firefly world. Click a square to zoom in."></canvas>
 				<div class="loading" id="loading" hidden>Loading map&hellip;</div>
 			</div>
-			<p class="hint" id="hint">Click a square to zoom in. Six clicks take you from the whole world down to a single chunk.</p>
+			<p class="hint" id="hint">Click a square to zoom in. Five clicks take you from the whole world down to a single chunk.</p>
 		</section>
 
 		<aside class="side">
@@ -135,9 +135,13 @@
 	"use strict";
 	var API = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var TILE_VERSION = "v1";
-	var WORLD_MIN = -32768, WORLD_SIZE = 65536; // blocks; a 4x4 split all the way down lands exactly on chunks
-	var GRID = 4, CHUNK = 16, MAX_LEVEL = 7, TILE_PX = 512, OFFSET = 64; // level L tile = 512 px covering 512 * 2^L blocks
-	var STEP_NAMES = ["World", "16,384 blocks", "4,096 blocks", "1,024 blocks", "256 blocks", "64 blocks", "Chunk"];
+	// The explored world, cropped to whole 4,096-block squares: a 14x14 grid at the top, then
+	// 4x4 splits (4,096 > 1,024 > 256 > 64 > 16) that land exactly on chunks.
+	var WORLD_MIN = -28672, TOP = 4096, TOP_GRID = 14, WORLD_SIZE = TOP * TOP_GRID;
+	var GRID = 4, CHUNK = 16, MAX_LEVEL = 7, TILE_PX = 512;
+	var TILE_MIN = -32768; // the tiles are numbered from here (level L tile = 512 px covering 512 * 2^L blocks)
+	var STEP_NAMES = ["World", "4,096 blocks", "1,024 blocks", "256 blocks", "64 blocks", "Chunk"];
+	var MAX_DEPTH = STEP_NAMES.length - 1;
 
 	function $(id){ return document.getElementById(id); }
 	var canvas = $("map"), ctx = canvas.getContext("2d"), stage = $("stage");
@@ -147,7 +151,9 @@
 	var images = {};  // "L/tx_tz" -> {img, ready}
 
 	function fmt(n){ return (n < 0 ? "−" : "") + Math.abs(n).toLocaleString("en-US"); }
-	function depth(size){ return Math.round(Math.log(WORLD_SIZE / size) / Math.log(GRID)); }
+	function depth(size){ return size >= WORLD_SIZE ? 0 : 1 + Math.round(Math.log(TOP / size) / Math.log(GRID)); }
+	function sizeAt(d){ return d === 0 ? WORLD_SIZE : TOP / Math.pow(GRID, d - 1); }
+	function cellsOf(size){ return size <= CHUNK ? CHUNK : size >= WORLD_SIZE ? TOP_GRID : GRID; }
 
 	// ---------------- tiles ----------------
 	function tile(L, tx, tz){
@@ -165,14 +171,14 @@
 	/** Draws level L's tiles over the current view; returns how many are still loading. */
 	function drawLevel(L, W){
 		var T = TILE_PX * Math.pow(2, L); // blocks per tile
-		var t0x = Math.floor((view.x - WORLD_MIN) / T), t1x = Math.floor((view.x + view.size - 1 - WORLD_MIN) / T);
-		var t0z = Math.floor((view.z - WORLD_MIN) / T), t1z = Math.floor((view.z + view.size - 1 - WORLD_MIN) / T);
+		var t0x = Math.floor((view.x - TILE_MIN) / T), t1x = Math.floor((view.x + view.size - 1 - TILE_MIN) / T);
+		var t0z = Math.floor((view.z - TILE_MIN) / T), t1z = Math.floor((view.z + view.size - 1 - TILE_MIN) / T);
 		var scale = W / view.size, pending = 0;
 		for(var tz = t0z; tz <= t1z; tz++) for(var tx = t0x; tx <= t1x; tx++){
 			var t = tile(L, tx, tz);
 			if(!t) continue;
 			if(!t.ready){ if(!t.failed) pending++; continue; }
-			var bx = WORLD_MIN + tx * T, bz = WORLD_MIN + tz * T;
+			var bx = TILE_MIN + tx * T, bz = TILE_MIN + tz * T;
 			// only the part of the tile inside the view, so big upscales stay exact
 			var sx0 = Math.max(view.x, bx), sz0 = Math.max(view.z, bz);
 			var sx1 = Math.min(view.x + view.size, bx + T), sz1 = Math.min(view.z + view.size, bz + T);
@@ -208,10 +214,10 @@
 
 	function drawGrid(W, dpr){
 		var chunk = view.size <= CHUNK;
-		var cells = chunk ? CHUNK : GRID; // at chunk level: one cell per block
+		var cells = cellsOf(view.size); // at chunk level: one cell per block
 		var cell = W / cells;
 		ctx.lineWidth = Math.max(1, dpr);
-		ctx.strokeStyle = chunk ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.22)";
+		ctx.strokeStyle = chunk ? "rgba(255,255,255,0.10)" : cells > GRID ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.22)";
 		ctx.beginPath();
 		for(var i = 1; i < cells; i++){
 			var p = Math.round(i * cell) + 0.5;
@@ -240,7 +246,7 @@
 		$("backBtn").disabled = size >= WORLD_SIZE;
 		$("hint").textContent = chunk
 			? "This is one chunk: each square is a block. Zoom out with the button above or Esc."
-			: "Click a square to zoom in. " + (depth(size) === 5 ? "One more click shows a single chunk." : "Six clicks take you from the whole world down to a single chunk.");
+			: "Click a square to zoom in. " + (depth(size) === MAX_DEPTH - 1 ? "One more click shows a single chunk." : "Five clicks take you from the whole world down to a single chunk.");
 		$("area").textContent = "X " + fmt(x) + " to " + fmt(x + size - 1) + " · Z " + fmt(z) + " to " + fmt(z + size - 1);
 		renderCrumbs();
 		var hash = size >= WORLD_SIZE ? "" : "#" + x + "," + z + "," + size;
@@ -265,13 +271,13 @@
 	$("crumbs").addEventListener("click", function(e){
 		var b = e.target.closest("button[data-depth]");
 		if(!b) return;
-		var s = squareAt(view.x, view.z, WORLD_SIZE / Math.pow(GRID, +b.getAttribute("data-depth")));
+		var s = squareAt(view.x, view.z, sizeAt(+b.getAttribute("data-depth")));
 		setView(s.x, s.z, s.size, true);
 	});
 
 	function zoomOut(){
 		if(view.size >= WORLD_SIZE) return;
-		var s = squareAt(view.x, view.z, view.size * GRID);
+		var s = squareAt(view.x, view.z, sizeAt(depth(view.size) - 1));
 		setView(s.x, s.z, s.size, true);
 	}
 	$("backBtn").addEventListener("click", zoomOut);
@@ -293,7 +299,7 @@
 		hover = b;
 		readout();
 		if(view.size <= CHUNK) { schedule(); return; }
-		var s = squareAt(b.bx, b.bz, view.size / GRID);
+		var s = squareAt(b.bx, b.bz, sizeAt(depth(view.size) + 1));
 		setView(s.x, s.z, s.size, true);
 	});
 
@@ -305,7 +311,7 @@
 		$("rRegion").textContent = fmt(Math.floor(x / 512)) + ", " + fmt(Math.floor(z / 512));
 		if(view.size <= CHUNK) $("rSquare").textContent = "this chunk";
 		else {
-			var s = squareAt(x, z, view.size / GRID);
+			var s = squareAt(x, z, sizeAt(depth(view.size) + 1));
 			$("rSquare").textContent = fmt(s.x) + "…" + fmt(s.x + s.size - 1) + ", " + fmt(s.z) + "…" + fmt(s.z + s.size - 1);
 		}
 	}
@@ -335,7 +341,7 @@
 		var m = /^#(-?\d+),(-?\d+),(\d+)$/.exec(location.hash);
 		if(m){
 			var size = +m[3], d = depth(size);
-			if(d >= 0 && d <= 6 && WORLD_SIZE / Math.pow(GRID, d) === size){
+			if(d >= 1 && d <= MAX_DEPTH && sizeAt(d) === size){
 				var s = squareAt(+m[1], +m[2], size);
 				setView(s.x, s.z, s.size, false);
 				return;
