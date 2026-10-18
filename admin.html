@@ -340,10 +340,10 @@
 		<details class="section-toggle">
 		<summary>Short links</summary>
 		<div class="card">
-			<div class="meta" style="margin-bottom:10px;">Make <b>sctp.nl/&lt;name&gt;</b> go to any page on the site, e.g. sctp.nl/xmas &rarr; /secret-santa/. Names can't be an existing page (like /search).</div>
+			<div class="meta" style="margin-bottom:10px;">Make <b>sctp.nl/&lt;name&gt;</b> go to any page on the site or any other website, e.g. sctp.nl/xmas &rarr; /secret-santa/ or sctp.nl/discord &rarr; https://discord.gg/&hellip;. Names can't be an existing page (like /search).</div>
 			<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
 				<div style="flex:1;min-width:160px;"><label for="slSlug">Short name</label><div style="display:flex;align-items:center;gap:4px;"><span class="meta" style="white-space:nowrap;">sctp.nl/</span><input type="text" id="slSlug" maxlength="40" placeholder="xmas" spellcheck="false" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;"></div></div>
-				<div style="flex:2;min-width:220px;"><label for="slTarget">Goes to</label><input type="text" id="slTarget" maxlength="500" placeholder="/secret-santa/ or https://sctp.nl/world/#…" spellcheck="false" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;"></div>
+				<div style="flex:2;min-width:220px;"><label for="slTarget">Goes to</label><input type="text" id="slTarget" maxlength="500" placeholder="/secret-santa/ or https://discord.gg/…" spellcheck="false" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;"></div>
 				<button id="slSaveBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;margin-bottom:6px;">Save link</button>
 				<button id="slCancelBtn" type="button" style="margin-bottom:6px;" hidden>Cancel edit</button>
 			</div>
@@ -564,7 +564,7 @@
 		manageForms: "Manage forms (create/edit forms, view responses) — see /admin-forms.html",
 		auctions: "Auctions (create auctions, record results) — see /auction/admin/",
 		siteNotice: "Homepage notice",
-		shortLinks: "Short links (sctp.nl/<name> redirects)",
+		shortLinks: "Short links (sctp.nl/<name> redirects to a page or another website)",
 		secretSanta: "Secret Santa (sign-ups, pairs, gift status) — see /secret-santa/admin/",
 	};
 	var PLAYER_REPORT_REASON_LABELS = {

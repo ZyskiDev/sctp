@@ -7255,7 +7255,7 @@ async function handleAdminAuctionResult(request, env) {
 // ---------------- short links (sctp.nl/<slug>) ----------------
 //
 // Admins with "shortLinks" make sctp.nl/<slug> redirect to any page on the
-// site (404.html looks the slug up via GET /short-link before showing anything).
+// site or any other website (404.html looks the slug up via GET /short-link before showing anything).
 // Slugs can't take the name of a real top-level page.
 const SHORT_LINK_SLUG = /^[a-z0-9][a-z0-9_-]{0,39}$/;
 const SHORT_LINK_RESERVED = new Set([
@@ -7265,15 +7265,25 @@ const SHORT_LINK_RESERVED = new Set([
 	"themes", "favicon.ico", "robots.txt", "cname",
 ]);
 
-/** A target on sctp.nl as a path ("/auction/?x=1#y"), or null. Full sctp.nl URLs are accepted too. */
+/**
+ * A short link's target: a page on sctp.nl as a path ("/auction/?x=1#y"; full
+ * sctp.nl URLs are shortened to that), or any other website's http(s) URL.
+ * Null when it's neither (e.g. javascript: links).
+ */
 function cleanShortLinkTarget(input) {
 	let t = String(input || "").trim();
-	if (!t) return null;
-	const m = /^(?:https?:\/\/)?(?:www\.)?sctp\.nl(\/.*)?$/i.exec(t);
-	if (m) t = m[1] || "/";
-	if (!t.startsWith("/") || t.startsWith("//")) return null;
-	if (/[\s<>"]/.test(t) || t.length > 500) return null;
-	return t;
+	if (!t || /[\s<>"]/.test(t) || t.length > 500) return null;
+	const own = /^(?:https?:\/\/)?(?:www\.)?sctp\.nl(\/.*)?$/i.exec(t);
+	if (own) t = own[1] || "/";
+	if (t.startsWith("/")) return t.startsWith("//") ? null : t;
+	// another website: a real http(s) URL with a host
+	if (!/^https?:\/\//i.test(t) && /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(t)) t = "https://" + t;
+	try {
+		const u = new URL(t);
+		return (u.protocol === "https:" || u.protocol === "http:") && u.hostname.includes(".") ? u.href : null;
+	} catch (e) {
+		return null;
+	}
 }
 
 async function handleResolveShortLink(request, env, ctx) {
@@ -7302,7 +7312,7 @@ async function handleAdminSaveShortLink(request, env) {
 	const previous = body.previousSlug ? String(body.previousSlug).toLowerCase() : null;
 	if (!SHORT_LINK_SLUG.test(slug)) return json({ error: "The short name can use letters, numbers, - and _ (up to 40), and must start with a letter or number." }, 400);
 	if (SHORT_LINK_RESERVED.has(slug)) return json({ error: "sctp.nl/" + slug + " is already a page on the site. Pick another name." }, 400);
-	if (!target) return json({ error: "The link must go to a page on sctp.nl, e.g. /auction/ or https://sctp.nl/world/." }, 400);
+	if (!target) return json({ error: "Enter a page on sctp.nl (e.g. /auction/) or a full web address (e.g. https://discord.gg/...)." }, 400);
 	if (target.replace(/[?#].*$/, "").replace(/^\/+|\/+$/g, "").toLowerCase() === slug) return json({ error: "A short link can't point at itself." }, 400);
 	const now = new Date().toISOString();
 	const taken = await env.DB.prepare("SELECT slug FROM shortLinks WHERE slug = ?").bind(slug).first();
