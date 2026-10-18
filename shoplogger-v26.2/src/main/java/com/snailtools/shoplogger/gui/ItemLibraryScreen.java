@@ -84,7 +84,7 @@ public class ItemLibraryScreen extends UiScreen {
 				.selected(() -> catalog == Catalog.RARE));
 		y += 24;
 
-		search = new UiField(font, x, y, w, 20, catalog == Catalog.RARE ? "Search name, effect, source, type…" : "Search items…", true);
+		search = new UiField(font, x, y, w, 20, catalog == Catalog.RARE ? "Search rare name or base item (e.g. elytra), effect…" : "Search items…", true);
 		search.box.setValue(keepQuery);
 		search.box.setResponder(s -> { keepQuery = s; searchChangedAtMillis = System.currentTimeMillis(); });
 		addRenderableOnly(search.frame());
@@ -212,8 +212,8 @@ public class ItemLibraryScreen extends UiScreen {
 		if (catalog == Catalog.VANILLA) {
 			for (VanillaItem it : vanillaItems) {
 				if (!q.isEmpty() && !it.name.toLowerCase(Locale.ROOT).contains(q)) continue;
-				list.addItemEntry(ItemListWidget.forVanilla(it.name, it.baseItem, () ->
-						openDetail(new ItemDetailScreen(this, it.name, it.baseItem, it.texture, false, null))));
+				list.addItemEntry(watched(it.name, ItemListWidget.forVanilla(it.name, it.baseItem, () ->
+						openDetail(new ItemDetailScreen(this, it.name, it.baseItem, it.texture, false, null)))));
 			}
 		} else {
 			for (RareItem it : rareItems) {
@@ -222,8 +222,8 @@ public class ItemLibraryScreen extends UiScreen {
 				if (!q.isEmpty() && !matchesSearch(it, q)) continue;
 				RareItem captured = it;
 				String sub = (it.category == null ? "Rare" : it.category) + (it.typeSlot != null && !it.typeSlot.isEmpty() ? " · " + it.typeSlot : "");
-				list.addItemEntry(ItemListWidget.forRare(it.name, sub, it.texture, () ->
-						openDetail(new ItemDetailScreen(this, captured.name, null, captured.texture, true, captured))));
+				list.addItemEntry(watched(it.name, ItemListWidget.forRare(it.name, sub, it.texture, () ->
+						openDetail(new ItemDetailScreen(this, captured.name, null, captured.texture, true, captured)))));
 			}
 		}
 		list.setScrollAmount(restoreScroll);
@@ -234,6 +234,13 @@ public class ItemLibraryScreen extends UiScreen {
 	private void openDetail(ItemDetailScreen detail) {
 		restoreScroll = list != null ? list.scrollAmount() : 0;
 		minecraft.setScreenAndShow(detail);
+	}
+
+	/** Items on your watchlist get a small spyglass on their row. */
+	private static ItemListWidget.ItemEntry watched(String name, ItemListWidget.ItemEntry e) {
+		return com.snailtools.shoplogger.WatchlistStore.find(name) != null
+				? e.withMark(com.snailtools.shoplogger.gui.ui.Draw.stack(net.minecraft.world.item.Items.SPYGLASS), "On your watchlist")
+				: e;
 	}
 
 	// rare id -> base item ("minecraft:elytra"), so "elytra" or "netherite sword" finds rares made from it

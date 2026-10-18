@@ -58,6 +58,8 @@
 	.hint-list{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:6px;}
 	.hint-list li{background:var(--panel-alt);border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;}
 	.hint-list .nm{font-weight:600;}
+	.item-link{color:inherit;text-decoration:none;border-bottom:1px dotted rgba(var(--accent-rgb,183,226,61),0.6);}
+	.item-link:hover{color:var(--accent);border-bottom-style:solid;}
 	.hint-list .why{color:var(--muted);}
 	.hint-tag{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:1px 8px;border:1px solid var(--line);}
 	.hint-tag.bad{color:#E2643D;border-color:rgba(226,100,61,0.5);}
@@ -108,6 +110,25 @@
 		return (Math.round(n*10)/10) + " dia";
 	}
 
+	// Item names link to their item page: the catalogs map a name (rares first) or base item to its page.
+	var slugByName = {}, slugByBase = {};
+	function alphaOnly(v){ return String(v || "").toLowerCase().replace(/[^a-z]/g, ""); }
+	var catalogsReady = Promise.all([
+		fetch("/data/vanilla-items.json").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }),
+		fetch("/data/rare-items.json").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; })
+	]).then(function(res){
+		res[0].forEach(function(it){ var k = alphaOnly(it.name); if(k && !slugByName[k]) slugByName[k] = it.id; if(it.baseItem && !slugByBase[it.baseItem]) slugByBase[it.baseItem] = it.id; });
+		res[1].forEach(function(it){ var k = alphaOnly(it.name); if(k) slugByName[k] = it.id; });
+	});
+	function itemLink(it){
+		var slug = slugByName[alphaOnly(it.itemName)];
+		if(!slug){
+			var base = it.baseItem || (it.itemKey ? String(it.itemKey).replace(/^v:/, "").split("|")[0] : "");
+			slug = slugByBase[base];
+		}
+		return slug ? '<a class="item-link" href="/items/' + encodeURIComponent(slug) + '">' + esc(it.itemName) + '</a>' : esc(it.itemName);
+	}
+
 	function load(){
 		var session = window.sctpAccount ? window.sctpAccount.getSession() : null;
 		if(!session){
@@ -129,7 +150,7 @@
 					document.getElementById("mineContent").innerHTML = '<p class="empty">No shop data tracked yet for your account — check back after your shop has been scanned and a daily snapshot has run.</p>';
 					return;
 				}
-				render(res.data);
+				catalogsReady.then(function(){ render(res.data); });
 			})
 			.catch(function(){ document.getElementById("mineContent").innerHTML = '<p class="empty">Couldn\'t load your stats.</p>'; });
 	}
@@ -144,18 +165,18 @@
 		}
 		return '<div class="card hint-card">' +
 			section("Undercut alerts", "Someone else currently sells the same item cheaper than you (per single item, in diamond-equivalent).", h.undercut || [], function(u){
-				return '<li><span class="nm">' + esc(u.itemName) + ' <span class="why">(' + esc(u.world) + ')</span></span>' +
+				return '<li><span class="nm">' + itemLink(u) + ' <span class="why">(' + esc(u.world) + ')</span></span>' +
 					'<span class="hint-tag bad">' + u.pctCheaper + '% cheaper elsewhere</span>' +
 					'<span class="why">you ' + fmtDia(u.yourPrice) + ' &middot; ' + esc(u.cheapestSeller) + ' ' + fmtDia(u.cheapestPrice) + '</span></li>';
 			}) +
 			section("What to reprice", "Priced well away from the market median for the same item (needs at least 2 other sellers).", h.reprice || [], function(r){
 				var hi = r.direction === "high";
-				return '<li><span class="nm">' + esc(r.itemName) + ' <span class="why">(' + esc(r.world) + ')</span></span>' +
+				return '<li><span class="nm">' + itemLink(r) + ' <span class="why">(' + esc(r.world) + ')</span></span>' +
 					'<span class="hint-tag ' + (hi ? "warn" : "good") + '">' + (hi ? r.pct + '% above market' : r.pct + '% below market') + '</span>' +
 					'<span class="why">you ' + fmtDia(r.yourPrice) + ' &middot; median ' + fmtDia(r.marketMedian) + ' (' + r.others + ' others)' + (hi ? ' &mdash; may sell slowly' : ' &mdash; you could charge more') + '</span></li>';
 			}) +
 			section("What to restock", "Things that have been selling for you but are nearly (or completely) out of stock.", h.restock || [], function(r){
-				return '<li><span class="nm">' + esc(r.itemName) + ' <span class="why">(' + esc(r.world) + ')</span></span>' +
+				return '<li><span class="nm">' + itemLink(r) + ' <span class="why">(' + esc(r.world) + ')</span></span>' +
 					'<span class="hint-tag ' + (r.stock === 0 ? "bad" : "warn") + '">' + (r.stock === 0 ? "out of stock" : "~" + r.daysLeft + " days left") + '</span>' +
 					'<span class="why">~' + fmtNum(r.sold14) + ' sold recently</span></li>';
 			}) +
@@ -205,7 +226,7 @@
 		var bestEl = document.getElementById("mineBestSellers");
 		bestEl.innerHTML = d.bestSellers.length
 			? d.bestSellers.map(function(it, i){
-				return '<li><span class="rank">' + (i+1) + '.</span><span class="name">' + esc(it.itemName) + ' (' + esc(it.world) + ')</span><span class="qty">' + fmtNum(it.sold) + ' sold</span></li>';
+				return '<li><span class="rank">' + (i+1) + '.</span><span class="name">' + itemLink(it) + ' (' + esc(it.world) + ')</span><span class="qty">' + fmtNum(it.sold) + ' sold</span></li>';
 			}).join("")
 			: '<li class="empty">No sales counted yet.</li>';
 	}

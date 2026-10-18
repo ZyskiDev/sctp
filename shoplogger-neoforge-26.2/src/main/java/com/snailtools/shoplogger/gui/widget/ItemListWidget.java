@@ -112,6 +112,16 @@ public class ItemListWidget extends AbstractSelectionList<ItemListWidget.ItemEnt
 			this.onOpenPage = onOpenPage;
 		}
 
+		private ItemStack mark = ItemStack.EMPTY;
+		private String markTip;
+
+		/** A small icon at the right of the row (e.g. a spyglass for items on your watchlist), with a tooltip. */
+		public ItemEntry withMark(ItemStack icon, String tooltip) {
+			this.mark = icon;
+			this.markTip = tooltip;
+			return this;
+		}
+
 		/** A small coloured label on the row, e.g. "Watching" or "Selling". */
 		public ItemEntry withBadge(String text, int color) {
 			this.badge = text;
@@ -134,6 +144,15 @@ public class ItemListWidget extends AbstractSelectionList<ItemListWidget.ItemEnt
 				int bw = Draw.pillWidth(font, badge);
 				right -= bw;
 				Draw.pill(g, font, badge, right, y + (h - 11) / 2, Theme.alpha(badgeColor, 0x33), badgeColor);
+				right -= 6;
+			}
+			if (!mark.isEmpty()) {
+				right -= 12;
+				int my = y + (h - 12) / 2;
+				Draw.item(g, mark, right, my, 12);
+				if (markTip != null && mouseX >= right && mouseX < right + 12 && mouseY >= my && mouseY < my + 12) {
+					g.setTooltipForNextFrame(font, Component.literal(markTip), mouseX, mouseY);
+				}
 				right -= 6;
 			}
 

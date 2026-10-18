@@ -336,6 +336,23 @@
 		<summary>Settings &amp; accounts</summary>
 		<div class="category-body">
 
+		<section data-perm="shortLinks">
+		<details class="section-toggle">
+		<summary>Short links</summary>
+		<div class="card">
+			<div class="meta" style="margin-bottom:10px;">Make <b>sctp.nl/&lt;name&gt;</b> go to any page on the site, e.g. sctp.nl/xmas &rarr; /secret-santa/. Names can't be an existing page (like /search).</div>
+			<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+				<div style="flex:1;min-width:160px;"><label for="slSlug">Short name</label><div style="display:flex;align-items:center;gap:4px;"><span class="meta" style="white-space:nowrap;">sctp.nl/</span><input type="text" id="slSlug" maxlength="40" placeholder="xmas" spellcheck="false" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;"></div></div>
+				<div style="flex:2;min-width:220px;"><label for="slTarget">Goes to</label><input type="text" id="slTarget" maxlength="500" placeholder="/secret-santa/ or https://sctp.nl/world/#…" spellcheck="false" style="width:100%;margin:6px 0;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px;"></div>
+				<button id="slSaveBtn" type="button" style="background:var(--accent);color:var(--accent-ink);border:none;font-weight:600;margin-bottom:6px;">Save link</button>
+				<button id="slCancelBtn" type="button" style="margin-bottom:6px;" hidden>Cancel edit</button>
+			</div>
+			<div class="err" id="slErr"></div>
+			<div id="slList" style="margin-top:12px;"></div>
+		</div>
+		</details>
+		</section>
+
 		<section data-perm="siteNotice">
 		<details class="section-toggle">
 		<summary>Homepage notice</summary>
@@ -537,7 +554,7 @@
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var EDITABLE_FIELDS = ["itemName","baseItem","price","priceLabel","stackSize","amount","stacksInStock","currency","seller","world","position"];
-	var ALL_PERMS = ["reports","sharedShopRequests","manualListings","blockedSellers","marketplaceListings","updateNotice","suggestions","bugReports","playerReports","manageMapart","manageForms","auctions","siteNotice","secretSanta"];
+	var ALL_PERMS = ["reports","sharedShopRequests","manualListings","blockedSellers","marketplaceListings","updateNotice","suggestions","bugReports","playerReports","manageMapart","manageForms","auctions","siteNotice","secretSanta","shortLinks"];
 	var PERM_LABELS = {
 		reports: "Reports", sharedShopRequests: "Shared-shop requests",
 		manualListings: "Manual listings", blockedSellers: "Blocked sellers",
@@ -547,6 +564,7 @@
 		manageForms: "Manage forms (create/edit forms, view responses) — see /admin-forms.html",
 		auctions: "Auctions (create auctions, record results) — see /auction/admin/",
 		siteNotice: "Homepage notice",
+		shortLinks: "Short links (sctp.nl/<name> redirects)",
 		secretSanta: "Secret Santa (sign-ups, pairs, gift status) — see /secret-santa/admin/",
 	};
 	var PLAYER_REPORT_REASON_LABELS = {
@@ -570,6 +588,7 @@
 	var lastMarketplaceModSearch = "";
 	var updateNotice = null;
 	var siteNotice = null;
+	var shortLinks = null, slEditing = null;
 	var suggestions = [];
 	var bugReports = [];
 	var playerReports = [];
@@ -647,6 +666,7 @@
 		if(hasPerm("reports")) bannedListings = await api("/admin/listings/bans");
 		if(hasPerm("updateNotice")) updateNotice = await api("/admin/update-notice");
 		if(hasPerm("siteNotice")) siteNotice = await api("/admin/site-notice");
+		if(hasPerm("shortLinks")) shortLinks = (await api("/admin/short-links")).links;
 		if(hasPerm("suggestions")) suggestions = await api("/admin/suggestions");
 		if(hasPerm("bugReports")) bugReports = await api("/admin/bug-reports");
 		if(hasPerm("playerReports")) playerReports = await api("/admin/player-reports");
@@ -666,6 +686,7 @@
 		renderMarketplaceMod();
 		renderUpdateNotice();
 		renderSiteNotice();
+		renderShortLinks();
 		renderSuggestions();
 		renderBugReports();
 		renderPlayerReports();
@@ -704,6 +725,54 @@
 			errEl.textContent = "Saved.";
 		} catch(err){
 			errEl.style.color = "var(--danger)";
+			errEl.textContent = "Failed: " + err.message;
+		}
+	}
+
+	// ---------------- short links ----------------
+
+	function renderShortLinks(){
+		var el = document.getElementById("slList");
+		if(!shortLinks || !el) return;
+		if(!shortLinks.length){ el.innerHTML = '<div class="meta">No short links yet.</div>'; return; }
+		el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13.5px;"><thead><tr>' +
+			'<th style="text-align:left;padding:6px;">Link</th><th style="text-align:left;padding:6px;">Goes to</th><th style="text-align:right;padding:6px;">Clicks</th><th></th></tr></thead><tbody>' +
+			shortLinks.map(function(l){
+				return '<tr style="border-top:1px solid var(--line);">' +
+					'<td style="padding:6px;white-space:nowrap;"><a href="https://sctp.nl/' + esc(l.slug) + '" target="_blank" rel="noopener">sctp.nl/' + esc(l.slug) + '</a></td>' +
+					'<td style="padding:6px;word-break:break-all;"><code>' + esc(l.target) + '</code><div class="meta">' + esc(l.createdBy) + ' &middot; ' + new Date(l.createdAt).toLocaleDateString() + '</div></td>' +
+					'<td style="padding:6px;text-align:right;">' + (l.clicks || 0) + '</td>' +
+					'<td style="padding:6px;white-space:nowrap;text-align:right;">' +
+						'<button type="button" data-sl-copy="' + esc(l.slug) + '">Copy</button> ' +
+						'<button type="button" data-sl-edit="' + esc(l.slug) + '">Edit</button> ' +
+						'<button type="button" data-sl-del="' + esc(l.slug) + '" style="color:var(--danger);border-color:var(--danger);">Delete</button></td></tr>';
+			}).join("") + '</tbody></table>';
+	}
+
+	function slReset(){
+		slEditing = null;
+		document.getElementById("slSlug").value = "";
+		document.getElementById("slTarget").value = "";
+		document.getElementById("slSaveBtn").textContent = "Save link";
+		document.getElementById("slCancelBtn").hidden = true;
+	}
+
+	async function saveShortLink(){
+		var errEl = document.getElementById("slErr");
+		errEl.style.color = "var(--danger)";
+		errEl.textContent = "";
+		try {
+			var r = await api("/admin/short-links/save", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ slug: document.getElementById("slSlug").value.trim(), target: document.getElementById("slTarget").value.trim(), previousSlug: slEditing }),
+			});
+			shortLinks = (await api("/admin/short-links")).links;
+			renderShortLinks();
+			slReset();
+			errEl.style.color = "var(--accent)";
+			errEl.textContent = "Saved: sctp.nl/" + r.slug + " goes to " + r.target;
+		} catch(err){
 			errEl.textContent = "Failed: " + err.message;
 		}
 	}
@@ -2131,6 +2200,32 @@
 
 	document.getElementById("updateNoticeSaveBtn").addEventListener("click", saveUpdateNotice);
 	document.getElementById("siteNoticeSaveBtn").addEventListener("click", saveSiteNotice);
+	document.getElementById("slSaveBtn").addEventListener("click", saveShortLink);
+	document.getElementById("slCancelBtn").addEventListener("click", slReset);
+	document.getElementById("slList").addEventListener("click", async function(e){
+		var b = e.target.closest("button");
+		if(!b) return;
+		if(b.dataset.slCopy){
+			var url = "https://sctp.nl/" + b.dataset.slCopy;
+			try { await navigator.clipboard.writeText(url); b.textContent = "Copied"; setTimeout(function(){ b.textContent = "Copy"; }, 1500); } catch(err){ window.prompt("Copy this link:", url); }
+		} else if(b.dataset.slEdit){
+			var l = (shortLinks || []).filter(function(x){ return x.slug === b.dataset.slEdit; })[0];
+			if(!l) return;
+			slEditing = l.slug;
+			document.getElementById("slSlug").value = l.slug;
+			document.getElementById("slTarget").value = l.target;
+			document.getElementById("slSaveBtn").textContent = "Save changes";
+			document.getElementById("slCancelBtn").hidden = false;
+			document.getElementById("slSlug").focus();
+		} else if(b.dataset.slDel){
+			if(!confirm("Delete sctp.nl/" + b.dataset.slDel + "? Anyone using it will land on a not-found page.")) return;
+			try {
+				await api("/admin/short-links/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: b.dataset.slDel }) });
+				shortLinks = (await api("/admin/short-links")).links;
+				renderShortLinks();
+			} catch(err){ document.getElementById("slErr").textContent = "Failed: " + err.message; }
+		}
+	});
 
 	// ---------------- manually-added listings ----------------
 

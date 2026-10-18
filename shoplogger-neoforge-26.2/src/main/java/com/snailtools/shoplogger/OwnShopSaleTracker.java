@@ -39,18 +39,26 @@ public final class OwnShopSaleTracker {
 	);
 
 	private static final Map<BlockPos, Boolean> HAS_PENDING_PAYMENT = new HashMap<>();
+	// Payments the owner has already seen by opening the chest themselves: no glow for
+	// those. Cleared when the payment is collected or a new sale comes in.
+	private static final java.util.Set<BlockPos> SEEN = new java.util.HashSet<>();
 	private static final String CONFIG_MESSAGES_ENABLED = "ownShopSale/messagesEnabled";
 
 	private OwnShopSaleTracker() {}
 
 	public static boolean hasPendingPayment(BlockPos containerPos) {
-		return HAS_PENDING_PAYMENT.getOrDefault(containerPos, false);
+		return HAS_PENDING_PAYMENT.getOrDefault(containerPos, false) && !SEEN.contains(containerPos);
+	}
+
+	/** The owner opened this chest by hand: stop highlighting the payment that's in it now. */
+	public static void acknowledge(BlockPos containerPos) {
+		if (HAS_PENDING_PAYMENT.getOrDefault(containerPos, false)) SEEN.add(containerPos.immutable());
 	}
 
 	/** Own shops with a payment waiting — WorldHighlights draws a green highlight around each. */
 	public static List<BlockPos> pendingPaymentPositions() {
 		List<BlockPos> out = new ArrayList<>();
-		HAS_PENDING_PAYMENT.forEach((pos, pending) -> { if (pending) out.add(pos); });
+		HAS_PENDING_PAYMENT.forEach((pos, pending) -> { if (pending && !SEEN.contains(pos)) out.add(pos); });
 		return out;
 	}
 
@@ -75,6 +83,7 @@ public final class OwnShopSaleTracker {
 
 		boolean nowHasPayment = containerHasItem(handler, baseItemId);
 		Boolean before = HAS_PENDING_PAYMENT.put(containerPos, nowHasPayment);
+		if (!nowHasPayment || Boolean.FALSE.equals(before)) SEEN.remove(containerPos); // collected, or a new sale
 
 		// Only notify on a genuine LIVE transition (confirmed empty -> now has
 		// payment) observed within this session. If `before` is null, this is

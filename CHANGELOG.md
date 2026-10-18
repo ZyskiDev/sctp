@@ -4,18 +4,18 @@
 
 ### Mod
 - **Confirm expensive buys** (on by default, Settings › Alerts): clicking an item in someone else's shop buys it straight away, so for shops priced at or above your threshold (32 DB by default) the first click does nothing except outline the slot in amber with "Click again to buy · <price>". Click the same item again within 4 seconds to buy it. Your own shops and cheaper shops work as before.
-- **Run auctions in-game** (Settings › Advanced › "Auctions on the dashboard", then rejoin): an Auctions screen lists the auctions you host (by your Minecraft name) and any you add with the code from the auction admin page. Each lot shows its seller, prices and status; click one to sell it at any price, mark it unsold or undo. A Payouts tab shows what to pay each seller after the cut. Commands, while holding the item:
-  - `/sold <price>` sells the lot. Prices can be written like `2stx63db`, `84db3dia`, `1stx`, `58db` or `4stx47db2dia` (a bare number is DB). The stack in your hand picks the lot size; if several sellers entered the same rare you get a list to pick from. A price below the seller's lowest limit asks you to run it again. Every sale has an [Undo] button.
-  - `/unsold` marks the lot as not sold.
-  - `/info` shows the seller, starting bid, lowest limit, SCTP's value and status. In a Dutch auction it also opens the **Dutch clock**: a popup that reads the nearest circle of 32 copper bulbs and shows the price right now (all lit = starting bid, none lit = lowest limit), the circle, and the price at each quarter. It stays until that lot is sold or unsold, and `/sold` without a price sells at the clock's price.
-  - `/auction <player>` while holding a shulker enters its rares for that player (you pick the prices). If they already entered online, you choose to ADD, OVERRIDE or MERGE (only add what's new).
-- **Rares by base item:** searching the rare library for "elytra" or "netherite sword" also finds rares made from that item (worked out from shop scans).
+- **Rares by base item:** searching the rare library for "elytra" or "netherite sword" also finds rares made from that item (worked out from shop scans). The search box says so.
+- **Sell bugs at Sefi** (thanks ZyskiDev): in the Creepy Crawly Exchange at spawn, a **Sell** button sells your Butterfly Garden bugs for you, one at a time, and the bugs you can sell are highlighted. Selling is blocked ("Remove wrong-owner bugs to sell") while you carry a bug that belongs to someone else.
+- **Watching icon:** items on your watchlist show a small spyglass in the Rares and Items libraries.
+- **Stock holograms** are two short lines now ("64 in stock", then the age), so holograms on chests side by side don't overlap, and they turn bright red when a chest is empty.
+- **Sold highlight:** the green glow on your shop chest stops once you open that chest yourself, like before 2.4's scan fix, and comes back with the next sale.
 - **Sorting and remembered filters:** Listings, Marketplace, item pages and seller profiles remember their filters. Sorting is "Auto" until you pick one: newest first with an empty search, cheapest first (then newest) once you type. Item pages list the cheapest first.
-- **Item page for what you're holding:** hold X and press I to open the item page (listings and price history) for the item in your hand; rares open their rare page. X on its own still opens the Item Library, now when you let go of it. Both keys can be changed in Controls.
+- **Item page for what you're holding:** hold X and press I to open the item page (listings and price history) for the item in your hand, or, in an inventory or chest, for the item under the mouse; rares open their rare page. X on its own still opens the Item Library, now when you let go of it. Both keys can be changed in Controls.
 
 ### Website
-- **Mapart credit:** mapart can credit the artist of the original art it's based on ("original art by …"), set by its owner or a mapart manager, shown on the mapart page and cards.
-- **Auctions:** the auction admin page shows each auction's in-game code for Shop Logger, and auctions can be deleted from the menu (they're set to finished; entries, results and statistics are kept).
+- **My Shop Statistics:** item names link to their item page.
+- **Brushbug Bunny** is now **Brushbug Buddy**, and the rare search box says you can search by rare name or base item.
+- **Mapart credit:** mapart can credit the artist of the original art it's based on ("original art by …"), set by its owner, shown on the mapart page and cards.
 - **Rares updated** from the latest Snailcraft Items sheet: 5 new rares (Old Shabby Axe, Cursed Elytra, XV. The Devil, XVIII. The Moon, Haunted Snail House) and two names fixed (Snearth & Snoon, XVII. The Star (Reversed)). The item library's rare search also finds rares by base item.
 - **Sorting and remembered filters:** the search page, item pages, seller pages and the marketplace sort newest first while the search box is empty and cheapest first (then newest) once you type, until you pick a sort yourself. Your filters and picked sort are remembered in your browser until you reset them. The marketplace got a Newest / Price sort, and posts without a budget no longer show "null".
 

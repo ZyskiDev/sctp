@@ -2193,7 +2193,7 @@
 			var stockCell = r.mapartGallery
 				? '&mdash;'
 				: r.marketplace
-				? (r.marketplaceType === "lookingFor" ? "wants " : "has ")+fmtNum(r.amount)
+				? (r.marketplaceType === "lookingFor" ? "wants " : r.marketplaceType === "auction" ? "lot of " : "has ")+fmtNum(r.amount)
 				: manual
 					? '&infin;'+manualIcon("Added manually by an admin — stock isn't tracked for this listing.")
 					: fmtNum(r.amount)+'<br><span class="price-sub">'+r.stacksInStock+' '+(r.bulk ? 'shulks' : r.stackSize === 64 ? 'stacks' : 'groups')+'</span>';
@@ -2212,7 +2212,7 @@
 			var typeCell = r.mapartGallery
 				? '<span class="badge mapart">Mapart gallery</span>'
 				: r.marketplace
-				? '<span class="badge marketplace">'+(r.marketplaceType === "lookingFor" ? "Wanted (Marketplace)" : "Marketplace")+'</span>'
+				? '<span class="badge marketplace">'+(r.marketplaceType === "lookingFor" ? "Wanted (Marketplace)" : r.marketplaceType === "auction" ? "Auction" : "Marketplace")+'</span>'
 				: (r.bulk ? '<span class="badge bulk">Bulk</span>' : r.bundled ? '<span class="badge bundled">Bundled</span>' : '<span class="badge single">Single</span>')+
 					(r.mixedContents ? ' <span class="badge mixed">Mixed chest</span>' : '');
 			html += '<tr'+(r.marketplace ? ' class="marketplace-row"' : '')+'>'+
@@ -2229,7 +2229,7 @@
 				'<td>'+stockCell+'</td>'+
 				'<td class="seller">'+(sellerUrl(r.seller, r.world) ? '<a href="'+sellerUrl(r.seller, r.world)+'">'+esc(r.seller)+'</a>' : esc(r.seller))+infoIcon+'</td>'+
 				'<td>'+esc(r.world)+'</td>'+
-				'<td class="position">'+esc(r.position)+'</td>'+
+				'<td class="position">'+(r.marketplaceType === "auction" ? '<a href="/auction/" title="Rares in an upcoming auction, priced at their starting bid">'+esc(r.position)+'</a>' : esc(r.position))+'</td>'+
 				'<td>'+lastSeenCell+'</td>'+
 				'<td>'+availableSinceCell(r)+'</td>'+
 				'<td><div class="action-btns">'+

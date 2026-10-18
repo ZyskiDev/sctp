@@ -3,15 +3,26 @@
 <head>
 <meta charset="utf-8">
 <script>
-	// /v<number> (any number of digits — /v2, /v3, /v49747, ...) is a short link to
-	// the "what's new" onboarding page. Redirect immediately, before loading anything
-	// else on this page — GitHub Pages routes any unmatched path here (see the rest of
-	// this file's routing further down for /items, /mapart, /s, /collection).
-	if (/^\/v\d+\/?$/i.test(location.pathname)) location.replace("/onboarding/update/");
+	// sctp.nl/<name> — a short link made in the admin panel ("Short links").
+	// GitHub Pages routes any unmatched path here, so a single-segment path is
+	// looked up first, with the page hidden so nothing flashes before the
+	// redirect. Unknown names fall through to this page's normal routing (see
+	// further down for /items, /mapart, /s, /collection).
+	(function(){
+		var m = /^\/([A-Za-z0-9][A-Za-z0-9_-]{0,39})\/?$/.exec(location.pathname);
+		if (!m) return;
+		document.documentElement.style.visibility = "hidden";
+		var show = function(){ document.documentElement.style.visibility = ""; };
+		fetch("https://snailcraft-trading-post.snailcraft-trading-post.workers.dev/short-link?slug=" + encodeURIComponent(m[1].toLowerCase()))
+			.then(function(r){ return r.ok ? r.json() : null; })
+			.then(function(d){ if (d && d.target) location.replace(d.target); else show(); })
+			.catch(show);
+		setTimeout(show, 4000);
+	})();
 	// /f/<slug> — a custom form (see admin-forms.html / f/index.html). Same
-	// early-redirect trick as /v<N> above, rather than folding form-rendering
-	// into this already-huge router: /f/index.html is a fully self-contained
-	// page that reads ?slug= itself.
+	// early-redirect trick as the short links above, rather than folding
+	// form-rendering into this already-huge router: /f/index.html is a fully
+	// self-contained page that reads ?slug= itself.
 	(function(){
 		var m = /^\/f\/([^\/]+)\/?$/i.exec(location.pathname);
 		if (m) location.replace("/f/index.html?slug=" + encodeURIComponent(m[1]));
@@ -366,17 +377,18 @@
 	function renderMarketplaceSection(rows){
 		if(!rows.length) return "";
 		var rowsHtml = rows.map(function(r){
-			var typeLabel = r.marketplaceType === "lookingFor" ? "Looking for" : "Selling";
+			var auction = r.marketplaceType === "auction";
+			var typeLabel = r.marketplaceType === "lookingFor" ? "Looking for" : auction ? "Auction" : "Selling";
 			var sellerLink = r.seller ? '<a href="/s/'+(r.world === "Honeybee" ? "hb" : "ff")+'/'+encodeURIComponent(r.seller)+'">'+esc(r.seller)+'</a>' : "";
 			return '<tr><td><span class="badge marketplace">'+esc(typeLabel)+'</span></td>'+
-				'<td>'+esc(r.itemNameDisplay || r.itemName)+'</td>'+
+				'<td>'+esc(r.itemNameDisplay || r.itemName)+(auction && r.auctionTitle ? '<br><a href="/auction/" style="font-size:12px;">'+esc(r.auctionTitle)+(r.auctionAt ? ' &middot; '+esc(new Date(r.auctionAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })) : '')+'</a>' : '')+'</td>'+
 				'<td>'+fmtNum(r.amount)+'</td>'+
 				'<td>'+esc(r.priceLabel)+'</td>'+
 				'<td>'+esc(r.world)+'</td>'+
 				'<td>'+sellerLink+'</td></tr>';
 		}).join("");
 		return '<section class="table-card" style="margin-bottom:20px;">'+
-			'<div class="table-toolbar"><span class="count">Marketplace listings ('+fmtNum(rows.length)+')</span></div>'+
+			'<div class="table-toolbar"><span class="count">'+(rows.some(function(r){ return r.marketplaceType === "auction"; }) ? 'Marketplace &amp; auctions' : 'Marketplace listings')+' ('+fmtNum(rows.length)+')</span></div>'+
 			'<div class="table-scroll"><table><thead><tr><th>Type</th><th>Item</th><th>Qty</th><th>Price</th><th>World</th><th>Poster</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'+
 		'</section>';
 	}
@@ -554,7 +566,10 @@
 			// them apart from real shop listings sharing the same array.
 			marketplace: raw.marketplace === true,
 			marketplaceType: raw.marketplaceType || null,
-			marketplaceListingId: raw.marketplaceListingId || null
+			marketplaceListingId: raw.marketplaceListingId || null,
+			// rares entered in an upcoming auction (marketplaceType "auction")
+			auctionTitle: raw.auctionTitle || null,
+			auctionAt: raw.auctionAt || null
 		};
 	}
 
@@ -1574,7 +1589,7 @@
 			if(!host) return;
 			function fmt(d){ return d > 9 ? (Math.round(d/9*100)/100) + " db" : (Math.round(d*100)/100) + " dia"; }
 			function cell(world){
-				var prices = currentListings.filter(function(r){ return r.world === world && String(r.currency||"").toLowerCase() !== "display" && (convertOn() || String(r.currency||"").toLowerCase() === "diamond"); })
+				var prices = currentListings.filter(function(r){ return r.world === world && r.marketplaceType !== "auction" && String(r.currency||"").toLowerCase() !== "display" && (convertOn() || String(r.currency||"").toLowerCase() === "diamond"); })
 					.map(pricePerItem).filter(function(p){ return isFinite(p) && p > 0; }).sort(function(a,b){ return a - b; });
 				if(!prices.length) return '<div class="pc-cell"><div class="pc-world">'+world+'</div><div class="pc-val none">No estimate yet</div><div class="pc-sub">not listed right now</div></div>';
 				var mid = prices.length % 2 ? prices[(prices.length-1)/2] : (prices[prices.length/2-1] + prices[prices.length/2]) / 2;

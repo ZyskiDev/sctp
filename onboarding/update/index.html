@@ -5,7 +5,7 @@
 <title>What's New - SCTP</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23101B14'/><circle cx='100' cy='100' r='60' fill='%23B7E23D'/></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="What's new in SCTP 2.5: a confirm for expensive buys, the item page for what you're holding, smarter sorting, rares by base item, and running rare auctions in-game.">
+<meta name="description" content="What's new in SCTP 2.5: a confirm for expensive buys, the item page for what you're holding, smarter sorting, rares by base item, and selling bugs at Sefi.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -144,7 +144,7 @@
 		<a href="#held-item"><span class="toc-num">02</span>The item you're holding</a>
 		<a href="#sorting"><span class="toc-num">03</span>Smarter sorting</a>
 		<a href="#base-item"><span class="toc-num">04</span>Rares by base item</a>
-		<a href="#host-auctions"><span class="toc-num">05</span>Auctions in-game</a>
+		<a href="#sell-bugs"><span class="toc-num">05</span>Sell bugs at Sefi</a>
 		<a href="#mapart-credit"><span class="toc-num">06</span>Mapart credit</a>
 		<a href="#site-extras"><span class="toc-num">07</span>More on the site</a>
 	</nav>
@@ -176,6 +176,7 @@
 				<div class="notes">
 					<ul>
 						<li>It opens that item's page: every listing for it and its price history. Rares open their rare page with all their details.</li>
+						<li>In your inventory or a chest, <b>hover</b> over an item and press X + I to open the page for that item instead.</li>
 						<li><b>X</b> on its own still opens the dashboard, now when you let go of it.</li>
 						<li>Both keys can be changed in <b>Options &rsaquo; Controls &rsaquo; Shop Logger</b>.</li>
 					</ul>
@@ -213,24 +214,15 @@
 			</div>
 		</section>
 
-		<section class="step" id="host-auctions">
-			<div class="step-head"><div class="step-num">5</div><h3>Running an auction in-game</h3><span class="new-pill">MOD &middot; HOSTS</span></div>
-			<p class="step-lede">Hosting a rare auction? Do it from the game: sell lots with one command, and let the mod read the Dutch clock for you.</p>
-			<div class="step-body">
-				<div class="notes">
-					<ul>
-						<li>Turn it on in <b>Settings &rsaquo; Advanced &rsaquo; Auctions on the dashboard</b>, then rejoin. Auctions you host show up by your Minecraft name; helpers add one with the code from the auction admin page.</li>
-						<li>Hold the item and type <code>/sold 2stx63db</code>. Prices work in any mix: <code>84db3dia</code>, <code>1stx</code>, <code>58db</code>, <code>4stx47db2dia</code>. <code>/unsold</code> if nobody buys it. Every sale has an <b>Undo</b> button.</li>
-						<li><code>/info</code> shows the seller, starting bid, lowest limit and SCTP's value. In a Dutch auction it opens the <b>Dutch clock</b>: it reads the nearest circle of 32 copper bulbs and shows the price right now, and <code>/sold</code> without a price sells at that price.</li>
-						<li>Holding a seller's shulker? <code>/auction &lt;player&gt;</code> enters all their rares at once. Already entered on the site? Choose <b>add</b>, <b>override</b> or <b>merge</b>.</li>
-						<li>The <b>Auctions</b> screen lists every lot to click and sell, plus a <b>Payouts</b> tab with what to pay each seller after the cut.</li>
-					</ul>
-				</div>
-				<div class="demo-row">
-					<span class="demo-label">Example</span>
-					<code style="font-size:13px;">/sold 2stx63db</code>
-					<span style="color:#7BD389;font-size:13px;">Sold Apple Elytra from Steve for 2 STX 63 DB</span>
-				</div>
+		<section class="step" id="sell-bugs">
+			<div class="step-head"><div class="step-num">5</div><h3>Sell your bugs at Sefi</h3><span class="new-pill">MOD</span></div>
+			<p class="step-lede">Caught a pile of bugs in your Butterfly Garden? Selling them at the Creepy Crawly Exchange at spawn is one click now. Thanks to ZyskiDev!</p>
+			<div class="notes">
+				<ul>
+					<li>Open the <b>Creepy Crawly Exchange</b> and press the new <b>Sell</b> button: the mod sells your bugs for you, one at a time. Press it again to stop.</li>
+					<li>The bugs you can sell are highlighted, so you can see what's going in.</li>
+					<li>Carrying a bug that belongs to someone else? Selling is blocked until you put it away, so you never sell another player's bug by accident.</li>
+				</ul>
 			</div>
 		</section>
 
@@ -250,7 +242,6 @@
 			<div class="notes">
 				<ul>
 					<li><b>5 new rares</b> from the item sheet (Old Shabby Axe, Cursed Elytra, XV. The Devil, XVIII. The Moon and Haunted Snail House), and two names fixed.</li>
-					<li><b>Auction hosts</b> see each auction's in-game code on the auction admin page, and old auctions can be deleted from the menu. Their results and statistics are kept.</li>
 					<li>Marketplace posts without a budget no longer say &ldquo;null&rdquo;.</li>
 				</ul>
 			</div>

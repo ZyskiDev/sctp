@@ -150,6 +150,7 @@ public class ShopLoggerClient {
 				KEY_CATEGORY
 		);
 		event.register(heldItemKey);
+		com.snailtools.shoplogger.gui.HeldItemPage.setKeys(openLibraryKey, heldItemKey);
 	}
 
 	private void registerGuiLayers(RegisterGuiLayersEvent event) {

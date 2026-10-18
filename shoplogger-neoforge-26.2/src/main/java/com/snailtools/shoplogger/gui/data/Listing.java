@@ -34,7 +34,7 @@ public class Listing {
 
 	// Set only for rows GET /listings merges in from the marketplace (see
 	// worker.js's marketplaceRowAsListing) — a real shop listing never has
-	// these. marketplaceType is "selling" or "lookingFor"; position for these
+	// these. marketplaceType is "selling", "lookingFor" or "auction" (a rare entered in an upcoming auction); position for these
 	// is always the literal text "Marketplace listing" (never real
 	// coordinates), which is also why parsePosition() naturally yields no [TP]
 	// button for them.
@@ -50,6 +50,7 @@ public class Listing {
 	/** Price per single item in diamonds — same basis as the website's priceInDiamonds()/stackSize. */
 	public double pricePerItemInDiamonds() {
 		if ("display".equalsIgnoreCase(currency)) return Double.POSITIVE_INFINITY;
+		if ("auction".equals(marketplaceType) && price <= 0) return Double.POSITIVE_INFINITY; // host picks the price
 		double mult = CURRENCY_VALUE.getOrDefault(currency == null ? "" : currency.toLowerCase(), 1.0);
 		int size = stackSize <= 0 ? 1 : stackSize;
 		return (price * mult) / size;

@@ -95,6 +95,15 @@ public final class AuctionClient {
 		return call(() -> post("/mod/auctions/result", body), ResultResponse.class);
 	}
 
+	/** Sets a waiting lot's price (minDia is ignored for a regular auction). */
+	public static CompletableFuture<ResultResponse> price(String itemId, int startDia, int minDia) {
+		JsonObject body = new JsonObject();
+		body.addProperty("itemId", itemId);
+		body.addProperty("startDia", startDia);
+		body.addProperty("minDia", minDia);
+		return call(() -> post("/mod/auctions/price", body), ResultResponse.class);
+	}
+
 	/** items: [{name, count}]; mode null the first time, then "add" | "override" | "merge". */
 	public static CompletableFuture<EnterResponse> enter(String auctionId, String mcUsername, List<Map<String, Object>> items, String mode) {
 		JsonObject body = new JsonObject();

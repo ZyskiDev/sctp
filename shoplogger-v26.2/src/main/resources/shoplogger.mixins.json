@@ -9,6 +9,7 @@
     "EmptyHandMixin",
     "GuiScreenMixin",
     "InteractionMixin",
+    "KeyboardHandlerMixin",
     "LevelRendererMixin",
     "MouseHandlerMixin",
     "ScreenMixin"

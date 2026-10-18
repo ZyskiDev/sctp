@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
  *   /unsold            the held item's lot didn't sell
  *   /info              the held item's lot: seller, prices, value; for a Dutch
  *                      auction it also opens the clock popup
+ *   /info <price>      sets the lot's price first (Dutch: /info <start> to <lowest>)
  *   /auction <player>  enter the held shulker's rares for that player
  * A "#<lot id>" argument (from the click-to-pick lists) names the lot directly.
  */
@@ -115,7 +116,44 @@ public final class AuctionCommands {
 	// ---------------- /info ----------------
 
 	private static void info(String args) {
-		pickLot(lotIdIn(args), true, "info", (auction, lot) -> {
+		String lotId = lotIdIn(args);
+		String priceText = args.replaceAll("#\\S+", "").trim();
+		if (priceText.isEmpty()) { pickLot(lotId, true, "info", AuctionCommands::showInfo); return; }
+		Integer[] prices = parsePrices(priceText);
+		if (prices == null) { error("Couldn't read \"" + priceText + "\" as a price. Try /info 58db, or for a Dutch auction /info 2stx to 40db (starting bid to lowest limit)."); return; }
+		pickLot(lotId, false, "info " + priceText, (auction, lot) -> {
+			if (auction.dutch() && prices[1] == null) {
+				error("A Dutch auction needs a starting bid and a lowest limit, e.g. /info " + priceText + " to 40db.");
+				return;
+			}
+			int start = prices[0], min = prices[1] != null ? prices[1] : prices[0];
+			AuctionClient.price(lot.id, start, min).whenComplete((r, ex) -> Minecraft.getInstance().execute(() -> {
+				if (ex != null) { error(AuctionClient.messageOf(ex)); return; }
+				send(pre(ChatFormat.SUCCESS, "Price set for " + lotName(lot) + "."));
+				showInfo(auction, r.item != null ? r.item : lot);
+			}));
+		});
+	}
+
+	/** "58db" -> {522, null}; "2stx to 40db", "2stx / 40db" or "2stx 40db" -> {start, lowest}. Null if unreadable. */
+	private static Integer[] parsePrices(String text) {
+		String[] parts = text.split("(?i)\\s+to\\s+|\\s*/\\s*");
+		if (parts.length > 2) return null;
+		if (parts.length == 2) {
+			Integer a = AuctionHost.parseDia(parts[0]), b = AuctionHost.parseDia(parts[1]);
+			return a != null && b != null ? new Integer[] { a, b } : null;
+		}
+		String[] tokens = text.trim().split("\\s+");
+		if (tokens.length == 2) {
+			Integer a = AuctionHost.parseDia(tokens[0]), b = AuctionHost.parseDia(tokens[1]);
+			if (a != null && b != null) return new Integer[] { a, b };
+		}
+		Integer one = AuctionHost.parseDia(text);
+		return one == null ? null : new Integer[] { one, null };
+	}
+
+	private static void showInfo(AuctionClient.Auction auction, AuctionClient.Lot lot) {
+		{
 			List<String> lines = new ArrayList<>();
 			String prices;
 			if (lot.hostPicks) prices = "Host picks the price";
@@ -133,8 +171,12 @@ public final class AuctionCommands {
 			if (auction.dutch() && "entered".equals(lot.status) && !lot.hostPicks) {
 				DutchClock.show(lot, auction.title);
 				send(Component.literal("  Dutch clock is on (top right). /sold sells at its price.").withStyle(ChatFormatting.GOLD));
+			} else if (lot.hostPicks && "entered".equals(lot.status)) {
+				send(Component.literal(auction.dutch()
+						? "  Set the price: /info <starting bid> to <lowest>, e.g. /info 2stx to 40db"
+						: "  Set the price: /info <price>, e.g. /info 58db").withStyle(ChatFormatting.GOLD));
 			}
-		});
+		}
 	}
 
 	// ---------------- picking the lot ----------------

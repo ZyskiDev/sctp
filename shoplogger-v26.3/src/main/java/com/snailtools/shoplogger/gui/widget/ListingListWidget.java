@@ -149,7 +149,10 @@ public class ListingListWidget extends AbstractSelectionList<ListingListWidget.L
 
 			int tx = x + 28;
 			int rightEdge = buttonsLeft() - 6;
-			String price = listing.priceLabel + " / " + listing.stackSize;
+			// rares in an upcoming auction (merged into /listings): the lot and its starting bid
+			String price = "auction".equals(listing.marketplaceType)
+					? "Auction · " + listing.priceLabel + (listing.stackSize > 1 ? " · " + listing.stackSize + "×" : "")
+					: listing.priceLabel + " / " + listing.stackSize;
 			String stock = "x" + listing.amount + " (" + listing.stacksInStock + ")";
 			int priceW = Math.max(font.width(price), font.width(stock));
 			int textW = rightEdge - priceW - 8 - tx;

@@ -127,6 +127,8 @@ public class ShopLoggerClient implements ClientModInitializer {
 				KEY_CATEGORY
 		));
 
+		com.snailtools.shoplogger.gui.HeldItemPage.setKeys(openLibraryKey, heldItemKey);
+
 		// Manual path: player right-clicks a chest/barrel themselves.
 		UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
 			if (!world.isClientSide()) return InteractionResult.PASS;

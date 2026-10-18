@@ -34,7 +34,8 @@ public final class StockHolograms {
 	private static final double MAX_DISTANCE = 8.0;
 	private static final float SCALE = 0.0085f;
 	private static final int COLOR = 0xFFD9DED6;
-	private static final int EMPTY_COLOR = 0xFF9AA19A;
+	private static final int AGE_COLOR = 0xFFAEB5AC;
+	private static final int EMPTY_COLOR = 0xFFFF4D4D; // bright red: nothing left to buy
 
 	private record Summary(String world, int stock, int items, long scannedAt) {}
 	private static final Map<BlockPos, Summary> LATEST = new HashMap<>();
@@ -83,11 +84,11 @@ public final class StockHolograms {
 			Vec3 toCam = camera.subtract(faceCenter);
 			if (toCam.x * front.getStepX() + toCam.z * front.getStepZ() <= 0.05) continue;
 
-			String age = ago(now - s.scannedAt());
-			String text = s.items() == 0 || s.stock() == 0 ? "Empty · " + age
-					: (s.items() > 1 ? s.items() + " items · " : "") + s.stock() + " in stock · " + age;
-			FormattedCharSequence line = Component.literal(text).getVisualOrderText();
+			// two short lines, so holograms on chests side by side don't run into each other
 			boolean empty = s.items() == 0 || s.stock() == 0;
+			String age = ago(now - s.scannedAt());
+			FormattedCharSequence line = Component.literal(empty ? "Empty" : s.stock() + " in stock").getVisualOrderText();
+			FormattedCharSequence line2 = Component.literal((!empty && s.items() > 1 ? s.items() + " items · " : "") + age).getVisualOrderText();
 			// chests are inset 1/16 from the block edge; barrels fill the block
 			double faceDepth = state.getBlock() instanceof BarrelBlock ? 0.5 : 0.4375;
 
@@ -96,10 +97,12 @@ public final class StockHolograms {
 			// same as Axis.YP.rotationDegrees(-yRot); a matrix so it compiles on 26.2 and 26.3 alike
 			poseStack.mulPose(new Matrix4f().rotationY((float) Math.toRadians(-front.toYRot()))); // local +z now points out of the front
 			// low on the face, below where a wall sign sits (signs start 4.5/16 up)
-			poseStack.translate(0.0, -0.36, faceDepth + 0.004);
+			poseStack.translate(0.0, -0.31, faceDepth + 0.004);
 			poseStack.scale(SCALE, -SCALE, SCALE);
 			collector.submitText(poseStack, -font.width(line) / 2f, 0, line, false, Font.DisplayMode.POLYGON_OFFSET,
 					0xF000F0, empty ? EMPTY_COLOR : COLOR, 0, 0);
+			collector.submitText(poseStack, -font.width(line2) / 2f, 10, line2, false, Font.DisplayMode.POLYGON_OFFSET,
+					0xF000F0, empty ? EMPTY_COLOR : AGE_COLOR, 0, 0);
 			poseStack.popPose();
 		}
 	}

@@ -100,7 +100,22 @@ public final class DutchClock {
 				}
 			}
 		}
-		return new ArrayList<>(seen);
+		// The real circle is exactly 32 bulbs. Extra connected bulbs (like a fake
+		// one next to it) are dropped, most oxidized first: the circle itself is
+		// the least oxidized.
+		List<BlockPos> circle = new ArrayList<>(seen);
+		if (circle.size() > LIGHTS) {
+			circle.sort(java.util.Comparator.<BlockPos>comparingInt(p -> oxidation(mc.level.getBlockState(p)))
+					.thenComparingDouble(p -> p.distSqr(me)));
+			circle = new ArrayList<>(circle.subList(0, LIGHTS));
+		}
+		return circle;
+	}
+
+	/** 0 = fresh copper, 1 = exposed, 2 = weathered, 3 = oxidized (waxed counts the same). */
+	private static int oxidation(BlockState state) {
+		String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+		return id.contains("oxidized") ? 3 : id.contains("weathered") ? 2 : id.contains("exposed") ? 1 : 0;
 	}
 
 	public static void render(GuiGraphicsExtractor g) {
@@ -143,7 +158,7 @@ public final class DutchClock {
 			g.text(font, trim(font, line, w - 84), tx, qy, here ? TEXT : MUTED, false);
 			qy += 10;
 		}
-		if (lit >= 0 && bulbs.size() != LIGHTS) {
+		if (lit >= 0 && bulbs.size() < LIGHTS) {
 			g.text(font, trim(font, "found " + bulbs.size() + " bulbs, expected " + LIGHTS, w - 12), x + 6, y + 112, 0xFFE2A33D, false);
 		}
 		g.text(font, trim(font, "/sold sells at this price", w - 12), x + 6, y + h - 32, MUTED, false);

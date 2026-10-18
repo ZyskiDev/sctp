@@ -572,7 +572,7 @@ async function firstBannedItem(env, seller, itemNames) {
 // accounts existed — see requireAnyAdmin.
 const ADMIN_PERMISSION_BUCKETS = new Set([
 	"reports", "sharedShopRequests", "faq", "manualListings", "blockedSellers", "marketplaceListings", "updateNotice",
-	"suggestions", "bugReports", "playerReports", "manageMapart", "manageForms", "auctions", "siteNotice", "secretSanta",
+	"suggestions", "bugReports", "playerReports", "manageMapart", "manageForms", "auctions", "siteNotice", "secretSanta", "shortLinks",
 ]);
 
 // Ranks bids for a seller's convenience using the shared CURRENCY_VALUE
@@ -1444,7 +1444,10 @@ async function handleGetListings(request, env, ctx) {
 		// for real shop stock.
 		const wantGallery = new URL(request.url).searchParams.get("mapart") === "1";
 		const galleryRows = wantGallery ? await getMapartGalleryRows(env) : [];
-		return shopRows.concat(marketplaceRows, galleryRows);
+		// Rares entered in an upcoming or running auction, tagged like marketplace
+		// posts (marketplaceType "auction"), so they show up wherever those do.
+		const auctionRows = await getAuctionLotRows(env).catch(() => []);
+		return shopRows.concat(marketplaceRows, auctionRows, galleryRows);
 	});
 }
 
@@ -1506,6 +1509,35 @@ function marketplaceRowAsListing(m, posterName) {
 		return { ...base, price, currency, priceLabel: marketplacePriceLabel(price, currency, m.askingPrice != null ? "asking" : "starting bid") };
 	}
 	return { ...base, price: m.budget, currency: m.budgetCurrency, priceLabel: marketplacePriceLabel(m.budget, m.budgetCurrency, "budget") };
+}
+
+/**
+ * Lots still waiting in auctions that aren't finished, as listing rows: the
+ * seller is whoever entered it, the price is the starting bid (or "host picks"),
+ * and position names the auction. Tagged marketplace + marketplaceType
+ * "auction" so consumers keep them apart from real shop stock.
+ */
+async function getAuctionLotRows(env) {
+	const { results } = await env.DB.prepare(
+		`SELECT i.*, a.title AS auctionTitle, a.auctionAt, a.world AS auctionWorld, a.type AS auctionType
+		 FROM auctionItems i JOIN auctions a ON a.id = i.auctionId
+		 WHERE i.status = 'entered' AND a.deletedAt IS NULL AND a.status != 'finished' AND a.auctionAt > ?`
+	).bind(new Date(Date.now() - 12 * 3600 * 1000).toISOString()).all(); // upcoming, or started in the last 12 hours
+	return results.map((i) => {
+		const day = new Date(i.auctionAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/Amsterdam" });
+		const qty = i.quantity || 1;
+		return {
+			id: "auction-" + i.id,
+			itemName: i.itemName, baseItem: "", bulk: false, bundled: false, mixedContents: false,
+			stackSize: qty, amount: qty, stacksInStock: 1,
+			seller: i.mcUsername, world: i.auctionWorld, position: `Auction: ${i.auctionTitle} (${day})`,
+			lastSeen: i.createdAt, availableSince: i.createdAt,
+			price: i.hostPicks ? null : i.startDia, currency: "diamond",
+			priceLabel: i.hostPicks ? "host picks (auction)" : `${fmtDia(i.startDia)} ${i.auctionType === "regular" ? "starting price" : "starting bid"}`,
+			marketplace: true, marketplaceType: "auction", marketplaceListingId: null,
+			auctionId: i.auctionId, auctionTitle: i.auctionTitle, auctionAt: i.auctionAt,
+		};
+	});
 }
 
 async function getActiveMarketplaceRows(env) {
@@ -7180,18 +7212,29 @@ async function handleAdminAuctionItemPrice(request, env) {
 	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
 	const item = await env.DB.prepare("SELECT * FROM auctionItems WHERE id = ?").bind(String(body.itemId || "")).first();
 	if (!item) return json({ error: "Item not found" }, 404);
+	const r = await setAuctionItemPrice(env, item, body.startDia, body.minDia);
+	if (r.error) return json({ error: r.error }, 400);
+	return json({ ok: true, ...r, hostPicks: 0 });
+}
+
+/**
+ * Sets an entry's price (shared by the admin page and the mod's /info <price>):
+ * a regular auction has one price, a Dutch one needs a lowest limit below the
+ * starting bid. Turns "let the host pick" off. Returns {error} or {startDia, minDia}.
+ */
+async function setAuctionItemPrice(env, item, startIn, minIn) {
 	const auction = await env.DB.prepare("SELECT type FROM auctions WHERE id = ?").bind(item.auctionId).first();
-	const startDia = Math.round(Number(body.startDia));
-	let minDia = Math.round(Number(body.minDia));
-	if (!(startDia > 0)) return json({ error: "Enter a starting price." }, 400);
+	const startDia = Math.round(Number(startIn));
+	let minDia = Math.round(Number(minIn));
+	if (!(startDia > 0)) return { error: "Enter a starting price." };
 	if (auction && auction.type === "regular") minDia = startDia;
 	else {
-		if (!(minDia > 0)) return json({ error: "Enter a lowest limit." }, 400);
-		if (minDia >= startDia) return json({ error: "The lowest limit must be below the starting bid." }, 400);
+		if (!(minDia > 0)) return { error: "Enter a lowest limit." };
+		if (minDia >= startDia) return { error: "The lowest limit must be below the starting bid." };
 	}
 	await env.DB.prepare("UPDATE auctionItems SET startDia = ?, minDia = ?, hostPicks = 0, updatedAt = ? WHERE id = ?")
 		.bind(startDia, minDia, new Date().toISOString(), item.id).run();
-	return json({ ok: true, startDia, minDia, hostPicks: 0 });
+	return { startDia, minDia };
 }
 
 async function handleAdminAuctionResult(request, env) {
@@ -7207,6 +7250,78 @@ async function handleAdminAuctionResult(request, env) {
 	const r = await setAuctionItemResult(env, item, status, body.soldDia);
 	if (r.error) return json({ error: r.error }, 400);
 	return json({ ok: true, ...r });
+}
+
+// ---------------- short links (sctp.nl/<slug>) ----------------
+//
+// Admins with "shortLinks" make sctp.nl/<slug> redirect to any page on the
+// site (404.html looks the slug up via GET /short-link before showing anything).
+// Slugs can't take the name of a real top-level page.
+const SHORT_LINK_SLUG = /^[a-z0-9][a-z0-9_-]{0,39}$/;
+const SHORT_LINK_RESERVED = new Set([
+	"404", "account", "admin", "admin-forms", "auction", "auctionadmin", "bug", "collection", "content-2.0", "data", "docs", "docs-src",
+	"f", "index", "items", "list", "mapart", "marketplace", "onboarding", "privacy", "rare-dle", "register", "report", "reset-password",
+	"roadmap", "s", "scripts", "search", "secret-santa", "stats", "store", "suggest", "themes", "verify", "verify-link", "world",
+	"themes", "favicon.ico", "robots.txt", "cname",
+]);
+
+/** A target on sctp.nl as a path ("/auction/?x=1#y"), or null. Full sctp.nl URLs are accepted too. */
+function cleanShortLinkTarget(input) {
+	let t = String(input || "").trim();
+	if (!t) return null;
+	const m = /^(?:https?:\/\/)?(?:www\.)?sctp\.nl(\/.*)?$/i.exec(t);
+	if (m) t = m[1] || "/";
+	if (!t.startsWith("/") || t.startsWith("//")) return null;
+	if (/[\s<>"]/.test(t) || t.length > 500) return null;
+	return t;
+}
+
+async function handleResolveShortLink(request, env, ctx) {
+	const slug = String(new URL(request.url).searchParams.get("slug") || "").toLowerCase();
+	if (!SHORT_LINK_SLUG.test(slug)) return json({ error: "Not found" }, 404);
+	const row = await env.DB.prepare("SELECT target FROM shortLinks WHERE slug = ?").bind(slug).first();
+	if (!row) return json({ error: "Not found" }, 404);
+	ctx.waitUntil(env.DB.prepare("UPDATE shortLinks SET clicks = clicks + 1 WHERE slug = ?").bind(slug).run());
+	return json({ target: row.target });
+}
+
+async function handleAdminListShortLinks(request, env) {
+	const auth = await requireAdminAuth(request, env, "shortLinks");
+	if (!auth.ok) return auth.response;
+	const { results } = await env.DB.prepare("SELECT * FROM shortLinks ORDER BY createdAt DESC").all();
+	return json({ links: results });
+}
+
+async function handleAdminSaveShortLink(request, env) {
+	const auth = await requireAdminAuth(request, env, "shortLinks");
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const slug = String(body.slug || "").trim().toLowerCase().replace(/^\/+|\/+$/g, "");
+	const target = cleanShortLinkTarget(body.target);
+	const previous = body.previousSlug ? String(body.previousSlug).toLowerCase() : null;
+	if (!SHORT_LINK_SLUG.test(slug)) return json({ error: "The short name can use letters, numbers, - and _ (up to 40), and must start with a letter or number." }, 400);
+	if (SHORT_LINK_RESERVED.has(slug)) return json({ error: "sctp.nl/" + slug + " is already a page on the site. Pick another name." }, 400);
+	if (!target) return json({ error: "The link must go to a page on sctp.nl, e.g. /auction/ or https://sctp.nl/world/." }, 400);
+	if (target.replace(/[?#].*$/, "").replace(/^\/+|\/+$/g, "").toLowerCase() === slug) return json({ error: "A short link can't point at itself." }, 400);
+	const now = new Date().toISOString();
+	const taken = await env.DB.prepare("SELECT slug FROM shortLinks WHERE slug = ?").bind(slug).first();
+	if (taken && slug !== previous) return json({ error: "sctp.nl/" + slug + " already exists." }, 409);
+	if (previous && previous !== slug) await env.DB.prepare("DELETE FROM shortLinks WHERE slug = ?").bind(previous).run();
+	await env.DB.prepare(
+		`INSERT INTO shortLinks (slug, target, createdAt, createdBy, updatedAt, clicks) VALUES (?, ?, ?, ?, ?, 0)
+		 ON CONFLICT(slug) DO UPDATE SET target = excluded.target, updatedAt = excluded.updatedAt`
+	).bind(slug, target, now, auth.admin.username, now).run();
+	return json({ ok: true, slug, target });
+}
+
+async function handleAdminDeleteShortLink(request, env) {
+	const auth = await requireAdminAuth(request, env, "shortLinks");
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	await env.DB.prepare("DELETE FROM shortLinks WHERE slug = ?").bind(String(body.slug || "").toLowerCase()).run();
+	return json({ ok: true });
 }
 
 // ---------------- Firefly world map (/world) ----------------
@@ -7416,6 +7531,24 @@ async function handleModAuctionResult(request, env) {
 	return json({ ok: true, item: auctionItemForMod(updated), previous: { status: item.status, soldDia: item.soldDia } });
 }
 
+// POST /mod/auctions/price {itemId, startDia, minDia?}: the host sets a lot's price in-game (/info <price>).
+async function handleModAuctionPrice(request, env) {
+	const auth = await requireModUser(request, env);
+	if (!auth.ok) return auth.response;
+	let body;
+	try { body = await request.json(); } catch (e) { return json({ error: "Invalid JSON body" }, 400); }
+	const item = await env.DB.prepare("SELECT * FROM auctionItems WHERE id = ?").bind(String(body.itemId || "")).first();
+	if (!item || item.status === "removed") return json({ error: "That lot isn't in this auction." }, 404);
+	const a = await modAuction(env, auth.mcKey, item.auctionId);
+	if (!a) return json({ error: "You don't have access to that auction." }, 403);
+	if (a.status === "finished") return json({ error: "This auction is finished." }, 400);
+	if (item.status !== "entered") return json({ error: "That lot is already " + item.status + "." }, 400);
+	const r = await setAuctionItemPrice(env, item, body.startDia, body.minDia);
+	if (r.error) return json({ error: r.error }, 400);
+	const updated = await env.DB.prepare("SELECT * FROM auctionItems WHERE id = ?").bind(item.id).first();
+	return json({ ok: true, item: auctionItemForMod(updated) });
+}
+
 /**
  * POST /mod/auctions/enter {auctionId, mcUsername, items: [{name, count}], mode?}
  * The host enters a held shulker for a player. Items are matched to rares by
@@ -7471,7 +7604,9 @@ async function handleModAuctionEnter(request, env) {
 	const account = await env.DB.prepare("SELECT id FROM admins WHERE mcVerified = 1 AND lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))").bind(mcUsername).first();
 	const result = await saveAuctionItems(env, a, mcUsername, account ? account.id : null, toAdd.map((x) => ({ rareId: x.rareId, quantity: x.quantity, hostPicks: true })));
 	if (result.error) return json({ error: result.error }, 400);
-	return json({ ok: true, added: result.saved, skipped: incoming.length - toAdd.length, replaced: mode === "override" ? existingRows.length : 0, unknown, linkedToAccount: !!account });
+	// same shape as GET /mod/auctions/items (the mod reads hostPicks as a boolean)
+	const added = result.saved.map((x) => ({ ...x, seller: mcUsername, hostPicks: !!x.hostPicks, status: "entered" }));
+	return json({ ok: true, added, skipped: incoming.length - toAdd.length, replaced: mode === "override" ? existingRows.length : 0, unknown, linkedToAccount: !!account });
 }
 
 // POST /admin/auctions/delete {id} ("auctions"): takes an auction out of the
@@ -8338,12 +8473,17 @@ const ROUTES = [
 	["POST", "/admin/auctions/result", handleAdminAuctionResult],
 	["POST", "/admin/auctions/item-price", handleAdminAuctionItemPrice],
 	["POST", "/admin/auctions/delete", handleAdminDeleteAuction],
+	["GET", "/short-link", handleResolveShortLink],
+	["GET", "/admin/short-links", handleAdminListShortLinks],
+	["POST", "/admin/short-links/save", handleAdminSaveShortLink],
+	["POST", "/admin/short-links/delete", handleAdminDeleteShortLink],
 	["POST", "/mod/auction-login", handleModAuctionLogin],
 	["GET", "/mod/auctions", handleModAuctions],
 	["POST", "/mod/auctions/add-code", handleModAuctionAddCode],
 	["GET", "/mod/auctions/items", handleModAuctionItems],
 	["POST", "/mod/auctions/result", handleModAuctionResult],
 	["POST", "/mod/auctions/enter", handleModAuctionEnter],
+	["POST", "/mod/auctions/price", handleModAuctionPrice],
 	["GET", "/rares/base-items", handleRareBaseItems],
 	["GET", "/mapart/of-the-day", handleGetMapartOfTheDay],
 	["POST", "/admin/mapart/otd/reroll", handleAdminRerollMapartOfTheDay],
