@@ -90,7 +90,7 @@ public class StorageSwitcher {
 		Minecraft mc = Minecraft.getInstance();
 		Screen screen = mc.gui.screen();
 		Page page = pageOf(screen);
-		if (page == null || action != 1 || info.button() != 0) return false;
+		if (page == null || action != 1 || QolHookManager.legacyButton(info) != 0) return false;
 		updateBounds((AbstractContainerScreen<?>) screen);
 		double mouseX = mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
 		double mouseY = mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();

@@ -1388,6 +1388,12 @@ async function handleUploadListings(request, env) {
 
 		if (stmts.length > 0) await env.DB.batch(stmts);
 
+		// which world(s) this connection scans, for the Firefly/Honeybee split of mod users
+		const uploadWorlds = new Set();
+		for (const r of validRows) if (r.world === "Firefly" || r.world === "Honeybee") uploadWorlds.add(r.world);
+		for (const sp of validScannedPositions) if (sp.world === "Firefly" || sp.world === "Honeybee") uploadWorlds.add(sp.world);
+		await recordUploadWorlds(env, request, uploadWorlds);
+
 		// Real sales: never allowed to fail the upload itself.
 		try { await detectConfirmedSales(env, validRows, validScannedPositions); } catch (e) { console.log("detectConfirmedSales failed: " + e); }
 
@@ -2112,15 +2118,39 @@ async function modUserPingHash(env, mcUsername) {
 	const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(normalized));
 	return bufToHex(sig);
 }
-async function recordModUserPing(env, mcUsername) {
+/**
+ * HMAC of the connection's address (same secret as the name hash, different
+ * prefix), never the address itself. Lets the join ping and shop-scan uploads
+ * from the same player be matched up for the Firefly/Honeybee split.
+ */
+async function connectionHash(env, request) {
+	const ip = request.headers.get("CF-Connecting-IP") || "";
+	if (!ip || !env.MOD_USER_HASH_SECRET) return null;
+	const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.MOD_USER_HASH_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+	return bufToHex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("ip:" + ip)));
+}
+async function recordModUserPing(env, mcUsername, request) {
 	try {
 		const hash = await modUserPingHash(env, mcUsername);
+		const ipHash = request ? await connectionHash(env, request) : null;
 		const now = new Date().toISOString();
 		await env.DB.prepare(
-			"INSERT INTO modUserPings (usernameHash, firstSeenAt, lastSeenAt, pingCount) VALUES (?, ?, ?, 1) " +
-			"ON CONFLICT(usernameHash) DO UPDATE SET lastSeenAt = excluded.lastSeenAt, pingCount = pingCount + 1"
-		).bind(hash, now, now).run();
+			"INSERT INTO modUserPings (usernameHash, firstSeenAt, lastSeenAt, pingCount, lastIpHash) VALUES (?, ?, ?, 1, ?) " +
+			"ON CONFLICT(usernameHash) DO UPDATE SET lastSeenAt = excluded.lastSeenAt, pingCount = pingCount + 1, lastIpHash = COALESCE(excluded.lastIpHash, lastIpHash)"
+		).bind(hash, now, now, ipHash).run();
 	} catch (e) { /* telemetry only — never worth failing the real request over */ }
+}
+
+/** Shop-scan uploads: remember which world(s) this connection scans (for the mod-user world split). */
+async function recordUploadWorlds(env, request, worlds) {
+	try {
+		const ipHash = await connectionHash(env, request);
+		if (!ipHash || !worlds.size) return;
+		const now = new Date().toISOString();
+		await env.DB.batch([...worlds].map((w) => env.DB.prepare(
+			"INSERT INTO uploadIpWorlds (ipHash, world, lastSeenAt) VALUES (?, ?, ?) ON CONFLICT(ipHash, world) DO UPDATE SET lastSeenAt = excluded.lastSeenAt"
+		).bind(ipHash, w, now)));
+	} catch (e) { /* telemetry only */ }
 }
 
 // Head admin: unique-mod-user counts derived from modUserPings above.
@@ -2136,7 +2166,31 @@ async function handleAdminModUserStats(request, env) {
 		env.DB.prepare("SELECT COUNT(*) AS c FROM modUserPings WHERE lastSeenAt >= ?").bind(cutoff30).first(),
 		env.DB.prepare("SELECT MIN(firstSeenAt) AS m FROM modUserPings").first(),
 	]);
-	return json({ total: total.c, activeLast7d: last7.c, activeLast30d: last30.c, trackingSince: since.m || null });
+	// Per world: mod users whose connection also uploaded shop scans for that world
+	// in the same window (see connectionHash). Players who don't scan stay "unknown".
+	const perWorld = async (cutoff) => {
+		const { results } = await env.DB.prepare(
+			`SELECT p.usernameHash, GROUP_CONCAT(DISTINCT u.world) AS worlds
+			 FROM modUserPings p JOIN uploadIpWorlds u ON u.ipHash = p.lastIpHash AND u.lastSeenAt >= ?
+			 WHERE p.lastSeenAt >= ? GROUP BY p.usernameHash`
+		).bind(cutoff, cutoff).all();
+		const out = { Firefly: 0, Honeybee: 0, both: 0, matched: results.length };
+		for (const r of results) {
+			const w = String(r.worlds || "").split(",");
+			if (w.includes("Firefly")) out.Firefly++;
+			if (w.includes("Honeybee")) out.Honeybee++;
+			if (w.includes("Firefly") && w.includes("Honeybee")) out.both++;
+		}
+		return out;
+	};
+	const [w7, w30] = await Promise.all([perWorld(cutoff7), perWorld(cutoff30)]);
+	const ipSince = await env.DB.prepare("SELECT MIN(lastSeenAt) AS m FROM uploadIpWorlds").first();
+	return json({ total: total.c, activeLast7d: last7.c, activeLast30d: last30.c, trackingSince: since.m || null,
+		worlds: {
+			Firefly: { activeLast7d: w7.Firefly, activeLast30d: w30.Firefly },
+			Honeybee: { activeLast7d: w7.Honeybee, activeLast30d: w30.Honeybee },
+		},
+		bothLast30d: w30.both, unknownLast30d: Math.max(0, last30.c - w30.matched), worldsTrackingSince: ipSince.m || null });
 }
 
 // Used by the MOD on join — no session token (the mod isn't a logged-in
@@ -2149,7 +2203,7 @@ async function handleGetNotificationsForMc(request, env, ctx) {
 	const url = new URL(request.url);
 	const mcUsername = (url.searchParams.get("mcUsername") || "").trim();
 	if (!mcUsername) return json({ error: "mcUsername is required" }, 400);
-	ctx.waitUntil(recordModUserPing(env, mcUsername));
+	ctx.waitUntil(recordModUserPing(env, mcUsername, request));
 
 	const { results: accounts } = await env.DB.prepare("SELECT id FROM admins WHERE lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.'))").bind(mcUsername).all();
 	if (accounts.length === 0) return json([]);

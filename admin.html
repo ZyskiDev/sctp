@@ -1699,9 +1699,32 @@
 			 '<div class="card" style="flex:1;min-width:140px;"><div class="meta">Last 30 days</div><div style="font-size:26px;font-weight:700;">' + stats.activeLast30d.toLocaleString() + '</div></div>'
 			].join("") + '</div>' +
 			'<div class="meta" style="margin-top:10px;">' + (since ? "Tracking since " + esc(since) + " — all-time only covers players seen since then, not the mod's full history." : "No pings recorded yet.") + '</div>' +
+			worldShareHtml(stats) +
 			'<button type="button" id="modUsersRefreshBtn" style="margin-top:10px;">Refresh</button>';
 		var btn = document.getElementById("modUsersRefreshBtn");
 		if(btn) btn.addEventListener("click", refreshModUserStats);
+	}
+
+	// Firefly / Honeybee split (mod 2.5+ reports the world it detects after joining)
+	function worldShareHtml(stats){
+		if(!stats.worlds) return "";
+		var ff = stats.worlds.Firefly, hb = stats.worlds.Honeybee;
+		var a = ff.activeLast30d, b = hb.activeLast30d, sum = a + b;
+		var pct = function(n){ return sum ? Math.round(n / sum * 100) + "%" : "–"; };
+		var bar = sum ? '<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin:8px 0 4px;background:var(--panel-alt);">' +
+			'<div style="width:' + (a / sum * 100) + '%;background:#E2A33D;"></div><div style="width:' + (b / sum * 100) + '%;background:#B7E23D;"></div></div>' : '';
+		var card = function(name, w, color, share){
+			return '<div class="card" style="flex:1;min-width:160px;"><div class="meta"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + color + ';margin-right:6px;"></span>' + name + ' &middot; ' + share + '</div>' +
+				'<div style="font-size:26px;font-weight:700;">' + w.activeLast30d.toLocaleString() + '</div>' +
+				'<div class="meta">last 30 days &middot; ' + w.activeLast7d.toLocaleString() + ' in 7 days</div></div>';
+		};
+		var since = stats.worldsTrackingSince ? new Date(stats.worldsTrackingSince).toLocaleDateString() : null;
+		return '<h3 style="margin:16px 0 4px;font-size:15px;">By world</h3>' + bar +
+			'<div style="display:flex;gap:10px;flex-wrap:wrap;">' + card("Firefly", ff, "#E2A33D", pct(a)) + card("Honeybee", hb, "#B7E23D", pct(b)) + '</div>' +
+			'<div class="meta" style="margin-top:8px;">' + (stats.bothLast30d ? stats.bothLast30d.toLocaleString() + ' player' + (stats.bothLast30d === 1 ? '' : 's') + ' played on both in the last 30 days (counted in each). ' : '') +
+			(stats.unknownLast30d ? stats.unknownLast30d.toLocaleString() + ' active player' + (stats.unknownLast30d === 1 ? '' : 's') + ' not matched to a world yet. ' : '') +
+			'A player counts for a world when their connection also uploaded shop scans for it, so players who don\'t scan aren\'t split. ' +
+			(since ? 'Counting since ' + esc(since) + '.' : 'Nothing matched yet: it fills in as players join and scan.') + '</div>';
 	}
 
 	async function refreshModUserStats(){

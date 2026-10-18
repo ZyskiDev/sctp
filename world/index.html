@@ -5,7 +5,7 @@
 <title>Firefly World Map - SCTP</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23101B14'/><circle cx='100' cy='100' r='60' fill='%23B7E23D'/></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="The whole Firefly world as one map. Click a square to zoom in, all the way down to a single chunk.">
+<meta name="description" content="The whole Firefly world as one map. Click a square to zoom in, down to 1,024 by 1,024 blocks.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -45,7 +45,7 @@
 	.btn-ghost:disabled{opacity:.45;cursor:not-allowed;border-color:var(--line);}
 	.stage{position:relative;width:100%;aspect-ratio:1/1;margin:0 auto;max-width:100%;background:#0A0F0C;border-radius:10px;overflow:hidden;touch-action:manipulation;}
 	.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:zoom-in;}
-	.stage.chunk canvas{cursor:crosshair;}
+	.stage.deepest canvas{cursor:crosshair;}
 	.loading{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.6);color:#ddd;font-size:12px;padding:3px 8px;border-radius:6px;pointer-events:none;}
 	.hint{color:var(--muted);font-size:12.5px;margin:10px 2px 0;}
 
@@ -96,7 +96,7 @@
 				<canvas id="map" aria-label="Map of the Firefly world. Click a square to zoom in."></canvas>
 				<div class="loading" id="loading" hidden>Loading map&hellip;</div>
 			</div>
-			<p class="hint" id="hint">Click a square to zoom in. Six clicks take you from the whole world down to a single chunk.</p>
+			<p class="hint" id="hint">Click a square to zoom in. Three clicks take you from the whole world down to 1,024 blocks.</p>
 		</section>
 
 		<aside class="side">
@@ -135,13 +135,15 @@
 	"use strict";
 	var API = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var TILE_VERSION = "v1";
-	// Squares come from a 65,536-block world square split 4x4 at every step, which lands
-	// exactly on chunks after six steps. Only the explored part is shown: squares on the
-	// edge are cut off at the map's edge, so the outer ones are narrower.
+	// Squares come from a 65,536-block world square split 4x4 at every step, down to
+	// 1,024 blocks after three steps (no closer, per the server rules). Only the explored
+	// part is shown: squares on the edge are cut off at the map's edge, so the outer ones
+	// are narrower.
 	var WORLD_MIN = -32768, WORLD_SIZE = 65536;
 	var MAP_MIN = -27136, MAP_MAX = 27136; // explored area (regions -53..52), max exclusive
-	var GRID = 4, CHUNK = 16, MAX_LEVEL = 7, TILE_PX = 512; // level L tile = 512 px covering 512 * 2^L blocks
-	var STEP_NAMES = ["World", "16,384 blocks", "4,096 blocks", "1,024 blocks", "256 blocks", "64 blocks", "Chunk"];
+	var GRID = 4, MIN_SIZE = 1024, MAX_LEVEL = 7, TILE_PX = 512; // level L tile = 512 px covering 512 * 2^L blocks
+	var STEP_NAMES = ["World", "16,384 blocks", "4,096 blocks", "1,024 blocks"];
+	var MAX_DEPTH = STEP_NAMES.length - 1;
 
 	function $(id){ return document.getElementById(id); }
 	var canvas = $("map"), ctx = canvas.getContext("2d"), stage = $("stage");
@@ -234,10 +236,10 @@
 	}
 
 	function drawGrid(scale, dpr, W, H){
-		var chunk = square.size <= CHUNK;
-		var cell = chunk ? 1 : square.size / GRID; // blocks per cell
+		if(square.size <= MIN_SIZE) return; // deepest level: nothing more to click
+		var cell = square.size / GRID; // blocks per cell
 		ctx.lineWidth = Math.max(1, dpr);
-		ctx.strokeStyle = chunk ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.22)";
+		ctx.strokeStyle = "rgba(255,255,255,0.22)";
 		ctx.beginPath();
 		for(var b = square.x + cell; b < square.x + square.size; b += cell){
 			if(b <= rect.x || b >= rect.x + rect.w) continue;
@@ -270,12 +272,12 @@
 		var r = clip(s);
 		if(!r){ s = { x: WORLD_MIN, z: WORLD_MIN, size: WORLD_SIZE }; r = clip(s); }
 		square = s; rect = r;
-		var chunk = s.size <= CHUNK;
-		stage.classList.toggle("chunk", chunk);
+		var deepest = s.size <= MIN_SIZE;
+		stage.classList.toggle("deepest", deepest);
 		$("backBtn").disabled = s.size >= WORLD_SIZE;
-		$("hint").textContent = chunk
-			? "This is one chunk: each square is a block. Zoom out with the button above or Esc."
-			: "Click a square to zoom in. " + (depth(s.size) === 5 ? "One more click shows a single chunk." : "Six clicks take you from the whole world down to a single chunk.");
+		$("hint").textContent = deepest
+			? "This is as close as the map goes (1,024 by 1,024 blocks). Zoom out with the button above or Esc."
+			: "Click a square to zoom in. " + (depth(s.size) === MAX_DEPTH - 1 ? "One more click is as close as the map goes." : "Three clicks take you from the whole world down to 1,024 blocks.");
 		$("area").textContent = "X " + fmt(r.x) + " to " + fmt(r.x + r.w - 1) + " · Z " + fmt(r.z) + " to " + fmt(r.z + r.h - 1);
 		renderCrumbs();
 		var hash = s.size >= WORLD_SIZE ? "" : "#" + s.x + "," + s.z + "," + s.size;
@@ -320,7 +322,7 @@
 		if(!b) return;
 		hover = b;
 		readout();
-		if(square.size <= CHUNK){ schedule(); return; }
+		if(square.size <= MIN_SIZE){ schedule(); return; }
 		setView(squareAt(b.bx, b.bz, square.size / GRID), true);
 	});
 
@@ -330,7 +332,7 @@
 		$("rBlock").textContent = fmt(x) + ", " + fmt(z);
 		$("rChunk").textContent = fmt(Math.floor(x / 16)) + ", " + fmt(Math.floor(z / 16));
 		$("rRegion").textContent = fmt(Math.floor(x / 512)) + ", " + fmt(Math.floor(z / 512));
-		if(square.size <= CHUNK) $("rSquare").textContent = "this chunk";
+		if(square.size <= MIN_SIZE) $("rSquare").textContent = "this square";
 		else {
 			var c = clip(squareAt(x, z, square.size / GRID));
 			$("rSquare").textContent = fmt(c.x) + "…" + fmt(c.x + c.w - 1) + ", " + fmt(c.z) + "…" + fmt(c.z + c.h - 1);
@@ -347,7 +349,7 @@
 		if(x < MAP_MIN || z < MAP_MIN || x >= MAP_MAX || z >= MAP_MAX){ err.textContent = "That's outside the map (it covers " + fmt(MAP_MIN) + " to " + fmt(MAP_MAX - 1) + ")."; return; }
 		err.textContent = "";
 		hover = { bx: x, bz: z };
-		setView(squareAt(x, z, CHUNK), true);
+		setView(squareAt(x, z, MIN_SIZE), true);
 		readout();
 	});
 
@@ -361,8 +363,9 @@
 		var m = /^#(-?\d+),(-?\d+),(\d+)$/.exec(location.hash);
 		if(m){
 			var size = +m[3], d = depth(size);
-			if(d >= 1 && d <= 6 && WORLD_SIZE / Math.pow(GRID, d) === size){
-				setView(squareAt(+m[1], +m[2], size), false);
+			if(d >= 1 && WORLD_SIZE / Math.pow(GRID, d) === size){
+				// older links to closer zooms open the 1,024 square around them
+				setView(squareAt(+m[1], +m[2], Math.max(size, MIN_SIZE)), false);
 				return;
 			}
 		}

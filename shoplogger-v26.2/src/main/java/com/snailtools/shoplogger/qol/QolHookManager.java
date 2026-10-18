@@ -29,6 +29,19 @@ public class QolHookManager {
     }
 
     /** Returns true if an addon used the click, so the game shouldn't also get it. */
+    /**
+     * The mouse button in the old numbering (0 left, 1 right, 2 middle). 26.3 moved
+     * input to SDL, where left is 1 and right is 3, so compare against
+     * InputConstants instead of raw numbers.
+     */
+    public static int legacyButton(MouseButtonInfo info) {
+        int b = info.button();
+        if (b == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return 0;
+        if (b == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) return 1;
+        if (b == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_MIDDLE) return 2;
+        return 100 + b; // other buttons never match
+    }
+
     public static boolean onMouseEvent(long window, MouseButtonInfo mouseButtonInfo, int action){
         if(storageSwitcher != null && storageSwitcher.onMouseEvent(window, mouseButtonInfo, action)) return true;
         if(butterflyGarden != null) butterflyGarden.onMouseEvent(window, mouseButtonInfo, action);

@@ -177,7 +177,7 @@ public class ButterflyGarden {
 
     public void onMouseEvent(long window, MouseButtonInfo button, int action) {
         if (button != null) {
-            onMouseEvent(window, button.button(), action);
+            onMouseEvent(window, QolHookManager.legacyButton(button), action);
         }
     }
 

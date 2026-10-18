@@ -16,7 +16,7 @@
 - **My Shop Statistics:** item names link to their item page.
 - **Brushbug Bunny** is now **Brushbug Buddy**, and the rare search box says you can search by rare name or base item.
 - **Mapart credit:** mapart can credit the artist of the original art it's based on ("original art by …"), set by its owner, shown on the mapart page and cards.
-- **Rares updated** from the latest Snailcraft Items sheet: 29 new rares: the bug update (the Beetle Emperor tools, armour and elytra, Bug Terrarium, Bug in a Jar, the stag beetle plushies and 12 bugs from ants to the Praying Mantis) plus Old Shabby Axe, Cursed Elytra, XV. The Devil, XVIII. The Moon and Haunted Snail House, and two names fixed (Snearth & Snoon, XVII. The Star (Reversed)). The item library's rare search also finds rares by base item.
+- **Rares updated** from the latest Snailcraft Items sheet: 31 new rares: the bug update (the Beetle Emperor tools, armour and elytra, Bug Terrarium, Bug in a Jar, the stag beetle plushies and 12 bugs from ants to the Praying Mantis) plus Old Shabby Axe, Cursed Elytra, XV. The Devil, XVIII. The Moon, Haunted Snail House, the Halloween 2026 Crate Key and the Creepy Crawly Coin, and two names fixed (Snearth & Snoon, XVII. The Star (Reversed)). The item library's rare search also finds rares by base item.
 - **Sorting and remembered filters:** the search page, item pages, seller pages and the marketplace sort newest first while the search box is empty and cheapest first (then newest) once you type, until you pick a sort yourself. Your filters and picked sort are remembered in your browser until you reset them. The marketplace got a Newest / Price sort, and posts without a budget no longer show "null".
 
 ## 2.4 (mod 2.4)
