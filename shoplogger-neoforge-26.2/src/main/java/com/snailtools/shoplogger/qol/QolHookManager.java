@@ -12,17 +12,19 @@ public class QolHookManager {
     private static ButterflyGarden butterflyGarden;
     private static QuestHelper questHelper;
     private static StorageSwitcher storageSwitcher;
+    private static CreepyCrawlyExchange creepyCrawlyExchange;
 
 
     public static void onInit(){
         butterflyGarden = new ButterflyGarden();
         questHelper = new QuestHelper();
         storageSwitcher = new StorageSwitcher();
-
+        creepyCrawlyExchange = new CreepyCrawlyExchange();
     }
 
     public static void onTick(){
         if(butterflyGarden != null) butterflyGarden.tick();
+        if(creepyCrawlyExchange != null) creepyCrawlyExchange.tick();
         com.snailtools.shoplogger.auction.DutchClock.tick();
     }
 
@@ -31,6 +33,7 @@ public class QolHookManager {
         if(storageSwitcher != null && storageSwitcher.onMouseEvent(window, mouseButtonInfo, action)) return true;
         if(butterflyGarden != null) butterflyGarden.onMouseEvent(window, mouseButtonInfo, action);
         if(questHelper != null) questHelper.onMouseEvent(window, mouseButtonInfo, action);
+        if(creepyCrawlyExchange != null) creepyCrawlyExchange.onMouseEvent(window, mouseButtonInfo, action);
         return false;
     }
 
@@ -46,6 +49,7 @@ public class QolHookManager {
         if(butterflyGarden != null) butterflyGarden.onScreenRender(screen, graphics, mouseX, mouseY, a);
         if(questHelper != null) questHelper.onScreenRender(screen, graphics, mouseX, mouseY, a);
         if(storageSwitcher != null) storageSwitcher.onScreenRender(screen, graphics, mouseX, mouseY, a);
+        if(creepyCrawlyExchange != null) creepyCrawlyExchange.onScreenRender(screen, graphics, mouseX, mouseY, a);
         BuyConfirm.onScreenRender(screen, graphics, mouseX, mouseY, a);
     }
 
