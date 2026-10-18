@@ -43,7 +43,7 @@
 	.btn-ghost{background:var(--panel-alt);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font:600 13px/1.2 var(--font-body);cursor:pointer;}
 	.btn-ghost:hover{border-color:var(--accent);}
 	.btn-ghost:disabled{opacity:.45;cursor:not-allowed;border-color:var(--line);}
-	.stage{position:relative;width:min(100%, calc(100vh - 230px));min-width:min(100%, 320px);margin:0 auto;aspect-ratio:1/1;max-width:100%;background:#0A0F0C;border-radius:10px;overflow:hidden;touch-action:manipulation;}
+	.stage{position:relative;width:100%;aspect-ratio:1/1;margin:0 auto;max-width:100%;background:#0A0F0C;border-radius:10px;overflow:hidden;touch-action:manipulation;}
 	.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:zoom-in;}
 	.stage.chunk canvas{cursor:crosshair;}
 	.loading{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.6);color:#ddd;font-size:12px;padding:3px 8px;border-radius:6px;pointer-events:none;}
@@ -96,7 +96,7 @@
 				<canvas id="map" aria-label="Map of the Firefly world. Click a square to zoom in."></canvas>
 				<div class="loading" id="loading" hidden>Loading map&hellip;</div>
 			</div>
-			<p class="hint" id="hint">Click a square to zoom in. Five clicks take you from the whole world down to a single chunk.</p>
+			<p class="hint" id="hint">Click a square to zoom in. Six clicks take you from the whole world down to a single chunk.</p>
 		</section>
 
 		<aside class="side">
@@ -135,25 +135,33 @@
 	"use strict";
 	var API = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var TILE_VERSION = "v1";
-	// The explored world, cropped to whole 4,096-block squares: a 14x14 grid at the top, then
-	// 4x4 splits (4,096 > 1,024 > 256 > 64 > 16) that land exactly on chunks.
-	var WORLD_MIN = -28672, TOP = 4096, TOP_GRID = 14, WORLD_SIZE = TOP * TOP_GRID;
-	var GRID = 4, CHUNK = 16, MAX_LEVEL = 7, TILE_PX = 512;
-	var TILE_MIN = -32768; // the tiles are numbered from here (level L tile = 512 px covering 512 * 2^L blocks)
-	var STEP_NAMES = ["World", "4,096 blocks", "1,024 blocks", "256 blocks", "64 blocks", "Chunk"];
-	var MAX_DEPTH = STEP_NAMES.length - 1;
+	// Squares come from a 65,536-block world square split 4x4 at every step, which lands
+	// exactly on chunks after six steps. Only the explored part is shown: squares on the
+	// edge are cut off at the map's edge, so the outer ones are narrower.
+	var WORLD_MIN = -32768, WORLD_SIZE = 65536;
+	var MAP_MIN = -27136, MAP_MAX = 27136; // explored area (regions -53..52), max exclusive
+	var GRID = 4, CHUNK = 16, MAX_LEVEL = 7, TILE_PX = 512; // level L tile = 512 px covering 512 * 2^L blocks
+	var STEP_NAMES = ["World", "16,384 blocks", "4,096 blocks", "1,024 blocks", "256 blocks", "64 blocks", "Chunk"];
 
 	function $(id){ return document.getElementById(id); }
 	var canvas = $("map"), ctx = canvas.getContext("2d"), stage = $("stage");
-	var view = { x: WORLD_MIN, z: WORLD_MIN, size: WORLD_SIZE };
-	var hover = null; // {bx, bz} block under the cursor
-	var have = null;  // per level: Set of "tx_tz" tiles that exist (world/tiles.json)
-	var images = {};  // "L/tx_tz" -> {img, ready}
+	var square = null; // the square being viewed {x, z, size}
+	var rect = null;   // the part of it on the map {x, z, w, h}
+	var hover = null;  // {bx, bz} block under the cursor
+	var have = null;   // per level: Set of "tx_tz" tiles that exist (world/tiles.json)
+	var images = {};   // "L/tx_tz" -> {img, ready}
 
 	function fmt(n){ return (n < 0 ? "−" : "") + Math.abs(n).toLocaleString("en-US"); }
-	function depth(size){ return size >= WORLD_SIZE ? 0 : 1 + Math.round(Math.log(TOP / size) / Math.log(GRID)); }
-	function sizeAt(d){ return d === 0 ? WORLD_SIZE : TOP / Math.pow(GRID, d - 1); }
-	function cellsOf(size){ return size <= CHUNK ? CHUNK : size >= WORLD_SIZE ? TOP_GRID : GRID; }
+	function depth(size){ return Math.round(Math.log(WORLD_SIZE / size) / Math.log(GRID)); }
+	function clip(s){
+		var x0 = Math.max(s.x, MAP_MIN), z0 = Math.max(s.z, MAP_MIN);
+		var x1 = Math.min(s.x + s.size, MAP_MAX), z1 = Math.min(s.z + s.size, MAP_MAX);
+		return x1 > x0 && z1 > z0 ? { x: x0, z: z0, w: x1 - x0, h: z1 - z0 } : null;
+	}
+	/** The square of the given size (a step of the 4x4 split) containing block x, z. */
+	function squareAt(x, z, size){
+		return { x: WORLD_MIN + Math.floor((x - WORLD_MIN) / size) * size, z: WORLD_MIN + Math.floor((z - WORLD_MIN) / size) * size, size: size };
+	}
 
 	// ---------------- tiles ----------------
 	function tile(L, tx, tz){
@@ -168,23 +176,23 @@
 		return t;
 	}
 
-	/** Draws level L's tiles over the current view; returns how many are still loading. */
-	function drawLevel(L, W){
+	/** Draws level L's tiles over the view; returns how many are still loading. */
+	function drawLevel(L, scale){
 		var T = TILE_PX * Math.pow(2, L); // blocks per tile
-		var t0x = Math.floor((view.x - TILE_MIN) / T), t1x = Math.floor((view.x + view.size - 1 - TILE_MIN) / T);
-		var t0z = Math.floor((view.z - TILE_MIN) / T), t1z = Math.floor((view.z + view.size - 1 - TILE_MIN) / T);
-		var scale = W / view.size, pending = 0;
+		var t0x = Math.floor((rect.x - WORLD_MIN) / T), t1x = Math.floor((rect.x + rect.w - 1 - WORLD_MIN) / T);
+		var t0z = Math.floor((rect.z - WORLD_MIN) / T), t1z = Math.floor((rect.z + rect.h - 1 - WORLD_MIN) / T);
+		var pending = 0;
 		for(var tz = t0z; tz <= t1z; tz++) for(var tx = t0x; tx <= t1x; tx++){
 			var t = tile(L, tx, tz);
 			if(!t) continue;
 			if(!t.ready){ if(!t.failed) pending++; continue; }
-			var bx = TILE_MIN + tx * T, bz = TILE_MIN + tz * T;
+			var bx = WORLD_MIN + tx * T, bz = WORLD_MIN + tz * T;
 			// only the part of the tile inside the view, so big upscales stay exact
-			var sx0 = Math.max(view.x, bx), sz0 = Math.max(view.z, bz);
-			var sx1 = Math.min(view.x + view.size, bx + T), sz1 = Math.min(view.z + view.size, bz + T);
+			var sx0 = Math.max(rect.x, bx), sz0 = Math.max(rect.z, bz);
+			var sx1 = Math.min(rect.x + rect.w, bx + T), sz1 = Math.min(rect.z + rect.h, bz + T);
 			var ppb = TILE_PX / T; // tile pixels per block
 			ctx.drawImage(t.img, (sx0 - bx) * ppb, (sz0 - bz) * ppb, (sx1 - sx0) * ppb, (sz1 - sz0) * ppb,
-				(sx0 - view.x) * scale, (sz0 - view.z) * scale, (sx1 - sx0) * scale, (sz1 - sz0) * scale);
+				(sx0 - rect.x) * scale, (sz0 - rect.z) * scale, (sx1 - sx0) * scale, (sz1 - sz0) * scale);
 		}
 		return pending;
 	}
@@ -193,74 +201,90 @@
 	var queued = false;
 	function schedule(){ if(!queued){ queued = true; requestAnimationFrame(draw); } }
 
+	/** Sizes the stage to the view's shape: full width, but never taller than the window. */
+	function fitStage(){
+		var pcs = getComputedStyle(stage.parentNode);
+		var avail = stage.parentNode.clientWidth - parseFloat(pcs.paddingLeft) - parseFloat(pcs.paddingRight);
+		var maxH = Math.max(280, window.innerHeight - 230);
+		var w = Math.min(avail, maxH * rect.w / rect.h);
+		stage.style.width = Math.round(w) + "px";
+		stage.style.height = Math.round(w * rect.h / rect.w) + "px";
+	}
+
 	function draw(){
 		queued = false;
+		if(!rect) return;
+		fitStage();
 		var dpr = window.devicePixelRatio || 1;
-		var W = Math.round(stage.clientWidth * dpr);
-		if(canvas.width !== W || canvas.height !== W){ canvas.width = W; canvas.height = W; }
+		var W = Math.round(stage.clientWidth * dpr), H = Math.round(stage.clientHeight * dpr);
+		if(canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
 		ctx.fillStyle = "#0A0F0C";
-		ctx.fillRect(0, 0, W, W);
-		var bpp = view.size / W; // blocks per device pixel
+		ctx.fillRect(0, 0, W, H);
+		var scale = W / rect.w; // device pixels per block
+		var bpp = 1 / scale;
 		var L = Math.max(0, Math.min(MAX_LEVEL, Math.floor(Math.log(Math.max(bpp, 1)) / Math.LN2)));
 		ctx.imageSmoothingEnabled = bpp > 1; // zoomed in past 1 block per pixel: crisp blocks
 		ctx.imageSmoothingQuality = "high";
 		// a coarser level underneath while the sharp tiles load
 		var coarse = Math.min(MAX_LEVEL, L + 3);
-		if(coarse !== L) drawLevel(coarse, W);
-		var pending = drawLevel(L, W);
+		if(coarse !== L) drawLevel(coarse, scale);
+		var pending = drawLevel(L, scale);
 		$("loading").hidden = !pending;
-		drawGrid(W, dpr);
+		drawGrid(scale, dpr, W, H);
 	}
 
-	function drawGrid(W, dpr){
-		var chunk = view.size <= CHUNK;
-		var cells = cellsOf(view.size); // at chunk level: one cell per block
-		var cell = W / cells;
+	function drawGrid(scale, dpr, W, H){
+		var chunk = square.size <= CHUNK;
+		var cell = chunk ? 1 : square.size / GRID; // blocks per cell
 		ctx.lineWidth = Math.max(1, dpr);
-		ctx.strokeStyle = chunk ? "rgba(255,255,255,0.10)" : cells > GRID ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.22)";
+		ctx.strokeStyle = chunk ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.22)";
 		ctx.beginPath();
-		for(var i = 1; i < cells; i++){
-			var p = Math.round(i * cell) + 0.5;
-			ctx.moveTo(p, 0); ctx.lineTo(p, W);
-			ctx.moveTo(0, p); ctx.lineTo(W, p);
+		for(var b = square.x + cell; b < square.x + square.size; b += cell){
+			if(b <= rect.x || b >= rect.x + rect.w) continue;
+			var px = Math.round((b - rect.x) * scale) + 0.5;
+			ctx.moveTo(px, 0); ctx.lineTo(px, H);
+		}
+		for(var c = square.z + cell; c < square.z + square.size; c += cell){
+			if(c <= rect.z || c >= rect.z + rect.h) continue;
+			var pz = Math.round((c - rect.z) * scale) + 0.5;
+			ctx.moveTo(0, pz); ctx.lineTo(W, pz);
 		}
 		ctx.stroke();
 		if(hover){
-			var per = view.size / cells;
-			var cx = Math.floor((hover.bx - view.x) / per), cz = Math.floor((hover.bz - view.z) / per);
-			if(cx >= 0 && cz >= 0 && cx < cells && cz < cells){
+			var hx = square.x + Math.floor((hover.bx - square.x) / cell) * cell, hz = square.z + Math.floor((hover.bz - square.z) / cell) * cell;
+			var x0 = Math.max(hx, rect.x), z0 = Math.max(hz, rect.z);
+			var x1 = Math.min(hx + cell, rect.x + rect.w), z1 = Math.min(hz + cell, rect.z + rect.h);
+			if(x1 > x0 && z1 > z0){
+				var rx = (x0 - rect.x) * scale, rz = (z0 - rect.z) * scale, rw = (x1 - x0) * scale, rh = (z1 - z0) * scale;
 				ctx.fillStyle = "rgba(255,255,255,0.12)";
-				ctx.fillRect(cx * cell, cz * cell, cell, cell);
+				ctx.fillRect(rx, rz, rw, rh);
 				ctx.strokeStyle = "#B7E23D";
 				ctx.lineWidth = 2 * dpr;
-				ctx.strokeRect(cx * cell + dpr, cz * cell + dpr, cell - 2 * dpr, cell - 2 * dpr);
+				ctx.strokeRect(rx + dpr, rz + dpr, rw - 2 * dpr, rh - 2 * dpr);
 			}
 		}
 	}
 
 	// ---------------- navigation ----------------
-	function setView(x, z, size, push){
-		view = { x: x, z: z, size: size };
-		var chunk = size <= CHUNK;
+	function setView(s, push){
+		var r = clip(s);
+		if(!r){ s = { x: WORLD_MIN, z: WORLD_MIN, size: WORLD_SIZE }; r = clip(s); }
+		square = s; rect = r;
+		var chunk = s.size <= CHUNK;
 		stage.classList.toggle("chunk", chunk);
-		$("backBtn").disabled = size >= WORLD_SIZE;
+		$("backBtn").disabled = s.size >= WORLD_SIZE;
 		$("hint").textContent = chunk
 			? "This is one chunk: each square is a block. Zoom out with the button above or Esc."
-			: "Click a square to zoom in. " + (depth(size) === MAX_DEPTH - 1 ? "One more click shows a single chunk." : "Five clicks take you from the whole world down to a single chunk.");
-		$("area").textContent = "X " + fmt(x) + " to " + fmt(x + size - 1) + " · Z " + fmt(z) + " to " + fmt(z + size - 1);
+			: "Click a square to zoom in. " + (depth(s.size) === 5 ? "One more click shows a single chunk." : "Six clicks take you from the whole world down to a single chunk.");
+		$("area").textContent = "X " + fmt(r.x) + " to " + fmt(r.x + r.w - 1) + " · Z " + fmt(r.z) + " to " + fmt(r.z + r.h - 1);
 		renderCrumbs();
-		var hash = size >= WORLD_SIZE ? "" : "#" + x + "," + z + "," + size;
+		var hash = s.size >= WORLD_SIZE ? "" : "#" + s.x + "," + s.z + "," + s.size;
 		if(location.hash !== hash) history[push ? "pushState" : "replaceState"](null, "", location.pathname + location.search + hash);
 		schedule();
 	}
 
-	/** The square of the given size (a step of the 4x4 split) containing block x, z. */
-	function squareAt(x, z, size){
-		return { x: WORLD_MIN + Math.floor((x - WORLD_MIN) / size) * size, z: WORLD_MIN + Math.floor((z - WORLD_MIN) / size) * size, size: size };
-	}
-
 	function renderCrumbs(){
-		var d = depth(view.size), html = [];
+		var d = depth(square.size), html = [];
 		for(var i = 0; i <= d; i++){
 			if(i) html.push('<span class="sep">&rsaquo;</span>');
 			if(i === d) html.push('<span class="here">' + STEP_NAMES[i] + '</span>');
@@ -271,14 +295,12 @@
 	$("crumbs").addEventListener("click", function(e){
 		var b = e.target.closest("button[data-depth]");
 		if(!b) return;
-		var s = squareAt(view.x, view.z, sizeAt(+b.getAttribute("data-depth")));
-		setView(s.x, s.z, s.size, true);
+		setView(squareAt(square.x, square.z, WORLD_SIZE / Math.pow(GRID, +b.getAttribute("data-depth"))), true);
 	});
 
 	function zoomOut(){
-		if(view.size >= WORLD_SIZE) return;
-		var s = squareAt(view.x, view.z, sizeAt(depth(view.size) - 1));
-		setView(s.x, s.z, s.size, true);
+		if(square.size >= WORLD_SIZE) return;
+		setView(squareAt(square.x, square.z, square.size * GRID), true);
 	}
 	$("backBtn").addEventListener("click", zoomOut);
 	document.addEventListener("keydown", function(e){
@@ -289,7 +311,7 @@
 		var r = canvas.getBoundingClientRect();
 		var fx = (e.clientX - r.left) / r.width, fz = (e.clientY - r.top) / r.height;
 		if(fx < 0 || fz < 0 || fx >= 1 || fz >= 1) return null;
-		return { bx: view.x + Math.floor(fx * view.size), bz: view.z + Math.floor(fz * view.size) };
+		return { bx: rect.x + Math.floor(fx * rect.w), bz: rect.z + Math.floor(fz * rect.h) };
 	}
 	canvas.addEventListener("mousemove", function(e){ hover = blockAt(e); readout(); schedule(); });
 	canvas.addEventListener("mouseleave", function(){ hover = null; readout(); schedule(); });
@@ -298,9 +320,8 @@
 		if(!b) return;
 		hover = b;
 		readout();
-		if(view.size <= CHUNK) { schedule(); return; }
-		var s = squareAt(b.bx, b.bz, sizeAt(depth(view.size) + 1));
-		setView(s.x, s.z, s.size, true);
+		if(square.size <= CHUNK){ schedule(); return; }
+		setView(squareAt(b.bx, b.bz, square.size / GRID), true);
 	});
 
 	function readout(){
@@ -309,10 +330,10 @@
 		$("rBlock").textContent = fmt(x) + ", " + fmt(z);
 		$("rChunk").textContent = fmt(Math.floor(x / 16)) + ", " + fmt(Math.floor(z / 16));
 		$("rRegion").textContent = fmt(Math.floor(x / 512)) + ", " + fmt(Math.floor(z / 512));
-		if(view.size <= CHUNK) $("rSquare").textContent = "this chunk";
+		if(square.size <= CHUNK) $("rSquare").textContent = "this chunk";
 		else {
-			var s = squareAt(x, z, sizeAt(depth(view.size) + 1));
-			$("rSquare").textContent = fmt(s.x) + "…" + fmt(s.x + s.size - 1) + ", " + fmt(s.z) + "…" + fmt(s.z + s.size - 1);
+			var c = clip(squareAt(x, z, square.size / GRID));
+			$("rSquare").textContent = fmt(c.x) + "…" + fmt(c.x + c.w - 1) + ", " + fmt(c.z) + "…" + fmt(c.z + c.h - 1);
 		}
 	}
 
@@ -323,11 +344,10 @@
 		var err = $("gotoErr");
 		if(!isFinite(x) || !isFinite(z) || $("gx").value.trim() === "" || $("gz").value.trim() === ""){ err.textContent = "Enter both X and Z, e.g. 1200 and -350."; return; }
 		x = Math.floor(x); z = Math.floor(z);
-		if(x < WORLD_MIN || z < WORLD_MIN || x >= WORLD_MIN + WORLD_SIZE || z >= WORLD_MIN + WORLD_SIZE){ err.textContent = "That's outside the map (it covers " + fmt(WORLD_MIN) + " to " + fmt(WORLD_MIN + WORLD_SIZE - 1) + ")."; return; }
+		if(x < MAP_MIN || z < MAP_MIN || x >= MAP_MAX || z >= MAP_MAX){ err.textContent = "That's outside the map (it covers " + fmt(MAP_MIN) + " to " + fmt(MAP_MAX - 1) + ")."; return; }
 		err.textContent = "";
-		var s = squareAt(x, z, CHUNK);
 		hover = { bx: x, bz: z };
-		setView(s.x, s.z, s.size, true);
+		setView(squareAt(x, z, CHUNK), true);
 		readout();
 	});
 
@@ -341,13 +361,12 @@
 		var m = /^#(-?\d+),(-?\d+),(\d+)$/.exec(location.hash);
 		if(m){
 			var size = +m[3], d = depth(size);
-			if(d >= 1 && d <= MAX_DEPTH && sizeAt(d) === size){
-				var s = squareAt(+m[1], +m[2], size);
-				setView(s.x, s.z, s.size, false);
+			if(d >= 1 && d <= 6 && WORLD_SIZE / Math.pow(GRID, d) === size){
+				setView(squareAt(+m[1], +m[2], size), false);
 				return;
 			}
 		}
-		setView(WORLD_MIN, WORLD_MIN, WORLD_SIZE, false);
+		setView({ x: WORLD_MIN, z: WORLD_MIN, size: WORLD_SIZE }, false);
 	}
 	window.addEventListener("popstate", fromHash);
 	window.addEventListener("resize", schedule);
