@@ -1046,9 +1046,16 @@
 		var hasAnyInfo = !!bio || shops.length > 0;
 		var distinctItems = new Set(allListings.map(function(r){ return r.baseItem; })).size;
 		var priced = allListings.filter(function(r){ return String(r.currency).toLowerCase() !== "display"; });
-		var avg = priced.length
-			? priced.reduce(function(a,r){ return a + pricePerItem(r); }, 0) / priced.length
-			: null;
+		var mean = function(list){ return list.length ? list.reduce(function(a,r){ return a + pricePerItem(r); }, 0) / list.length : null; };
+		// Joke prices (like a "not for sale" item at 64 diamond blocks) would swamp the
+		// average, so anything over 10x the seller's median price per item is left out
+		// by default; the "include" link puts them back.
+		var sortedPrices = priced.map(pricePerItem).sort(function(a,b){ return a - b; });
+		var median = sortedPrices.length ? sortedPrices[Math.floor(sortedPrices.length / 2)] : 0;
+		var normal = median > 0 ? priced.filter(function(r){ return pricePerItem(r) <= median * 10; }) : priced;
+		var outliers = priced.length - normal.length;
+		var avg = mean(normal), avgAll = mean(priced);
+		var fmtAvg = function(v){ return v === null ? '—' : fmtNum(Math.round(v*100)/100); };
 
 		var html = '<div class="profile">'+
 			'<img class="avatar" src="https://mc-heads.net/avatar/'+encodeURIComponent(username)+'/168" alt="" width="84" height="84">'+
@@ -1067,10 +1074,18 @@
 			'<div class="profile-stats">'+
 				'<div><b>'+fmtNum(allListings.length)+'</b>listings</div>'+
 				'<div><b>'+fmtNum(distinctItems)+'</b>distinct items</div>'+
-				'<div><b>'+(avg === null ? '—' : fmtNum(Math.round(avg*100)/100))+'</b>avg dia / item</div>'+
+				'<div><b id="sellerAvg">'+fmtAvg(avg)+'</b>avg dia / item'+
+					(outliers ? '<span class="avg-outliers" style="display:block;font-size:11px;opacity:.75;">'+outliers+' pricey listing'+(outliers === 1 ? '' : 's')+' left out &middot; <a href="#" id="sellerAvgToggle">include</a></span>' : '')+'</div>'+
 			'</div>'+
 		'</div>';
 		document.getElementById("app").insertAdjacentHTML("beforeend", html);
+		var avgToggle = document.getElementById("sellerAvgToggle");
+		if(avgToggle) avgToggle.addEventListener("click", function(e){
+			e.preventDefault();
+			var all = avgToggle.textContent === "include";
+			document.getElementById("sellerAvg").textContent = fmtAvg(all ? avgAll : avg);
+			avgToggle.textContent = all ? "leave out" : "include";
+		});
 	}
 
 	// ---------------- currency filter ----------------
@@ -1597,7 +1612,8 @@
 			if(!host) return;
 			function fmt(d){ return d > 9 ? (Math.round(d/9*100)/100) + " db" : (Math.round(d*100)/100) + " dia"; }
 			function cell(world){
-				var prices = currentListings.filter(function(r){ return r.world === world && r.marketplaceType !== "auction" && String(r.currency||"").toLowerCase() !== "display" && (convertOn() || String(r.currency||"").toLowerCase() === "diamond"); })
+				// the treasure hunt's TheShellkeeper never counts toward prices (puzzle prices, joke stock)
+				var prices = currentListings.filter(function(r){ return r.world === world && r.marketplaceType !== "auction" && String(r.seller || "").toLowerCase() !== "theshellkeeper" && String(r.currency||"").toLowerCase() !== "display" && (convertOn() || String(r.currency||"").toLowerCase() === "diamond"); })
 					.map(pricePerItem).filter(function(p){ return isFinite(p) && p > 0; }).sort(function(a,b){ return a - b; });
 				if(!prices.length) return '<div class="pc-cell"><div class="pc-world">'+world+'</div><div class="pc-val none">No estimate yet</div><div class="pc-sub">not listed right now</div></div>';
 				var mid = prices.length % 2 ? prices[(prices.length-1)/2] : (prices[prices.length/2-1] + prices[prices.length/2]) / 2;

@@ -397,6 +397,17 @@ function rowTimestamp(r) {
 	return isNaN(t) ? (r._uploadedAt || 0) : t;
 }
 
+// Sellers kept out of every price statistic (daily snapshots and price history,
+// seller stats, confirmed sales, shop hints, estimates, Secret Santa values and
+// where-to-buy). Their listings still show in searches. The treasure hunt's
+// TheShellkeeper sells junk at puzzle prices and "not for sale" stock at 64
+// diamond blocks, which would skew everything.
+const STATS_EXCLUDED_SELLERS = ["theshellkeeper"];
+const STATS_SELLER_SQL = `lower(seller) NOT IN (${STATS_EXCLUDED_SELLERS.map((x) => "'" + x + "'").join(",")})`;
+function isStatsExcludedSeller(seller) {
+	return STATS_EXCLUDED_SELLERS.includes(String(seller || "").toLowerCase());
+}
+
 function positionKey(world, position) {
 	return `${world}|${position}`.toLowerCase();
 }
@@ -1223,6 +1234,7 @@ async function detectConfirmedSales(env, validRows, scannedPositions) {
 			stock[r._key] = { a: Number(r.amount) || 0, p: priceInDiamonds(r) / (r.stackSize || 1), n: r.itemName, b: r.baseItem, s: r.seller };
 		}
 		const sellerKey = rows.length ? String(rows[0].seller).toLowerCase() : null;
+		if (sellerKey && isStatsExcludedSeller(sellerKey)) continue;
 		const prev = prevByPos.get(key);
 		// an older scan arriving late must never become the new baseline
 		if (prev && Date.parse(prev.scannedAt) >= Date.parse(scannedAt)) continue;
@@ -3279,7 +3291,7 @@ async function computeDailySnapshots(env) {
 	}
 
 	const { results: rows } = await env.DB.prepare(
-		"SELECT rowKey, baseItem, itemName, price, currency, stackSize, amount, seller, world FROM listings"
+		"SELECT rowKey, baseItem, itemName, price, currency, stackSize, amount, seller, world FROM listings WHERE " + STATS_SELLER_SQL
 	).all();
 
 	// groupKey -> { itemKey, world, prices: number[], sellers: Set, totalStock, listingCount }
@@ -5292,7 +5304,7 @@ async function computeShopHints(env, sellerKey, statRows, latestDate, trackingDa
 		const others = new Map(); // key -> [{each, seller}]
 		for (const chunk of chunkArray(bases, 80)) {
 			const { results } = await env.DB.prepare(
-				`SELECT baseItem, itemName, price, currency, stackSize, seller, world FROM listings WHERE lower(baseItem) IN (${chunk.map(() => "?").join(",")}) AND lower(seller) != ?`
+				`SELECT baseItem, itemName, price, currency, stackSize, seller, world FROM listings WHERE lower(baseItem) IN (${chunk.map(() => "?").join(",")}) AND lower(seller) != ? AND ${STATS_SELLER_SQL}`
 			).bind(...chunk, sellerKey).all();
 			for (const r of results) {
 				if (String(r.currency || "").toLowerCase() === "display") continue;
@@ -7077,7 +7089,7 @@ async function auctionEstimate(env, rare, world) {
 	// LIKE on the name's longest word narrows the scan; the normalized match decides
 	const word = String(rare.name).split(/[^A-Za-z0-9']+/).sort((a, b) => b.length - a.length)[0] || rare.name;
 	const { results } = await env.DB.prepare(
-		"SELECT itemName, price, currency, stackSize, world FROM listings WHERE itemName LIKE ? AND lower(currency) != 'display'"
+		"SELECT itemName, price, currency, stackSize, world FROM listings WHERE itemName LIKE ? AND lower(currency) != 'display' AND " + STATS_SELLER_SQL
 	).bind(`%${word}%`).all();
 	const matches = results.filter((r) => norm(r.itemName) === target);
 	const here = perItem(matches.filter((r) => r.world === world));
@@ -7762,7 +7774,7 @@ async function handleRareBaseItems(request, env, ctx) {
 		const want = new Map();
 		for (const r of catalog.items) { const k = santaNorm(r.name); if (k) want.set(k, r.id); }
 		const { results } = await env.DB.prepare(
-			"SELECT itemName, baseItem, COUNT(*) AS n FROM listings WHERE baseItem IS NOT NULL AND baseItem != '' GROUP BY itemName, baseItem"
+			"SELECT itemName, baseItem, COUNT(*) AS n FROM listings WHERE baseItem IS NOT NULL AND baseItem != '' AND " + STATS_SELLER_SQL + " GROUP BY itemName, baseItem"
 		).all();
 		const tally = new Map();
 		for (const row of results) {
@@ -8090,7 +8102,7 @@ async function santaItemValue(env, item) {
 	}
 	if (item.kind === "item") {
 		const { results } = await env.DB.prepare(
-			"SELECT price, currency, stackSize FROM listings WHERE world = ? AND baseItem = ? AND lower(itemName) = lower(?) AND lower(currency) != 'display'"
+			"SELECT price, currency, stackSize FROM listings WHERE world = ? AND baseItem = ? AND lower(itemName) = lower(?) AND lower(currency) != 'display' AND " + STATS_SELLER_SQL
 		).bind(SANTA_WORLD, item.baseItem, item.name).all();
 		const per = results.map((r) => priceInDiamonds(r) / (r.stackSize || 1)).filter((p) => isFinite(p) && p > 0).sort((a, b) => a - b);
 		if (!per.length) return { value: null, basis: null };
@@ -8106,12 +8118,12 @@ async function santaWhereToBuy(env, item, marketplace) {
 	if (item.kind === "rare") {
 		const word = String(item.name).split(/[^A-Za-z0-9']+/).sort((a, b) => b.length - a.length)[0] || item.name;
 		const { results } = await env.DB.prepare(
-			"SELECT * FROM listings WHERE world = ? AND itemName LIKE ? AND lower(currency) != 'display'"
+			"SELECT * FROM listings WHERE world = ? AND itemName LIKE ? AND lower(currency) != 'display' AND " + STATS_SELLER_SQL
 		).bind(SANTA_WORLD, `%${word}%`).all();
 		rows = results.filter((r) => santaNorm(r.itemName) === santaNorm(item.name));
 	} else if (item.kind === "item") {
 		const { results } = await env.DB.prepare(
-			"SELECT * FROM listings WHERE world = ? AND baseItem = ? AND lower(itemName) = lower(?) AND lower(currency) != 'display'"
+			"SELECT * FROM listings WHERE world = ? AND baseItem = ? AND lower(itemName) = lower(?) AND lower(currency) != 'display' AND " + STATS_SELLER_SQL
 		).bind(SANTA_WORLD, item.baseItem, item.name).all();
 		rows = results;
 	}
