@@ -28,7 +28,7 @@
 	var H = window.HUNT, esc = H.esc;
 	var slug = (new URLSearchParams(location.search).get("slug") || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
 	if(slug) try { history.replaceState(null, "", "/" + slug); } catch(e){}
-	H.api("/hunt/door?slug=" + encodeURIComponent(slug)).then(function(d){
+	H.api("/hunt/door?slug=" + encodeURIComponent(slug) + "&tz=" + new Date().getTimezoneOffset()).then(function(d){
 		var el = H.$("door");
 		el.className = "door" + (d.open ? "" : " closed");
 		el.innerHTML = '<div class="mark" aria-hidden="true"></div>' + (d.title ? "<h1>" + esc(d.title) + "</h1>" : "") + "<p>" + esc(d.text) + "</p>";

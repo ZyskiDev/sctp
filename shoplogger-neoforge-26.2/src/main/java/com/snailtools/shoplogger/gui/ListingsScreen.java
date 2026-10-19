@@ -221,5 +221,10 @@ public class ListingsScreen extends UiScreen {
 		} else if (truncated) {
 			Draw.centered(g, font, "Showing the first " + MAX_RESULTS + " — refine your search to narrow it down", listX + listW / 2, listY + listH + 2, Theme.FAINT);
 		}
+		if (search != null && com.snailtools.shoplogger.hunt.HuntClient.paired()) {
+			// The Golden Shell: a note for a hunter who searches the right thing
+			String note = com.snailtools.shoplogger.hunt.HuntClient.note("search:" + search.value().trim().toLowerCase(Locale.ROOT));
+			com.snailtools.shoplogger.hunt.HuntNotes.card(g, font, note, contentX() + contentW(), contentBottom(), Math.min(260, contentW() - 20));
+		}
 	}
 }

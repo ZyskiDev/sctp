@@ -1,82 +1,243 @@
 {
-	"_note": "Shared content for the Golden Shell (same for every hunter). Upload with scripts/hunt/seed.js or paste into /hunt/admin/ > Shared content. The whorl puzzle fragments below are TEST fragments for a vault at 0, 0: rewrite them once the real vault spot is chosen.",
+	"_note": "Shared content for the Golden Shell (the same for every hunter). Fragments are written for the vault at 26380, 66, -23633 (squares: 16,384 at 16384,-32768; 4,096 at 24576,-24576; 1,024 at 25600,-24576) and the key 2 5 7 3. Upload with scripts/hunt/seed.js --content or paste into /hunt/admin/.",
 	"chapters": [
-		{ "id": "c1", "whorl": 1, "ord": 1, "title": "The Impostor",
+		{
+			"id": "c1",
+			"whorl": 1,
+			"ord": 1,
+			"title": "The Impostor",
 			"clue": "Nine treasures, described in my own hand. Eight are honest. Find the liar, then let each honest one give up a single letter.",
-			"hints": ["My descriptions use the same words as the library's rare pages.", "Filter by category and release month first. Most descriptions then leave one or two rares.", "The number is a letter position in the rare's name. One description fits no rare at all: skip it."],
-			"fragment": "Not where the map runs out." },
-		{ "id": "c2", "whorl": 1, "ord": 2, "title": "Same Bones",
+			"hints": [
+				"My descriptions use the same words as the library's rare pages.",
+				"Filter by category and release month first. Most descriptions then leave one or two rares.",
+				"The number is a letter position in the rare's name (count letters only). One description fits no rare at all: skip it."
+			],
+			"fragment": "Where the map runs out on two sides."
+		},
+		{
+			"id": "c2",
+			"whorl": 1,
+			"ord": 2,
+			"title": "Same Bones",
 			"clue": "Beneath every treasure is something ordinary. Four of mine share the same bones. Ask the library what else is built on them.",
-			"hints": ["The library can find rares by what they're made from.", "The four share one vanilla base item. Search for it.", "Sort A to Z. The numbers are positions. Take first letters."],
-			"fragment": "East of the middle." },
-		{ "id": "c3", "whorl": 1, "ord": 3, "title": "Cross Yourself",
+			"hints": [
+				"The library can find rares by what they're made from.",
+				"The four share one vanilla base item. Search for it.",
+				"Sort A to Z. The numbers are positions. Take first letters."
+			],
+			"fragment": "Toward the sunrise."
+		},
+		{
+			"id": "c3",
+			"whorl": 1,
+			"ord": 3,
+			"title": "Cross Yourself",
 			"clue": "Hold the hour in your hand, then cross yourself.",
-			"hints": ["The mod can show a page for whatever is in your hand.", "Hold a clock. Press the key that crosses and the key that stands alone.", "X and I. Each note names your next item in a riddle."],
-			"fragment": "South of the middle." },
-		{ "id": "c4", "whorl": 1, "ord": 4, "title": "Daily Bread",
+			"hints": [
+				"The mod can show a page for whatever is in your hand.",
+				"Hold a clock. Press the key that crosses and the key that stands alone.",
+				"X and I. Each note names your next item in a riddle."
+			],
+			"fragment": "Toward the pole star."
+		},
+		{
+			"id": "c4",
+			"whorl": 1,
+			"ord": 4,
+			"title": "Daily Bread",
 			"clue": "I play the daily game too, but never on your board. Beat my boards, and their first letters will speak.",
-			"hints": ["The daily rare game has a hunter's mode.", "Once you're signed up, Rare-dle has a Hunt boards button.", "Win every board and read the answers' first letters."],
-			"fragment": "Touching the very centre of the world." },
-
-		{ "id": "c5", "whorl": 2, "ord": 1, "title": "Strange Prices",
+			"hints": [
+				"The daily rare game has a hunter's mode.",
+				"Once you're signed up, Rare-dle has a Hunt boards button.",
+				"Win every board and read the answers' first letters."
+			],
+			"fragment": "A great white island rests in it."
+		},
+		{
+			"id": "c5",
+			"whorl": 2,
+			"ord": 1,
+			"title": "Strange Prices",
 			"clue": "A merchant sells what nobody wants, at prices nobody would pay. Every coin is a letter.",
-			"hints": ["I keep shops on both worlds, and the trading post lists everything.", "Search for my junk, one world at a time.", "Diamonds are letters. 1 is A."],
-			"fragment": "In the north." },
-		{ "id": "c6", "whorl": 2, "ord": 2, "title": "The Ghost Above the Chest",
+			"hints": [
+				"I keep shops on both worlds, and the trading post lists everything.",
+				"Search for my junk, one world at a time.",
+				"Diamonds are letters. 1 is A."
+			],
+			"fragment": "On the eastern edge of your square."
+		},
+		{
+			"id": "c6",
+			"whorl": 2,
+			"ord": 2,
+			"title": "The Ghost Above the Chest",
 			"clue": "Ask the ghost above my chests how many remain. Count up from the poorest, and listen to what each one whispers to you.",
-			"hints": ["The ghost is the number the mod floats on a shop chest. It may be switched off in your settings.", "Visit my shop on Firefly. Each ghost whispers one letter, to you alone.", "Order the letters by stock, smallest first."],
-			"fragment": "In the west." },
-		{ "id": "c7", "whorl": 2, "ord": 3, "title": "Days Gone By",
+			"hints": [
+				"The ghost is the number the mod floats on a shop chest. It may be switched off in your settings.",
+				"Visit my shop on Firefly. Each ghost whispers one letter, to you alone.",
+				"Order the letters by stock, smallest first."
+			],
+			"fragment": "Neither the first nor the last of its column."
+		},
+		{
+			"id": "c7",
+			"whorl": 2,
+			"ord": 3,
+			"title": "Days Gone By",
 			"clue": "The market remembers every day. I asked it five questions about days gone by. Now you ask them.",
-			"hints": ["Every item page remembers its prices.", "Look at each item's history on the date I name.", "Hover the chart on that day. The number in my question is a letter position in the winner's name."],
-			"fragment": "At the corner nearest the centre of the world." },
-		{ "id": "c8", "whorl": 2, "ord": 4, "title": "Wanted: A Reader",
+			"hints": [
+				"Every item page remembers its prices.",
+				"Look at each item's lowest price on the day I name.",
+				"The cheapest of each group wins. The number is a letter of its name (count letters only)."
+			],
+			"fragment": "North of the pale sands."
+		},
+		{
+			"id": "c8",
+			"whorl": 2,
+			"ord": 4,
+			"title": "Wanted: A Reader",
 			"clue": "I'm hiring. The pay is terrible. The job description is the job.",
-			"hints": ["The marketplace has jobs, and I've posted one.", "Apply for my job. I answer every applicant.", "Shift each letter of the code back by your numbers."],
-			"fragment": "Where nought meets nought." },
-
-		{ "id": "c9", "whorl": 3, "ord": 1, "title": "The Torn Corner",
+			"hints": [
+				"The marketplace has jobs, and I've posted one.",
+				"Apply for my job. I answer every applicant.",
+				"Shift each letter of the code back by your numbers."
+			],
+			"fragment": "Due east of where the white island ends."
+		},
+		{
+			"id": "c9",
+			"whorl": 3,
+			"ord": 1,
+			"title": "The Torn Corner",
 			"clue": "I tore a corner off my map and turned it in my hands. Put it back, and tell me its region.",
-			"hints": ["My map is the one of Firefly.", "It's turned and tinted. Match coastlines and roads, not colours.", "Hover its centre and give me the Region the map shows."],
-			"fragment": "Northern edge." },
-		{ "id": "c10", "whorl": 3, "ord": 2, "title": "The Gallery",
+			"hints": [
+				"My map is the one of Firefly.",
+				"It's turned and tinted. Match coastlines and roads, not colours.",
+				"Hover its centre and give me the Region the map shows."
+			],
+			"fragment": "Along the northern edge."
+		},
+		{
+			"id": "c10",
+			"whorl": 3,
+			"ord": 2,
+			"title": "The Gallery",
 			"clue": "Art hangs in rows. I remember five pieces, but not their names. Find them, and let each name give you a letter.",
-			"hints": ["The catalog knows every artist.", "Filter by artist and category, then check the size.", "The number is a letter position in the title."],
-			"fragment": "Western edge." },
-		{ "id": "c11", "whorl": 3, "ord": 3, "title": "The Shelf",
+			"hints": [
+				"The catalog knows every artist.",
+				"Filter by artist and category, then check the size.",
+				"The number is a letter position in the title."
+			],
+			"fragment": "Not on the western edge."
+		},
+		{
+			"id": "c11",
+			"whorl": 3,
+			"ord": 3,
+			"title": "The Shelf",
 			"clue": "I keep a collection like everyone else. What I keep is not what I want.",
-			"hints": ["I have a profile, like you.", "Compare what I have with what I want.", "Keep only what's not wanted. Count in page order and take first letters."],
-			"fragment": "The corner square." },
-		{ "id": "c12", "whorl": 3, "ord": 4, "title": "Doors Without Signs",
+			"hints": [
+				"I have a profile, like you. So does my collection.",
+				"H is what I have, W is what I want.",
+				"Line each list up A to Z. H3 is the third thing I have; take its first letter."
+			],
+			"fragment": "Not cut short by the end of the map."
+		},
+		{
+			"id": "c12",
+			"whorl": 3,
+			"ord": 4,
+			"title": "Doors Without Signs",
 			"clue": "Some doors on my site have no signs. One is named after the lights of the night, and opens only while they're out, and only for you.",
-			"hints": ["Not every page on sctp.nl has a link to it.", "Try the door named after the insects of the night.", "sctp.nl/fireflies, between 20:00 and 23:00 UTC, logged in."],
-			"fragment": "Still where nought meets nought." },
-
-		{ "id": "c13", "whorl": 4, "ord": 1, "title": "Wings for Coin",
-			"clue": "Where wings are traded for coin, I left a note beneath the score.",
-			"hints": ["Wings are traded at the garden.", "Open the exchange at the Butterfly Garden. My note waits there.", "Count butterflies in the panel's order. The second number is a letter position."],
-			"fragment": "The first frame: one click." },
-		{ "id": "c14", "whorl": 4, "ord": 2, "title": "Paper Errands",
-			"clue": "Every errand is written on paper. Mine is written between the lines.",
-			"hints": ["Errands come on paper, and the mod reads them for you.", "Open a quest paper.", "My note sits above the paper."],
-			"fragment": "The second frame: two clicks." },
-		{ "id": "c15", "whorl": 4, "ord": 3, "title": "The Collector of Crawlers",
-			"clue": "The collector of crawlers keeps her own order. Count as she counts.",
-			"hints": ["The collector of crawlers trades in coins.", "Visit Sefi and open the exchange. My note waits there.", "Count bugs in her screen's order, not the alphabet."],
-			"fragment": "The third frame: three clicks." },
-		{ "id": "c16", "whorl": 4, "ord": 4, "title": "Two Pockets",
+			"hints": [
+				"Not every page on sctp.nl has a link to it.",
+				"Try the door named after the insects of the night.",
+				"sctp.nl/fireflies, between 20:00 and 23:00 your time, logged in."
+			],
+			"fragment": "A pink island with red spots touches its southern edge."
+		},
+		{
+			"id": "c13",
+			"whorl": 4,
+			"ord": 1,
+			"title": "Wings for Coin",
+			"clue": "Where wings are traded for coin, I left you a note. Count what's for sale before you read it.",
+			"hints": [
+				"Wings are traded at the garden.",
+				"Open the Butterfly Exchange. My note sits above it.",
+				"Count the kinds of butterfly for sale. That's your step: read the first letter, then every that-many-th letter after it."
+			],
+			"fragment": "The first arrow points straight to the right."
+		},
+		{
+			"id": "c14",
+			"whorl": 4,
+			"ord": 2,
+			"title": "The Watchful Eye",
+			"clue": "Keep an eye on what nobody wants. I notice who's watching.",
+			"hints": [
+				"The mod can watch items for you and tell you when they show up.",
+				"Add my junk to your watchlist, then look at your watchlist.",
+				"Watch the dead bush. My note sits in the corner of the mod's Watchlist screen."
+			],
+			"fragment": "The second arrow points down and to the left."
+		},
+		{
+			"id": "c15",
+			"whorl": 4,
+			"ord": 3,
+			"title": "Ask the Ledger",
+			"clue": "Your game keeps a ledger of every shop on the server. Ask it for me by name.",
+			"hints": [
+				"The mod can search every listing without leaving the game.",
+				"Open the mod (X) and search for me.",
+				"Type Shellkeeper in the mod's search box. My note sits in the corner."
+			],
+			"fragment": "The third arrow is one click short of pointing up again."
+		},
+		{
+			"id": "c16",
+			"whorl": 4,
+			"ord": 4,
+			"title": "Two Pockets",
 			"clue": "Half your pocket hangs where fireflies glow. The other half sleeps in the void's box where the bees hum.",
-			"hints": ["Fireflies and bees are worlds, not insects.", "Your pocket is your backpack. The void's box is your ender chest.", "Backpack on Firefly, ender chest on Honeybee."],
-			"fragment": "The fourth frame: four clicks." }
+			"hints": [
+				"Fireflies and bees are worlds, not insects.",
+				"Your pocket is your backpack. The void's box is your ender chest.",
+				"Backpack on Firefly, ender chest on Honeybee."
+			],
+			"fragment": "The fourth arrow points down and to the right."
+		}
 	],
 	"whorls": [
-		{ "whorl": 1, "title": "The Archive", "intro": "The Shellkeeper's own records: the rares, what they're made of, and the game of guessing them.",
-			"puzzle": "Each fragment rules squares out. Which square of the world is left?", "nudge": "Cross squares off on the world map as you read each fragment." },
-		{ "whorl": 2, "title": "The Market", "intro": "Shops on both worlds, their ghosts, their history and their jobs.",
-			"puzzle": "Inside your first square, one smaller square is meant.", "nudge": "Zoom into your first square on the map: it splits into sixteen." },
-		{ "whorl": 3, "title": "The Atlas", "intro": "Maps, art, collections and doors nobody links to.",
-			"puzzle": "The last square: as close as the map will go.", "nudge": "Zoom into your second square on the map." },
-		{ "whorl": 4, "title": "The Garden", "intro": "Out into the world: the garden, the errands, the collector of crawlers and your own pockets.",
-			"puzzle": "Every frame starts pointing up. How many clicks does each one need?", "nudge": "The key is four numbers, one per frame, in order." }
+		{
+			"whorl": 1,
+			"title": "The Archive",
+			"intro": "The Shellkeeper's own records: the rares, what they're made of, and the game of guessing them.",
+			"puzzle": "Each fragment rules squares out. Which square of the world is left?",
+			"nudge": "Cross squares off on the world map as you read each fragment. North is up."
+		},
+		{
+			"whorl": 2,
+			"title": "The Market",
+			"intro": "Shops on both worlds, their ghosts, their history and their jobs.",
+			"puzzle": "Your first square splits into sixteen. Only one is meant.",
+			"nudge": "North is up, east is right. The white island is the big snowy one from Whorl I."
+		},
+		{
+			"whorl": 3,
+			"title": "The Atlas",
+			"intro": "Maps, art, collections and doors nobody links to.",
+			"puzzle": "The last square: as close as the map will go.",
+			"nudge": "The map cuts off near the eastern edge: a square cut short is only partly drawn."
+		},
+		{
+			"whorl": 4,
+			"title": "The Garden",
+			"intro": "Out into your own game: the garden, the mod's watchful eye, its ledger and your own pockets.",
+			"puzzle": "Four frames, each holding an arrow that starts pointing up. Every click turns an arrow an eighth of the way round, clockwise. How many clicks does each frame need?",
+			"nudge": "Pointing right is two clicks. Pointing down is four."
+		}
 	]
 }

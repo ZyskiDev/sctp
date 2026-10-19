@@ -18,7 +18,7 @@
 		var API = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev", slug = m[1].toLowerCase(), token = null;
 		try { var ss = JSON.parse(localStorage.getItem("sctp_session") || "null"); if (ss && ss.token && Date.parse(ss.expiresAt) >= Date.now()) token = ss.token; } catch (e) {}
 		var link = fetch(API + "/short-link?slug=" + encodeURIComponent(slug)).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
-		fetch(API + "/hunt/door?slug=" + encodeURIComponent(slug), token ? { headers: { Authorization: "Bearer " + token } } : {})
+		fetch(API + "/hunt/door?slug=" + encodeURIComponent(slug) + "&tz=" + new Date().getTimezoneOffset(), token ? { headers: { Authorization: "Bearer " + token } } : {})
 			.then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
 			.then(function(door){
 				if (door && door.redirect) return location.replace(door.redirect);

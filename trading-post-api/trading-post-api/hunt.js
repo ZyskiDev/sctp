@@ -32,12 +32,12 @@ const WHORL_NUDGE_DELAY = 120 * HOUR;
 const LIMITS = { chapter: [10, HOUR], whorl: [3, 24 * HOUR], apex: [10, HOUR], vault: [10, HOUR] };
 const RAREDLE_RESET_MS = HOUR;
 // Notes the mod may see (everything else, like door and Rare-dle answers, stays on the server).
-const MOD_NOTE_PREFIXES = ["item:", "chest:", "butterfly", "quest", "sefi", "bp:", "ec:"];
+const MOD_NOTE_PREFIXES = ["item:", "chest:", "butterfly", "watch:", "search:", "bp:", "ec:"];
 const PAIR_ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const IMAGE_KEY = /^img\/[A-Za-z0-9_-]{8,80}\.(webp|png)$/;
 
 export function makeHunt(d) {
-	const { json, requireAnyAdmin, requireAdminAuth, newToken, bufToHex, modUserPingHash, MC_USERNAME } = d;
+	const { json, requireAnyAdmin, requireAdminAuth, newToken, bufToHex, modUserPingHash, MC_USERNAME, notifyAccount } = d;
 
 	// ---- settings ----
 
@@ -47,6 +47,7 @@ export function makeHunt(d) {
 		apex: { title: "The Apex", riddle: "", marks: [] },
 		doors: [], hintRelease: {}, broadcast: null, shell: { found: null, claims: [] },
 		testers: [], // Minecraft names that see the hunt while it's off (for testing)
+		readerJobId: null, // chapter 8: the Shellkeeper's marketplace job; applying gets you your key
 	};
 	async function getSettings(env) {
 		const row = await env.DB.prepare("SELECT value FROM siteSettings WHERE key = ?").bind(SETTINGS_KEY).first();
@@ -71,8 +72,12 @@ export function makeHunt(d) {
 		if (token) {
 			const t = await env.DB.prepare("SELECT mcUsername FROM huntTokens WHERE token = ?").bind(token).first();
 			if (t) return t.mcUsername;
-			const a = await env.DB.prepare("SELECT a.mcUsername, a.mcVerified FROM adminSessions s JOIN admins a ON a.id = s.adminId WHERE s.token = ? AND s.expiresAt > ?").bind(token, nowIso()).first();
-			if (a && a.mcVerified) return a.mcUsername;
+			const a = await env.DB.prepare("SELECT a.id, a.mcUsername FROM adminSessions s JOIN admins a ON a.id = s.adminId WHERE s.token = ? AND s.expiresAt > ?").bind(token, nowIso()).first();
+			if (a) {
+				const p = await env.DB.prepare("SELECT mcUsername FROM huntPlayers WHERE accountId = ?").bind(a.id).first();
+				if (p) return p.mcUsername;
+				if (a.mcUsername) return a.mcUsername;
+			}
 		}
 		return new URL(request.url).searchParams.get("mc") || null;
 	}
@@ -89,7 +94,7 @@ export function makeHunt(d) {
 		return bufToHex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("hunt:" + scope + ":" + value)));
 	}
 	function normAnswer(kind, s) {
-		s = String(s == null ? "" : s);
+		s = String(s == null ? "" : s).replace(/[−–—]/g, "-"); // the map prints minus as "−"
 		if (kind === "numbers") return (s.match(/-?\d+/g) || []).map((n) => String(parseInt(n, 10))).join(",");
 		return s.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]/g, "");
 	}
@@ -240,7 +245,7 @@ export function makeHunt(d) {
 		}
 		return {
 			enabled: true,
-			player: { ledger: ledger(player.ledgerNo), ledgerNo: player.ledgerNo, mcUsername: player.mcUsername, signedUpAt: player.signedUpAt, anonymous: !!player.anonymous, via: player.via },
+			player: { ledger: ledger(player.ledgerNo), ledgerNo: player.ledgerNo, mcUsername: player.mcUsername, signedUpAt: player.signedUpAt, anonymous: !!player.anonymous, via: player.via, verified: player.verified !== 0 },
 			whorls, apex,
 			shell: publicShell(settings),
 			hunters: shares.total,
@@ -306,30 +311,42 @@ export function makeHunt(d) {
 		return json({ status: "waiting" });
 	}
 
-	/** POST /hunt/signup {code, via?}: redeem a code from the mod with a verified account. */
+	/**
+	 * POST /hunt/signup {code, via?}: redeem a code from the mod with an sctp.nl account.
+	 * The hunter's name is the Minecraft name of the game that showed the code. A
+	 * verified account must match it; an unverified one may hunt under it, but a
+	 * verified account with that name later takes it over (no squatting names).
+	 */
 	async function handleSignup(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
-		const auth = await huntAuth(request, env, { siteOnly: true });
-		if (auth.response) return auth.response;
 		const b = await body(request);
 		const code = String((b && b.code) || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 		const pretty = code.slice(0, 3) + "-" + code.slice(3);
 		const p = await env.DB.prepare("SELECT * FROM huntPairings WHERE code = ?").bind(pretty).first();
+		if (!s.enabled && !(p && isTester(s, p.mcUsername)) && !(await canSee(request, env, s))) return hidden();
+		const auth = await huntAuth(request, env, { siteOnly: true });
+		if (auth.response) return auth.response;
 		if (!p || Date.parse(p.expiresAt) < Date.now() || p.token) return json({ error: "That code isn't valid (any more). Get a fresh one from the mod." }, 400);
 		const admin = auth.admin;
-		if (!admin.mcVerified || !admin.mcUsername) return json({ error: "Verify your Minecraft name on your account page first, then try the code again.", code: "verify" }, 403);
-		if (mcKey(admin.mcUsername) !== mcKey(p.mcUsername)) return json({ error: "This code came from " + p.mcUsername + "'s game, but your account is verified as " + admin.mcUsername + "." }, 403);
+		const name = p.mcUsername;
+		const verified = !!admin.mcVerified && mcKey(admin.mcUsername) === mcKey(name);
+		if (admin.mcVerified && !verified) return json({ error: "This code came from " + name + "'s game, but your account is verified as " + admin.mcUsername + "." }, 403);
 
 		let player = await env.DB.prepare("SELECT * FROM huntPlayers WHERE accountId = ?").bind(admin.id).first();
 		if (player && player.removed) return json({ error: "You've been removed from the hunt." }, 403);
 		if (!player) {
 			if (!s.signupOpen) return json({ error: "Sign-up is closed right now." }, 403);
-			// one hunter per Minecraft account
-			const taken = await env.DB.prepare("SELECT 1 AS x FROM huntPlayers WHERE lower(ltrim(mcUsername, '.')) = ?").bind(mcKey(admin.mcUsername)).first();
-			if (taken) return json({ error: "Another account already hunts as " + admin.mcUsername + "." }, 403);
+			// one hunter per Minecraft account; a verified owner beats an unverified one
+			const taken = await env.DB.prepare("SELECT accountId, verified, removed FROM huntPlayers WHERE lower(ltrim(mcUsername, '.')) = ?").bind(mcKey(name)).first();
+			if (taken && !taken.removed && (taken.verified || !verified)) return json({ error: "Another account already hunts as " + name + "." }, 403);
+			if (taken && !taken.verified && verified) {
+				await env.DB.batch([
+					env.DB.prepare("UPDATE huntPlayers SET removed = 1, mcUsername = mcUsername || ' (taken over)' WHERE accountId = ?").bind(taken.accountId),
+					env.DB.prepare("DELETE FROM huntTokens WHERE accountId = ?").bind(taken.accountId),
+				]);
+			}
 			if (s.requirePriorModUse) {
-				const ping = await env.DB.prepare("SELECT firstSeenAt FROM modUserPings WHERE usernameHash = ?").bind(await modUserPingHash(env, admin.mcUsername)).first();
+				const ping = await env.DB.prepare("SELECT firstSeenAt FROM modUserPings WHERE usernameHash = ?").bind(await modUserPingHash(env, name)).first();
 				if (!ping || (s.enabledAt && ping.firstSeenAt > s.enabledAt)) return json({ error: "The hunt is for players who already used the mod before it started." }, 403);
 			}
 			const set = await env.DB.prepare("SELECT setNo FROM huntSets WHERE accountId IS NULL ORDER BY setNo LIMIT 1").first();
@@ -338,8 +355,8 @@ export function makeHunt(d) {
 			const now = nowIso();
 			const res = await env.DB.prepare("UPDATE huntSets SET accountId = ?, assignedAt = ? WHERE setNo = ? AND accountId IS NULL").bind(admin.id, now, set.setNo).run();
 			if (!res.meta.changes) return json({ error: "Busy, try again." }, 409);
-			await env.DB.prepare("INSERT INTO huntPlayers (accountId, mcUsername, ledgerNo, setNo, signedUpAt, via) VALUES (?, ?, ?, ?, ?, ?)")
-				.bind(admin.id, admin.mcUsername, (max.m || 0) + 1, set.setNo, now, b && b.via === "spiral" ? "spiral" : "mod").run();
+			await env.DB.prepare("INSERT INTO huntPlayers (accountId, mcUsername, ledgerNo, setNo, signedUpAt, via, verified) VALUES (?, ?, ?, ?, ?, ?, ?)")
+				.bind(admin.id, name, (max.m || 0) + 1, set.setNo, now, b && b.via === "spiral" ? "spiral" : "mod", verified ? 1 : 0).run();
 			player = await env.DB.prepare("SELECT * FROM huntPlayers WHERE accountId = ?").bind(admin.id).first();
 		}
 		const token = newToken();
@@ -415,7 +432,7 @@ export function makeHunt(d) {
 			kind = "apex";
 			if (!solves.has("w4")) return json({ error: "Not yet." }, 403);
 			if (!s.vault) return json({ error: "This puzzle isn't ready yet." }, 503);
-			const nums = (String(answer || "").match(/-?\d+/g) || []).map(Number);
+			const nums = (String(answer || "").replace(/[−–—]/g, "-").match(/-?\d+/g) || []).map(Number);
 			if (nums.length !== 3) return json({ error: "Give the block as three numbers: x y z." }, 400);
 			const wait = await tooManyWrong(env, player.accountId, ref, kind);
 			if (wait) return json({ error: "Too many wrong answers. Try again later.", retryAt: wait }, 429);
@@ -496,9 +513,13 @@ export function makeHunt(d) {
 		const door = (s.doors || []).find((x) => String(x.slug).toLowerCase() === slug);
 		if (!door) return hidden();
 		const closed = { door: true, open: false, title: door.title || "", text: door.closed || "Closed." };
+		// The hours are the hunter's own time: the page sends its offset (?tz=, minutes,
+		// as Date#getTimezoneOffset gives it). While the hunt is still off (testers only)
+		// a door is always open; the hours apply from the real start.
 		const inWindow = (() => {
-			if (!door.from || !door.to) return true;
-			const now = new Date(), mins = now.getUTCHours() * 60 + now.getUTCMinutes();
+			if (!door.from || !door.to || !s.enabled) return true;
+			const tz = Math.max(-840, Math.min(840, Number(new URL(request.url).searchParams.get("tz")) || 0));
+			const now = new Date(), mins = ((now.getUTCHours() * 60 + now.getUTCMinutes() - tz) % 1440 + 1440) % 1440;
 			const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
 			const a = toMin(door.from), b = toMin(door.to);
 			return a <= b ? mins >= a && mins < b : mins >= a || mins < b;
@@ -701,7 +722,7 @@ export function makeHunt(d) {
 		const [content, sets, players, solveCounts, wrongCounts, hintCounts] = await Promise.all([
 			loadContent(env),
 			env.DB.prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN accountId IS NULL THEN 0 ELSE 1 END) AS assigned FROM huntSets").first(),
-			env.DB.prepare("SELECT p.accountId, p.mcUsername, p.ledgerNo, p.setNo, p.signedUpAt, p.via, p.anonymous, p.removed, (SELECT COUNT(*) FROM huntSolves s WHERE s.accountId = p.accountId) AS solved, (SELECT GROUP_CONCAT(ref) FROM huntSolves s WHERE s.accountId = p.accountId) AS refs FROM huntPlayers p ORDER BY p.ledgerNo").all(),
+			env.DB.prepare("SELECT p.accountId, p.mcUsername, p.ledgerNo, p.setNo, p.signedUpAt, p.via, p.anonymous, p.removed, p.verified, (SELECT COUNT(*) FROM huntSolves s WHERE s.accountId = p.accountId) AS solved, (SELECT GROUP_CONCAT(ref) FROM huntSolves s WHERE s.accountId = p.accountId) AS refs FROM huntPlayers p ORDER BY p.ledgerNo").all(),
 			env.DB.prepare("SELECT ref, COUNT(*) AS c FROM huntSolves GROUP BY ref").all(),
 			env.DB.prepare("SELECT ref, COUNT(*) AS c FROM huntGuesses WHERE correct = 0 GROUP BY ref").all(),
 			env.DB.prepare("SELECT chapterId, tier, COUNT(*) AS c FROM huntHints GROUP BY chapterId, tier").all(),
@@ -741,6 +762,7 @@ export function makeHunt(d) {
 				s.vault = { x, y, z };
 			}
 		}
+		if ("readerJobId" in b) s.readerJobId = b.readerJobId ? String(b.readerJobId).trim() : null;
 		if ("vaultTolerance" in b) s.vaultTolerance = Math.max(0, Math.min(10, Number(b.vaultTolerance) || 0));
 		if (typeof b.key === "string" && b.key.trim()) s.keyHash = await huntHash(env, "key", normAnswer("numbers", b.key));
 		if (typeof b.vaultWord === "string" && b.vaultWord.trim()) s.vaultWordHash = await huntHash(env, "vault", normAnswer("word", b.vaultWord));
@@ -838,7 +860,11 @@ export function makeHunt(d) {
 			case "reassign": {
 				const set = await env.DB.prepare("SELECT setNo FROM huntSets WHERE accountId IS NULL ORDER BY setNo LIMIT 1").first();
 				if (!set) return json({ error: "No spare sets left. Upload more first." }, 409);
+				// the old set is retired (deleted), then the new one handed over
 				await env.DB.batch([
+					env.DB.prepare("DELETE FROM huntSetChapters WHERE setNo IN (SELECT setNo FROM huntSets WHERE accountId = ?)").bind(p.accountId),
+					env.DB.prepare("DELETE FROM huntSetNotes WHERE setNo IN (SELECT setNo FROM huntSets WHERE accountId = ?)").bind(p.accountId),
+					env.DB.prepare("DELETE FROM huntSets WHERE accountId = ?").bind(p.accountId),
 					env.DB.prepare("UPDATE huntSets SET accountId = ?, assignedAt = ? WHERE setNo = ?").bind(p.accountId, now, set.setNo),
 					env.DB.prepare("UPDATE huntPlayers SET setNo = ? WHERE accountId = ?").bind(set.setNo, p.accountId),
 					env.DB.prepare("DELETE FROM huntRaredle WHERE accountId = ?").bind(p.accountId),
@@ -908,8 +934,32 @@ export function makeHunt(d) {
 		return json({ ok: true, key });
 	}
 
+	/**
+	 * Chapter 8: a hunter applied for the Shellkeeper's job (handleExpressJobInterest
+	 * calls this). If it's the hunt's job and their whorl is open, the Shellkeeper
+	 * answers with their personal note (context "secret:job") as a marketplace
+	 * notification. Returns that text, or null for anyone else.
+	 */
+	async function jobInterestReply(env, jobId, accountId) {
+		try {
+			const s = await getSettings(env);
+			if (!s.readerJobId || s.readerJobId !== jobId) return null;
+			const player = await playerOf(env, accountId);
+			if (!player || (!s.enabled && !isTester(s, player.mcUsername))) return null;
+			const note = await env.DB.prepare("SELECT n.text, c.whorl FROM huntSetNotes n JOIN huntChapters c ON c.id = n.chapterId WHERE n.setNo = ? AND n.context = 'secret:job'").bind(player.setNo).first();
+			if (!note) return null;
+			const unlocks = unlockTimes(player, await solvesOf(env, player.accountId));
+			if (!unlocks[note.whorl]) return null;
+			const text = "TheShellkeeper replied to your application: " + note.text;
+			await notifyAccount(env, accountId, "jobReply", text, jobId);
+			return text;
+		} catch (e) {
+			return null; // never break the normal job interest
+		}
+	}
+
 	return {
-		raredleHuntState, raredleHuntGuess,
+		raredleHuntState, raredleHuntGuess, jobInterestReply,
 		routes: [
 			["GET", "/hunt/status", handleStatus],
 			["GET", "/hunt/state", handleState],

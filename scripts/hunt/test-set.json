@@ -1,0 +1,364 @@
+{
+	"chapters": {
+		"c1": {
+			"kind": "word",
+			"answer": "NAUTILUS",
+			"content": [
+				{
+					"t": "text",
+					"v": "Nine treasures, in my own hand."
+				},
+				{
+					"t": "list",
+					"items": [
+						"[7] Collectibles, from Garden Crate, released Apr 2025, Postcard.",
+						"[1] Collectibles, from Wldcard Crate, released Jun 2026, Postcard.",
+						"[7] Wearables, from Adventure Crate, released Feb 2025, Elytra.",
+						"[4] Collectibles, from Demonic Wishing Eye, released Dec 2025, Postcard.",
+						"[6] Wearables, from Adventure Crate, released Feb 2025, Boots.",
+						"[7] Collectibles, from Demonic Wishing Eye, released Dec 2025, Consumeable.",
+						"[9] Wearables, from Archangel Armor Set, released Sep 2025, Chest.",
+						"[4] Attunements & Enchantments, from Cryptid Crate, released Apr 2026, Attunement.",
+						"[7] Useable Rares, from Welcome Crate, released Jan 2025, Pickaxe."
+					],
+					"ordered": true
+				}
+			]
+		},
+		"c2": {
+			"kind": "word",
+			"answer": "SWAN",
+			"content": [
+				{
+					"t": "text",
+					"v": "Four of mine: Bitter Bow, Fish Flinger, Stargaze's Echo, UFBow."
+				},
+				{
+					"t": "text",
+					"v": "Numbers: 5 · 8 · 1 · 4"
+				}
+			]
+		},
+		"c3": {
+			"kind": "word",
+			"answer": "ANCHOR",
+			"content": [
+				{
+					"t": "text",
+					"v": "Six letters, six things to hold. The first is the hour."
+				}
+			]
+		},
+		"c4": {
+			"kind": "word",
+			"answer": "CREEK",
+			"content": [
+				{
+					"t": "text",
+					"v": "Five boards. Their secret rares' first letters, board by board."
+				},
+				{
+					"t": "link",
+					"href": "/rare-dle/?mode=hunt",
+					"v": "Play your boards"
+				}
+			]
+		},
+		"c5": {
+			"kind": "word",
+			"answer": "BEACON",
+			"content": [
+				{
+					"t": "text",
+					"v": "What nobody wants, in the order I want it:"
+				},
+				{
+					"t": "list",
+					"items": [
+						"Poisonous Potato",
+						"Bone",
+						"Dead Bush",
+						"Rotten Flesh",
+						"Clay Ball",
+						"Lily Pad"
+					],
+					"ordered": true
+				}
+			]
+		},
+		"c6": {
+			"kind": "word",
+			"answer": "CASTAWAY",
+			"content": [
+				{
+					"t": "text",
+					"v": "Eight ghosts on Firefly. Eight letters, if you ask them in the right order."
+				}
+			]
+		},
+		"c7": {
+			"kind": "word",
+			"answer": "OTTER",
+			"content": [
+				{
+					"t": "text",
+					"v": "Five questions, five days, five letters."
+				},
+				{
+					"t": "list",
+					"items": [
+						"5 October: which was cheapest: Acacia Leaves, Acacia Log, Acacia Sapling, Stone? [3]",
+						"12 October: which was cheapest: Ancient Debris, Anvil, Armor Stand, Dirt? [4]",
+						"5 October: which was cheapest: Bedrock, Big Dripleaf, Birch Leaves, Wheat Seeds? [5]",
+						"12 October: which was cheapest: Beacon, Bee Nest, Bell, Cobbled Deepslate? [6]",
+						"5 October: which was cheapest: Brick, Bricks, Brown Dye, Carrot? [3]"
+					],
+					"ordered": true
+				}
+			]
+		},
+		"c8": {
+			"kind": "word",
+			"answer": "SEASHORE",
+			"content": [
+				{
+					"t": "text",
+					"v": "Somebody is hiring on the marketplace. Apply, and read what comes back."
+				}
+			]
+		},
+		"c9": {
+			"kind": "numbers",
+			"answer": "-20, 13",
+			"content": [
+				{
+					"t": "image",
+					"key": "img/torn-3c7298987fcdcfaaa3.webp",
+					"alt": "A torn piece of the Firefly map"
+				},
+				{
+					"t": "text",
+					"v": "Where does this belong? Its region, please: two numbers."
+				}
+			]
+		},
+		"c10": {
+			"kind": "word",
+			"answer": "INLET",
+			"content": [
+				{
+					"t": "text",
+					"v": "Five pieces I remember, and one letter from each name."
+				},
+				{
+					"t": "list",
+					"items": [
+						"[4] A 3×4 seasonal piece by EarthHQ & charmolyqi, on Honeybee.",
+						"[5] A 1×1 tv/animation piece by memelordmars, on Honeybee.",
+						"[8] A 2×2 memes piece by Tomahna, on Firefly.",
+						"[4] A 1×2 tv/animation piece by EarthHQ & charmolyqi, on Honeybee.",
+						"[3] A 3×4 seasonal piece by Rvban97, on Honeybee."
+					],
+					"ordered": true
+				}
+			]
+		},
+		"c11": {
+			"kind": "word",
+			"answer": "COAST",
+			"content": [
+				{
+					"t": "text",
+					"v": "H4 · W7 · H1 · W10 · H19"
+				}
+			]
+		},
+		"c12": {
+			"kind": "word",
+			"answer": "TWILIGHT",
+			"content": [
+				{
+					"t": "text",
+					"v": "Not every page is signposted."
+				}
+			]
+		},
+		"c13": {
+			"kind": "word",
+			"answer": "GLADE",
+			"content": [
+				{
+					"t": "text",
+					"v": "Where wings are sold, I left you something to read."
+				}
+			]
+		},
+		"c14": {
+			"kind": "word",
+			"answer": "FROST",
+			"content": [
+				{
+					"t": "text",
+					"v": "I sell what nobody wants. Keep an eye on the first of it."
+				}
+			]
+		},
+		"c15": {
+			"kind": "word",
+			"answer": "SNAIL",
+			"content": [
+				{
+					"t": "text",
+					"v": "Ask the ledger in your game for me."
+				}
+			]
+		},
+		"c16": {
+			"kind": "word",
+			"answer": "LANTERN",
+			"content": [
+				{
+					"t": "text",
+					"v": "Two pockets, two worlds, one word."
+				}
+			]
+		}
+	},
+	"notes": [
+		{
+			"context": "item:minecraft:clock",
+			"chapterId": "c3",
+			"text": "First: A. Next, hold what always points home."
+		},
+		{
+			"context": "item:minecraft:compass",
+			"chapterId": "c3",
+			"text": "Second: N. Next, hold what a chicken leaves behind when it flies."
+		},
+		{
+			"context": "item:minecraft:feather",
+			"chapterId": "c3",
+			"text": "Third: C. Next, hold what a skeleton is made of."
+		},
+		{
+			"context": "item:minecraft:bone",
+			"chapterId": "c3",
+			"text": "Fourth: H. Next, hold what you write on but never sign."
+		},
+		{
+			"context": "item:minecraft:paper",
+			"chapterId": "c3",
+			"text": "Fifth: O. Next, hold what a spider spins."
+		},
+		{
+			"context": "item:minecraft:string",
+			"chapterId": "c3",
+			"text": "Sixth: R. That was the last."
+		},
+		{
+			"context": "secret:raredle:1",
+			"chapterId": "c4",
+			"text": "rare-cactus-frog"
+		},
+		{
+			"context": "secret:raredle:2",
+			"chapterId": "c4",
+			"text": "rare-racoon-tissue-box"
+		},
+		{
+			"context": "secret:raredle:3",
+			"chapterId": "c4",
+			"text": "rare-eagles-wings"
+		},
+		{
+			"context": "secret:raredle:4",
+			"chapterId": "c4",
+			"text": "rare-earth"
+		},
+		{
+			"context": "secret:raredle:5",
+			"chapterId": "c4",
+			"text": "rare-kagamimochi"
+		},
+		{
+			"context": "chest:Firefly:-3879,104,-795",
+			"chapterId": "c6",
+			"text": "C"
+		},
+		{
+			"context": "chest:Firefly:-3879,103,-797",
+			"chapterId": "c6",
+			"text": "A"
+		},
+		{
+			"context": "chest:Firefly:-3879,104,-798",
+			"chapterId": "c6",
+			"text": "S"
+		},
+		{
+			"context": "chest:Firefly:-3879,104,-797",
+			"chapterId": "c6",
+			"text": "T"
+		},
+		{
+			"context": "chest:Firefly:-3879,103,-798",
+			"chapterId": "c6",
+			"text": "A"
+		},
+		{
+			"context": "chest:Firefly:-3879,103,-795",
+			"chapterId": "c6",
+			"text": "W"
+		},
+		{
+			"context": "chest:Firefly:-3877,103,-799",
+			"chapterId": "c6",
+			"text": "A"
+		},
+		{
+			"context": "chest:Firefly:-3877,104,-799",
+			"chapterId": "c6",
+			"text": "Y"
+		},
+		{
+			"context": "secret:job",
+			"chapterId": "c8",
+			"text": "Thank you for applying. Shift each letter of my description back by: 22 20 4 16 9 11 2 0"
+		},
+		{
+			"context": "door:fireflies",
+			"chapterId": "c12",
+			"text": "You found a door with no sign. Behind it, scattered letters: G H I I L T T W"
+		},
+		{
+			"context": "butterfly",
+			"chapterId": "c13",
+			"text": "GPHOZ RNWXL BZFFZ BJAAB RYVTB QMDFX BUDAS TEWVV TAIDR"
+		},
+		{
+			"context": "watch:dead bush",
+			"chapterId": "c14",
+			"text": "It comes after dusk and before the dew, and paints your windows white. Five letters."
+		},
+		{
+			"context": "search:shellkeeper",
+			"chapterId": "c15",
+			"text": "Always home, never still. It carries its house and leaves a silver trail. Five letters."
+		},
+		{
+			"context": "search:theshellkeeper",
+			"chapterId": "c15",
+			"text": "Always home, never still. It carries its house and leaves a silver trail. Five letters."
+		},
+		{
+			"context": "bp:Firefly",
+			"chapterId": "c16",
+			"text": "The first half of a light you carry: LAN"
+		},
+		{
+			"context": "ec:Honeybee",
+			"chapterId": "c16",
+			"text": "The second half: TERN"
+		}
+	]
+}

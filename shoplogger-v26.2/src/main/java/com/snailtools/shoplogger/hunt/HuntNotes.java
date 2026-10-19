@@ -13,9 +13,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The hunt's notes on game screens: a gold line above the Butterfly and Creepy
- * Crawly exchanges, quest papers, and your backpack and ender chest (per world).
- * Only for a paired hunter whose puzzle set has a note for that screen.
+ * The hunt's notes on game screens: a gold line above the Butterfly Exchange and
+ * your backpack and ender chest (per world). Only for a paired hunter whose
+ * puzzle set has a note for that screen. (The mod's own screens draw theirs
+ * with card(): the watchlist, the listings search, the item page.)
  */
 public final class HuntNotes {
 
@@ -29,8 +30,6 @@ public final class HuntNotes {
 		String title = screen.getTitle().getString();
 		String lower = title.toLowerCase(Locale.ROOT);
 		if (title.contains("Butterfly Exchange")) return "butterfly";
-		if (title.contains("Creepy Crawly Exchange")) return "sefi";
-		if (title.contains("Quests!")) return "quest";
 		ShopWorld world = WorldSelection.get();
 		if (world == null) return null;
 		if (lower.contains("backpack")) return "bp:" + world.label();
@@ -61,6 +60,18 @@ public final class HuntNotes {
 		g.fill(x, y, x + w + 8, y + h, 0xE0141018);
 		g.fill(x, y, x + 2, y + h, HuntClient.GOLD);
 		for (int i = 0; i < lines.size(); i++) g.text(font, lines.get(i), x + 5, y + 4 + i * 10, HuntClient.GOLD, true);
+	}
+
+	/** A gold note card in a mod screen, its bottom-right corner at (right, bottom). */
+	public static void card(GuiGraphicsExtractor g, Font font, String note, int right, int bottom, int maxW) {
+		if (note == null || note.isBlank()) return;
+		List<String> lines = wrap(font, note, maxW);
+		int w = 0;
+		for (String l : lines) w = Math.max(w, font.width(l));
+		int h = lines.size() * 10 + 8, x = right - w - 14, y = bottom - h;
+		g.fill(x, y, x + w + 14, y + h, 0xF0141018);
+		g.fill(x, y, x + 2, y + h, HuntClient.GOLD);
+		for (int i = 0; i < lines.size(); i++) g.text(font, lines.get(i), x + 7, y + 5 + i * 10, HuntClient.GOLD, true);
 	}
 
 	/** Word-wraps to a pixel width. */

@@ -1,0 +1,189 @@
+{
+	"_note": "TheShellkeeper's sctp.nl account (chapter 11: the shelf). Collection and wishlist are rares on Firefly. Keep them unchanged while the hunt runs.",
+	"username": "TheShellkeeper",
+	"accountId": "4c874586-a1b8-4d37-b6e2-878dd9f36054",
+	"collection": [
+		{
+			"name": "Death's Ledger",
+			"id": "rare-deaths-ledger"
+		},
+		{
+			"name": "Golden Books",
+			"id": "rare-golden-books"
+		},
+		{
+			"name": "Old Bookshelf",
+			"id": "rare-old-bookshelf"
+		},
+		{
+			"name": "Granpappy's Clock",
+			"id": "rare-granpappys-clock"
+		},
+		{
+			"name": "Snail o' Clock",
+			"id": "rare-snail-o-clock"
+		},
+		{
+			"name": "Firefly Lantern",
+			"id": "rare-firefly-lantern"
+		},
+		{
+			"name": "Fish Lantern",
+			"id": "rare-fish-lantern"
+		},
+		{
+			"name": "Floor Lantern",
+			"id": "rare-floor-lantern"
+		},
+		{
+			"name": "Shell of Shielding",
+			"id": "rare-shell-of-shielding"
+		},
+		{
+			"name": "The Infinite Pearl",
+			"id": "rare-the-infinite-pearl"
+		},
+		{
+			"name": "Akoya Pearl",
+			"id": "rare-akoya-pearl"
+		},
+		{
+			"name": "Antique Coin",
+			"id": "rare-antique-coin"
+		},
+		{
+			"name": "Seashell Shovel",
+			"id": "rare-seashell-shovel"
+		},
+		{
+			"name": "SnailCraft Yearbook",
+			"id": "rare-snailcraft-yearbook"
+		},
+		{
+			"name": "Sneldon the Helpful Snail",
+			"id": "rare-sneldon-the-helpful-snail"
+		},
+		{
+			"name": "Voyager Snail",
+			"id": "rare-voyager-snail"
+		},
+		{
+			"name": "Studio Snail",
+			"id": "rare-studio-snail"
+		},
+		{
+			"name": "Snail Neon Sign",
+			"id": "rare-snail-neon-sign"
+		},
+		{
+			"name": "Cookbook Stand",
+			"id": "rare-cookbook-stand"
+		},
+		{
+			"name": "Welcome Key",
+			"id": "rare-welcome-key"
+		},
+		{
+			"name": "Bag of Shiny Coin",
+			"id": "rare-bag-of-shiny-coin"
+		},
+		{
+			"name": "Twinkling Golden Coins",
+			"id": "rare-twinkling-golden-coins"
+		}
+	],
+	"wishlist": [
+		{
+			"name": "Miniature Giant Golden Snail",
+			"id": "rare-miniature-giant-golden-snail"
+		},
+		{
+			"name": "Opal the Pendant Snail",
+			"id": "rare-opal-the-pendant-snail"
+		},
+		{
+			"name": "Shelda the Lovely Snail",
+			"id": "rare-shelda-the-lovely-snail"
+		},
+		{
+			"name": "Nautical Crate Key",
+			"id": "rare-nautical-crate-key"
+		},
+		{
+			"name": "Relic Crate Key",
+			"id": "rare-relic-crate-key"
+		},
+		{
+			"name": "Haunted House Skeleton Key",
+			"id": "rare-haunted-house-skeleton-key"
+		},
+		{
+			"name": "Book of Wings",
+			"id": "rare-book-of-wings"
+		},
+		{
+			"name": "Peacokc Pearl",
+			"id": "rare-peacokc-pearl"
+		},
+		{
+			"name": "Multi-Hanging Lantern",
+			"id": "rare-multi-hanging-lantern"
+		},
+		{
+			"name": "Snailborb and Friends",
+			"id": "rare-snailborb-and-friends"
+		},
+		{
+			"name": "Triviathan the Trivia Snail",
+			"id": "rare-triviathan-the-trivia-snail"
+		},
+		{
+			"name": "Key to Addeve City",
+			"id": "rare-key-to-addeve-city"
+		}
+	],
+	"job": {
+		"id": "ddbb7209-c9a9-428a-b4d4-5466bc046dbf",
+		"title": "Reader wanted",
+		"code": "OYEIQZTE",
+		"note": "Chapter 8: the code is the same for everyone; each hunter gets their own key (note secret:job) so it decodes to their own 8-letter word: key[i] = code[i] - word[i] (mod 26)."
+	},
+	"ghostBarrels": {
+		"_note": "Chapter 6: polished andesite shop barrels (64 diamond blocks each) on TheShellkeeper's Firefly plot. Hunters read the letters in order of stock, smallest first. Keep the stock unchanged.",
+		"world": "Firefly",
+		"barrels": [
+			{
+				"pos": "-3879,104,-795",
+				"stock": 3
+			},
+			{
+				"pos": "-3879,103,-795",
+				"stock": 17
+			},
+			{
+				"pos": "-3879,104,-797",
+				"stock": 12
+			},
+			{
+				"pos": "-3879,103,-797",
+				"stock": 5
+			},
+			{
+				"pos": "-3879,104,-798",
+				"stock": 8
+			},
+			{
+				"pos": "-3879,103,-798",
+				"stock": 14
+			},
+			{
+				"pos": "-3877,104,-799",
+				"stock": 41
+			},
+			{
+				"pos": "-3877,103,-799",
+				"stock": 23
+			}
+		]
+	}
+}

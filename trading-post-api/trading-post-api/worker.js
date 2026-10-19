@@ -1347,20 +1347,14 @@ async function handleUploadListings(request, env) {
 
 		// scannedPositions pruning: any listing already stored at a position
 		// that was just actively re-scanned, but NOT re-reported in this exact
-		// upload, is *probably* gone (sold out / chest emptied / shop removed)
-		// — but a single scan occasionally missing one item out of a large
-		// container (for whatever reason — timing, lag, an edge case we haven't
-		// tracked down) shouldn't be enough on its own to delete a listing
-		// that's still actually there. Same principle ShopAutoScanner's
-		// whole-shop removal already uses client-side (see
-		// MIN_TRUSTED_PRUNE_VERSION's comment): require it missing across 2
-		// separate scans of that position before actually deleting; a single
-		// miss just increments missingStreak, reset back to 0 the moment the
-		// item is seen again (see buildListingUpsertStmt).
+		// upload, is gone (sold out / chest emptied / shop removed) and is
+		// deleted straight away. (It used to take 2 misses in a row, tracked in
+		// missingStreak; the threshold is now 1, so one scan is enough. The
+		// column and the counting stay so the old rule is one number away.)
 		// Deliberately NOT nested inside the validRows check above — a chest
 		// scanned down to fully empty sends scannedPositions with an empty
 		// `rows`, and that's exactly the case pruning exists for.
-		const MISSING_STREAK_THRESHOLD = 2;
+		const MISSING_STREAK_THRESHOLD = 1;
 		if (validScannedPositions.length > 0) {
 			const freshKeysAtScannedPos = new Set(
 				validRows.filter((r) => scannedSet.has(positionKey(r.world, r.position))).map((r) => r._key)
@@ -1781,7 +1775,9 @@ async function handleExpressJobInterest(request, env) {
 	await notifyAccount(env, job.accountId, "jobInterest",
 		`${auth.admin.username} ${verb} for your "${job.title}" post! Contact them via:\n${contactInfoText(auth.admin)}`, jobId);
 
-	return json({ ok: true, contactInfo: poster ? contactInfoText(poster) : null });
+	// the treasure hunt's job (chapter 8): the Shellkeeper answers hunters straight away
+	const huntReply = await hunt.jobInterestReply(env, jobId, auth.admin.id);
+	return json({ ok: true, contactInfo: poster ? contactInfoText(poster) : null, reply: huntReply || undefined });
 }
 
 // POST /marketplace/jobs/review — thumbs up/down on a job post, with an
@@ -8508,7 +8504,7 @@ async function handleSantaAdminGiftStatus(request, env) {
 // The Golden Shell treasure hunt lives in hunt.js; it gets the helpers it needs from here.
 const hunt = makeHunt({
 	json, requireAnyAdmin, requireAdminAuth, newToken, bufToHex, modUserPingHash, MC_USERNAME,
-	raredleCompare, raredleTwinNote, raredlePixelHint, raredlePracticePool, RAREDLE_MAX_GUESSES, RAREDLE_PIXEL_STEPS,
+	raredleCompare, raredleTwinNote, raredlePixelHint, raredlePracticePool, RAREDLE_MAX_GUESSES, RAREDLE_PIXEL_STEPS, notifyAccount,
 });
 
 const ROUTES = [

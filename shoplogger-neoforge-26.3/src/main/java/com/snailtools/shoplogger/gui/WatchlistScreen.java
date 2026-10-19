@@ -235,5 +235,12 @@ public class WatchlistScreen extends UiScreen {
 		} else if (searching() && list != null && list.size() == 0) {
 			Draw.emptyState(g, font, listX, listY, listW, listH, "No items match that", "Try a shorter search.", Theme.MUTED);
 		}
+		if (!searching() && com.snailtools.shoplogger.hunt.HuntClient.paired()) {
+			// The Golden Shell: a note for a hunter watching the right item
+			for (WatchedItem watched : WatchlistStore.getAll()) {
+				String note = com.snailtools.shoplogger.hunt.HuntClient.note("watch:" + watched.itemName.trim().toLowerCase(java.util.Locale.ROOT));
+				if (note != null) { com.snailtools.shoplogger.hunt.HuntNotes.card(g, font, note, contentX() + contentW(), contentBottom(), Math.min(260, contentW() - 20)); break; }
+			}
+		}
 	}
 }

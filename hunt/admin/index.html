@@ -77,6 +77,7 @@
 		<section class="card">
 			<h2>The Apex</h2>
 			<p class="muted small" style="margin:0 0 12px;">Shown to each hunter the moment they solve Whorl IV, so the shell must be in the vault from the start. Marks are drawn on the world map for them only.</p>
+			<div class="field"><label for="readerJobId">Chapter 8 job id</label><input type="text" id="readerJobId" class="code" placeholder="the Shellkeeper's marketplace job"><p class="help">Hunters who apply get their personal key (note <code>secret:job</code>) as a notification. Saved with the Apex.</p></div>
 			<div class="field"><label for="apexTitle">Title</label><input type="text" id="apexTitle"></div>
 			<div class="field"><label for="apexRiddle">Riddle</label><textarea id="apexRiddle" rows="5"></textarea></div>
 			<div class="field"><label for="apexMarks">Map marks</label><textarea id="apexMarks" class="code" rows="4" placeholder="1 1200 -350&#10;2 1410 -120"></textarea><p class="help">One per line: label x z</p></div>
@@ -117,7 +118,7 @@
 
 		<section class="card">
 			<h2>Doors</h2>
-			<p class="muted small" style="margin:0 0 10px;">Hidden pages on sctp.nl (sctp.nl/&lt;slug&gt;). Each hunter's door text comes from their puzzle set (note context <code>door:&lt;slug&gt;</code>). Times are UTC.</p>
+			<p class="muted small" style="margin:0 0 10px;">Hidden pages on sctp.nl (sctp.nl/&lt;slug&gt;). Each hunter's door text comes from their puzzle set (note context <code>door:&lt;slug&gt;</code>). Times are each hunter's own local time; while the hunt is off (testers only) doors are always open.</p>
 			<div class="field"><textarea id="doorsJson" class="code" rows="6" spellcheck="false" placeholder='[{"slug":"fireflies","title":"A door","from":"20:00","to":"23:00","closed":"Closed. Come back when the fireflies are out."}]'></textarea></div>
 			<button type="button" class="btn" id="saveDoors">Save doors</button>
 			<p class="err" id="doorsErr"></p>
@@ -183,6 +184,7 @@
 		$("vx").value = s.vault ? s.vault.x : ""; $("vy").value = s.vault && s.vault.y != null ? s.vault.y : ""; $("vz").value = s.vault ? s.vault.z : "";
 		$("vtol").value = s.vaultTolerance;
 		$("testers").value = (s.testers || []).join(", ");
+		$("readerJobId").value = s.readerJobId || "";
 		$("apexTitle").value = s.apex.title || "";
 		$("apexRiddle").value = s.apex.riddle || "";
 		$("apexMarks").value = (s.apex.marks || []).map(function(m){ return m.n + " " + m.x + " " + m.z; }).join("\n");
@@ -314,7 +316,7 @@
 		$("apexErr").textContent = "";
 		var marks = $("apexMarks").value.split("\n").map(function(l){ return l.trim().split(/\s+/); }).filter(function(p){ return p.length >= 3; })
 			.map(function(p){ return { n: p[0], x: Number(p[1]), z: Number(p[2]) }; });
-		post("/admin/hunt/settings", { apex: { title: $("apexTitle").value, riddle: $("apexRiddle").value, marks: marks } }).then(function(){ toast("Saved"); }).catch(function(e){ $("apexErr").textContent = e.message; });
+		post("/admin/hunt/settings", { readerJobId: $("readerJobId").value.trim(), apex: { title: $("apexTitle").value, riddle: $("apexRiddle").value, marks: marks } }).then(function(){ toast("Saved"); }).catch(function(e){ $("apexErr").textContent = e.message; });
 	};
 	$("saveDoors").onclick = function(){
 		$("doorsErr").textContent = "";
