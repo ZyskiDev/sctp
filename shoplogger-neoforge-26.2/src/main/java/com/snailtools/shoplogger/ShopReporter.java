@@ -143,6 +143,7 @@ public final class ShopReporter {
 		body.put("reason", "other");
 		String who = client.getUser() != null ? client.getUser().getName() : "unknown";
 		body.put("details", "[In-game report] sent from the Shop Logger mod by " + who);
+		body.put("reporter", who); // if you can deal with reports, the Worker accepts it straight away
 
 		HttpRequest request = HttpRequest.newBuilder()
 				.uri(URI.create(API_BASE + "/reports"))
@@ -154,7 +155,9 @@ public final class ShopReporter {
 
 		CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
 				.thenAccept(response -> client.execute(() -> {
-					if (response.statusCode() == 200) {
+					if (response.statusCode() == 200 && response.body().contains("\"autoAccepted\":true")) {
+						ChatFormat.send(client, ChatFormat.SUCCESS, "Listing removed: you can deal with reports, so your report was accepted straight away.");
+					} else if (response.statusCode() == 200) {
 						ChatFormat.send(client, ChatFormat.SUCCESS, "Report sent — thanks for flagging that listing.");
 					} else {
 						SENT_KEYS.remove(key); // let them retry

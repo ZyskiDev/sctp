@@ -151,6 +151,7 @@
 		<section data-perm="reports manageMapart">
 		<details class="section-toggle">
 		<summary>Reports <span class="count-badge" id="reportsCountBadge"></span></summary>
+		<div class="actions" id="reportsBulk" style="margin:0 0 12px;" hidden><button type="button" class="approve" id="approveAllReports">Accept all reports</button><span class="meta" id="approveAllMsg" style="margin-left:10px;"></span></div>
 		<div id="reportsPending"></div>
 		<details>
 			<summary>Resolved reports</summary>
@@ -1252,6 +1253,10 @@
 		badge.textContent = pending.length ? pending.length : "";
 		badge.classList.toggle("attn", pending.length > 0);
 
+		// "Accept all": only for listing reports, and only with the reports permission
+		var pendingListing = pending.filter(function(r){ return String(r.listingKey || "").indexOf("mapart:") !== 0; });
+		document.getElementById("reportsBulk").hidden = !(hasPerm("reports") && pendingListing.length);
+		document.getElementById("approveAllReports").textContent = "Accept all " + pendingListing.length + " listing report" + (pendingListing.length === 1 ? "" : "s");
 		document.getElementById("reportsPending").innerHTML = pending.length
 			? pending.map(reportCard).join("")
 			: '<div class="empty">No pending reports.</div>';
@@ -1350,6 +1355,18 @@
 			'<div style="margin-top:10px;">'+body+'</div>'+
 		'</div>';
 	}
+
+	document.getElementById("approveAllReports").addEventListener("click", async function(){
+		var b = this, msg = document.getElementById("approveAllMsg");
+		if(!confirm(b.textContent + "? Every reported listing is deleted. Mapart reports stay in the queue.")) return;
+		b.disabled = true;
+		try {
+			var r = await api("/admin/reports/approve-all", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+			msg.textContent = "Accepted " + r.approved + " (" + r.deleted + " listings removed" + (r.skippedMapart ? ", " + r.skippedMapart + " mapart reports left for you" : "") + ").";
+			await refresh();
+		} catch(err){ msg.textContent = "Failed: " + err.message; }
+		b.disabled = false;
+	});
 
 	async function resolveReport(id, action, field, value){
 		try {

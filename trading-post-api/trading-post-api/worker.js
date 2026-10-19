@@ -2330,6 +2330,17 @@ async function handleSubmitReport(request, env) {
 	};
 
 	try {
+		// An in-game report from someone who can deal with reports anyway is accepted
+		// straight away: the listing goes, and the report is filed as approved.
+		const reporter = await inGameReporterWithReportsPerm(env, body, report.details);
+		if (reporter && !isMapartReportKey(listingKey)) {
+			const details = (report.details + " · auto-accepted (" + reporter + " can deal with reports)").slice(0, 600);
+			await env.DB.prepare(
+				"INSERT INTO reports (id, listingKey, listingJson, reason, details, status, createdAt, resolvedAt) VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)"
+			).bind(report.id, report.listingKey, report.listing ? JSON.stringify(report.listing) : null, report.reason, details, report.createdAt, report.createdAt).run();
+			const res = await env.DB.prepare("DELETE FROM listings WHERE rowKey = ?").bind(listingKey).run();
+			return json({ ok: true, id: report.id, autoAccepted: true, listingChanged: res.meta.changes > 0 });
+		}
 		await env.DB.prepare(
 			"INSERT INTO reports (id, listingKey, listingJson, reason, details, status, createdAt, resolvedAt) VALUES (?, ?, ?, ?, ?, 'pending', ?, NULL)"
 		).bind(report.id, report.listingKey, report.listing ? JSON.stringify(report.listing) : null, report.reason, report.details, report.createdAt).run();
@@ -2337,6 +2348,51 @@ async function handleSubmitReport(request, env) {
 	} catch (e) {
 		return json({ error: String(e) }, 502);
 	}
+}
+
+const AUTO_ACCEPT_PER_HOUR = 30;
+
+/**
+ * The Minecraft name behind an in-game report, if that player's sctp.nl account
+ * (verified name) has the "reports" permission, or is a head admin. The mod sends
+ * it as `reporter` (and older mods only as "... by <name>" in the details).
+ * The name can't be proven (the mod's key is public), so this is capped at
+ * AUTO_ACCEPT_PER_HOUR per name, and a wrongly deleted listing comes back with
+ * the next scan of that shop.
+ */
+async function inGameReporterWithReportsPerm(env, body, details) {
+	if (!String(details || "").startsWith("[In-game report]")) return null;
+	let name = String(body.reporter || "").trim();
+	if (!name) { const m = /\bby ([.A-Za-z0-9_]{2,17})$/.exec(String(details)); if (m) name = m[1]; }
+	if (!MC_USERNAME.test(name)) return null;
+	const admin = await env.DB.prepare("SELECT isHeadAdmin, permissions FROM admins WHERE lower(ltrim(mcUsername, '.')) = lower(ltrim(?, '.')) AND mcVerified = 1 LIMIT 1").bind(name).first();
+	if (!admin) return null;
+	let perms = [];
+	try { perms = JSON.parse(admin.permissions || "[]"); } catch (e) { /* none */ }
+	if (!admin.isHeadAdmin && !perms.includes("reports")) return null;
+	const since = new Date(Date.now() - 3600 * 1000).toISOString();
+	const recent = await env.DB.prepare("SELECT COUNT(*) AS c FROM reports WHERE status = 'approved' AND resolvedAt >= ? AND details LIKE ?").bind(since, "%auto-accepted (" + name + " %").first();
+	return recent.c < AUTO_ACCEPT_PER_HOUR ? name : null;
+}
+
+// POST /admin/reports/approve-all ("reports") — accepts every pending listing
+// report at once: each listing is deleted and its report marked approved.
+// Mapart reports stay in the queue (they need a look).
+async function handleAdminApproveAllReports(request, env) {
+	const auth = await requireAdminAuth(request, env, "reports");
+	if (!auth.ok) return auth.response;
+	const { results } = await env.DB.prepare("SELECT id, listingKey FROM reports WHERE status = 'pending'").all();
+	const listing = results.filter((r) => !isMapartReportKey(r.listingKey));
+	const now = new Date().toISOString();
+	let deleted = 0;
+	for (const chunk of chunkArray(listing, 40)) {
+		const res = await env.DB.batch(chunk.flatMap((r) => [
+			env.DB.prepare("UPDATE reports SET status = 'approved', resolvedAt = ? WHERE id = ? AND status = 'pending'").bind(now, r.id),
+			env.DB.prepare("DELETE FROM listings WHERE rowKey = ?").bind(r.listingKey),
+		]));
+		for (let i = 1; i < res.length; i += 2) deleted += res[i].meta.changes;
+	}
+	return json({ ok: true, approved: listing.length, deleted, skippedMapart: results.length - listing.length });
 }
 
 async function handleSubmitSharedShopRequest(request, env) {
@@ -8493,6 +8549,7 @@ const ROUTES = [
 	["GET", "/admin/reports", handleListReports],
 	["GET", "/admin/shared-shop-requests", handleListSharedShopRequests],
 	["POST", "/admin/reports/resolve", handleResolveReport],
+	["POST", "/admin/reports/approve-all", handleAdminApproveAllReports],
 	["POST", "/admin/listings/remove", handleAdminRemoveListingDirect],
 	["POST", "/admin/listings/ban", handleAdminBanListing],
 	["GET", "/admin/listings/bans", handleAdminListBannedListings],
