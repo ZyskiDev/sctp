@@ -159,6 +159,8 @@ public class SettingsScreen extends UiScreen {
 							RareRentalHighlighter::isInShulkersEnabled, RareRentalHighlighter::setInShulkersEnabled),
 					SettingRow.toggle("Ender chest / backpack button", "A button beside /ec and /bp that opens the other one",
 							StorageSwitcher::isEnabled, StorageSwitcher::setEnabled),
+					SettingRow.toggle("Stack repeated chat", "Show ×2, ×3 next to a message instead of repeating it",
+							com.snailtools.shoplogger.qol.ChatStacker::isEnabled, com.snailtools.shoplogger.qol.ChatStacker::setEnabled),
 					SettingRow.toggle("Stock holograms", "Small stock line on the front of scanned shop chests",
 							StockHolograms::isEnabled, StockHolograms::setEnabled),
 					SettingRow.choice("Teleport beam style", "The beam that points to a shop after TP",

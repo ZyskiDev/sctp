@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.6 (mod 2.6)
+
+### Mod
+- **Stack repeated chat** (on by default, Settings › Display): when a message is almost the same as the one right before it, like the line for every butterfly you sell, the older line is replaced by the new one with ×2, ×3… after it instead of filling your chat. Messages only stack when they start with the same two words, so two different players' messages never merge.
+
 ## 2.5 (mod 2.5)
 
 ### Mod
