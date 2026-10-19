@@ -336,6 +336,15 @@
 		<summary>Settings &amp; accounts</summary>
 		<div class="category-body">
 
+		<section data-perm="hunt">
+		<details class="section-toggle">
+		<summary>The Golden Shell (treasure hunt)</summary>
+		<div class="card">
+			<div class="meta">The hunt has its own page: the on/off switch, the vault and answers, the shared clues, puzzle sets and hunters. <a href="/hunt/admin/">Open the hunt admin &rarr;</a></div>
+		</div>
+		</details>
+		</section>
+
 		<section data-perm="shortLinks">
 		<details class="section-toggle">
 		<summary>Short links</summary>
@@ -554,7 +563,7 @@
 
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var EDITABLE_FIELDS = ["itemName","baseItem","price","priceLabel","stackSize","amount","stacksInStock","currency","seller","world","position"];
-	var ALL_PERMS = ["reports","sharedShopRequests","manualListings","blockedSellers","marketplaceListings","updateNotice","suggestions","bugReports","playerReports","manageMapart","manageForms","auctions","siteNotice","secretSanta","shortLinks"];
+	var ALL_PERMS = ["reports","sharedShopRequests","manualListings","blockedSellers","marketplaceListings","updateNotice","suggestions","bugReports","playerReports","manageMapart","manageForms","auctions","siteNotice","secretSanta","shortLinks","hunt"];
 	var PERM_LABELS = {
 		reports: "Reports", sharedShopRequests: "Shared-shop requests",
 		manualListings: "Manual listings", blockedSellers: "Blocked sellers",
@@ -566,6 +575,7 @@
 		siteNotice: "Homepage notice",
 		shortLinks: "Short links (sctp.nl/<name> redirects to a page or another website)",
 		secretSanta: "Secret Santa (sign-ups, pairs, gift status) — see /secret-santa/admin/",
+		hunt: "The Golden Shell treasure hunt (on/off switch, answers, hunters) — see /hunt/admin/",
 	};
 	var PLAYER_REPORT_REASON_LABELS = {
 		scamming: "Scamming", inappropriate_content: "Inappropriate shop content",

@@ -46,9 +46,15 @@ public final class RaredleClient {
 
 	public static final class Answer { public String id, name, texture, effect, category, releaseDate, obtainedFrom; }
 
+	public static final class Board { public int board; public String status; }
+
 	public static final class State {
 		public String date, status, error;
 		public int maxGuesses, score;
+		// the Golden Shell's hunt boards (mode "hunt")
+		public String mode, resetAt;
+		public int board;
+		public List<Board> boards;
 		public List<Guess> guesses;
 		public PixelHint pixelHint;
 		public Stats stats;
@@ -61,11 +67,21 @@ public final class RaredleClient {
 	}
 
 	public static CompletableFuture<State> state() {
-		return withLogin(() -> send(HttpRequest.newBuilder(URI.create(API_BASE + "/raredle/state")).GET()));
+		return state(0);
+	}
+
+	/** huntBoard 0 = today's daily rare; 1+ = that treasure-hunt board. */
+	public static CompletableFuture<State> state(int huntBoard) {
+		String path = huntBoard > 0 ? "/raredle/state?mode=hunt&board=" + huntBoard : "/raredle/state";
+		return withLogin(() -> send(HttpRequest.newBuilder(URI.create(API_BASE + path)).GET()));
 	}
 
 	public static CompletableFuture<State> guess(String itemId) {
-		String body = GSON.toJson(Map.of("itemId", itemId));
+		return guess(itemId, 0);
+	}
+
+	public static CompletableFuture<State> guess(String itemId, int huntBoard) {
+		String body = huntBoard > 0 ? GSON.toJson(Map.of("itemId", itemId, "mode", "hunt", "board", huntBoard)) : GSON.toJson(Map.of("itemId", itemId));
 		return withLogin(() -> send(HttpRequest.newBuilder(URI.create(API_BASE + "/raredle/guess"))
 				.header("Content-Type", "application/json")
 				.POST(HttpRequest.BodyPublishers.ofString(body))));

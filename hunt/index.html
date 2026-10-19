@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Golden Shell - SCTP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/hunt/hunt.css">
+<link rel="stylesheet" href="/site.css">
+<style>
+	.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:4px;}
+	.tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font:600 14px var(--font-body);padding:8px 8px;margin-bottom:-1px;cursor:pointer;}
+	.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+	.banner{border-radius:12px;padding:12px 16px;border:1px solid rgba(var(--accent-rgb),.5);background:rgba(var(--accent-rgb),.1);}
+	.whorl-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;}
+	.whorl.locked{opacity:.6;}
+	.chapters{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:12px;margin-top:12px;}
+	.chapter{background:var(--panel-alt);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;}
+	.chapter.solved{border-color:rgba(111,191,106,.45);}
+	.chapter h3{margin:0;font-size:16px;}
+	.blocks p{margin:6px 0;}
+	.blocks ol,.blocks ul{margin:6px 0;padding-left:22px;}
+	.blocks li{margin:3px 0;}
+	.blocks pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:13px/1.5 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0;}
+	.blocks img{max-width:100%;border-radius:8px;border:1px solid var(--line);image-rendering:pixelated;display:block;margin:6px 0;}
+	.answer{display:flex;gap:8px;margin-top:6px;}
+	.answer input{flex:1;min-width:0;}
+	.hints{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+	.hint-row{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:13px;}
+	.hint-row b{color:var(--muted);min-width:46px;}
+	.hint-text{color:var(--text);font-style:italic;}
+	.fragment{font-family:var(--font-display);font-style:italic;color:var(--accent);}
+	.puzzle{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px;}
+	.lock{font-size:13.5px;}
+	.gate-box{max-width:520px;margin:40px auto;text-align:center;}
+	.gate-box .code-in{font:600 22px var(--font-mono);text-align:center;letter-spacing:.12em;text-transform:uppercase;max-width:220px;margin:14px auto 8px;display:block;}
+	.lb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;}
+	.notfound{max-width:520px;margin:60px auto;text-align:center;}
+	.notfound h1{font-family:var(--font-display);font-size:40px;margin:0 0 6px;}
+	ol.rules{padding-left:20px;margin:0;}
+	ol.rules li{margin:6px 0;}
+</style>
+</head>
+<body>
+
+<header class="site" id="siteHeader" hidden>
+	<div class="wrap header-row">
+		<div class="brand-row">
+			<div class="brand-mark" aria-hidden="true">&#x1F41A;</div>
+			<div><h1>The Golden Shell</h1><p class="tag" id="tagline">The Shellkeeper's ledger</p></div>
+		</div>
+		<div id="siteNavMount"></div>
+	</div>
+</header>
+
+<main class="wrap" id="main">
+	<p class="muted" id="loading">Loading&hellip;</p>
+</main>
+
+<script src="/site-nav.js" defer></script>
+<script src="/account-widget.js" defer></script>
+<script src="/hunt/hunt-common.js"></script>
+<script>
+(function(){
+	"use strict";
+	var H = window.HUNT, $ = H.$, esc = H.esc;
+	var ROMAN = ["", "I", "II", "III", "IV"];
+	var status = null, state = null, tab = "hunt", board = null, drafts = {};
+	var via = /[?&]via=spiral\b/.test(location.search) ? "spiral" : null;
+
+	function main(html){ $("main").innerHTML = html; }
+
+	function notFound(){
+		$("siteHeader").hidden = true;
+		document.title = "Page not found - SCTP";
+		main('<div class="notfound"><h1>404</h1><p class="muted">This page doesn\'t exist.</p><p><a href="/">Back to sctp.nl</a></p></div>');
+	}
+
+	function load(){
+		H.api("/hunt/status").then(function(s){
+			status = s;
+			if(!s.enabled) return notFound();
+			$("siteHeader").hidden = false;
+			if(!H.session()) return renderGate();
+			return H.api("/hunt/state").then(function(st){ state = st; render(); }).catch(function(e){
+				if(e.status === 401) return renderGate();
+				main('<div class="card"><p class="err">' + esc(e.message) + '</p></div>');
+			});
+		}).catch(function(){ main('<div class="card"><p class="err">Couldn\'t reach sctp.nl. Try again in a minute.</p></div>'); });
+	}
+
+	// ---- not signed up yet: the ledger asks for the code the mod showed ----
+	function renderGate(){
+		var s = H.session();
+		var html = '<div class="card gate-box"><h2 style="font-size:26px;">Who keeps the ledger?</h2>';
+		if(!status.signupOpen) html += '<p class="muted">The ledger is closed to new names for now.</p>';
+		if(!s){
+			html += '<p class="muted">The Shellkeeper only writes names they can trust. Log in to sctp.nl first.</p><button type="button" class="btn" id="loginBtn">Log in</button>';
+		} else if(!s.mcVerified){
+			html += '<p class="muted">The Shellkeeper only writes verified names. Verify your Minecraft name on <a href="/account/">your account page</a> first.</p>';
+		} else {
+			html += '<p class="muted">Bring the code the Shellkeeper gave you.</p><input type="text" class="code-in" id="codeIn" maxlength="7" placeholder="ABC-123" autocomplete="off" spellcheck="false" aria-label="Code">' +
+				'<button type="button" class="btn" id="codeBtn">Sign the ledger</button><p class="err" id="codeErr"></p>';
+		}
+		html += "</div>";
+		main(html);
+		if($("loginBtn")) $("loginBtn").onclick = function(){ window.sctpAccount && window.sctpAccount.openLogin(); };
+		if($("codeBtn")){
+			var go = function(){
+				$("codeErr").textContent = "";
+				H.api("/hunt/signup", { json: { code: $("codeIn").value, via: via } }).then(function(st){ state = st; render(); })
+					.catch(function(e){ $("codeErr").textContent = e.message; });
+			};
+			$("codeBtn").onclick = go;
+			$("codeIn").onkeydown = function(e){ if(e.key === "Enter") go(); };
+		}
+	}
+
+	// ---- signed up ----
+	function render(){
+		if(!state.player) return renderGate();
+		$("tagline").innerHTML = 'Ledger <span class="ledger">' + esc(state.player.ledger) + "</span> &middot; " + esc(state.player.mcUsername);
+		var html = "";
+		var seen = null;
+		try { seen = localStorage.getItem("huntBroadcastSeen"); } catch(e){}
+		if(status.broadcast && status.broadcast.id !== seen) html += '<div class="banner" id="bcBanner"><b>The Shellkeeper:</b> ' + esc(status.broadcast.text) + ' <button type="button" class="btn-ghost" id="bcClose" style="margin-left:8px;padding:4px 10px;">Got it</button></div>';
+		if(state.shell.found) html += '<div class="banner"><b>The Golden Shell has been found' + (state.shell.by ? " by " + esc(state.shell.by) : "") + ".</b> The ledger stays open: finish the hunt for your place in the Hall of Fame.</div>";
+		html += '<div class="tabs" role="tablist">' + [["hunt", "Your hunt"], ["fame", "Hall of Fame"], ["rules", "Rules"]].map(function(t){
+			return '<button type="button" class="tab' + (tab === t[0] ? " active" : "") + '" data-tab="' + t[0] + '" role="tab" aria-selected="' + (tab === t[0]) + '">' + t[1] + "</button>";
+		}).join("") + "</div>";
+		html += '<div id="tabBody"></div>';
+		main(html);
+		if($("bcClose")) $("bcClose").onclick = function(){ try { localStorage.setItem("huntBroadcastSeen", status.broadcast.id); } catch(e){} $("bcBanner").remove(); };
+		if(tab === "hunt") renderHunt();
+		else if(tab === "fame") renderFame();
+		else renderRules();
+	}
+
+	function blocks(list){
+		return '<div class="blocks">' + (list || []).map(function(b){
+			if(b.t === "list") return (b.ordered === false ? "<ul>" : "<ol>") + (b.items || []).map(function(i){ return "<li>" + esc(i) + "</li>"; }).join("") + (b.ordered === false ? "</ul>" : "</ol>");
+			if(b.t === "code") return "<pre>" + esc(b.v) + "</pre>";
+			if(b.t === "image") return '<img data-img="' + esc(b.key) + '" alt="' + esc(b.alt || "A picture from the Shellkeeper") + '">';
+			if(b.t === "link" && /^\/[^/]/.test(b.href || "")) return '<p><a href="' + esc(b.href) + '">' + esc(b.v || b.href) + "</a></p>";
+			return "<p>" + esc(b.v) + "</p>";
+		}).join("") + "</div>";
+	}
+	function loadImages(){
+		document.querySelectorAll("img[data-img]").forEach(function(img){
+			fetch(H.API + "/hunt/image?key=" + encodeURIComponent(img.dataset.img), { headers: { Authorization: "Bearer " + H.session().token } })
+				.then(function(r){ return r.ok ? r.blob() : null; }).then(function(b){ if(b) img.src = URL.createObjectURL(b); });
+			img.removeAttribute("data-img");
+		});
+	}
+
+	function hintRows(id, hints){
+		if(!hints || !hints.length) return "";
+		return '<div class="hints">' + hints.map(function(h){
+			var right;
+			if(h.revealed) right = '<span class="hint-text">' + esc(h.text) + "</span>";
+			else if(h.available) right = '<button type="button" class="btn-ghost" data-hint="' + esc(id) + '" data-tier="' + h.tier + '" style="padding:4px 10px;">Show the ' + h.label.toLowerCase() + "</button>";
+			else right = '<span class="muted">' + H.until(h.availableAt) + "</span>";
+			return '<div class="hint-row"><b>' + esc(h.label) + "</b>" + right + "</div>";
+		}).join("") + "</div>";
+	}
+
+	function answerBox(ref, placeholder){
+		return '<div class="answer"><input type="text" data-answer="' + esc(ref) + '" placeholder="' + esc(placeholder || "Your answer") + '" value="' + esc(drafts[ref] || "") + '" autocomplete="off" spellcheck="false" aria-label="Answer">' +
+			'<button type="button" class="btn" data-submit="' + esc(ref) + '">Check</button></div><p class="err" data-err="' + esc(ref) + '"></p>';
+	}
+
+	function renderHunt(){
+		var html = "";
+		state.whorls.forEach(function(w){
+			if(!w.unlocked){
+				html += '<section class="card whorl locked"><div class="whorl-head"><h2>Whorl ' + ROMAN[w.whorl] + " &middot; " + esc(w.title) + '</h2><span class="pill">Locked</span></div><p class="muted lock" style="margin:0;">Opens when you solve Whorl ' + ROMAN[w.whorl - 1] + ".</p></section>";
+				return;
+			}
+			var solvedCount = w.chapters.filter(function(c){ return c.solved; }).length;
+			html += '<section class="card whorl"><div class="whorl-head"><h2>Whorl ' + ROMAN[w.whorl] + " &middot; " + esc(w.title) + "</h2>" +
+				(w.solved ? '<span class="pill good">Solved</span>' : '<span class="pill on">' + solvedCount + " of " + w.chapters.length + " chapters</span>") + "</div>";
+			if(w.intro) html += '<p class="muted" style="margin:4px 0 0;">' + esc(w.intro) + "</p>";
+			html += '<div class="chapters">' + w.chapters.map(function(c){
+				var out = '<div class="chapter' + (c.solved ? " solved" : "") + '"><div class="whorl-head"><h3>' + esc(c.title) + "</h3>" + (c.solved ? '<span class="pill good">Solved</span>' : "") + "</div>";
+				out += '<div class="clue">' + esc(c.clue) + "</div>";
+				if(c.content && c.content.length) out += blocks(c.content);
+				if(c.solved) out += '<p style="margin:4px 0 0;"><span class="muted small">Fragment:</span> <span class="fragment">' + esc(c.fragment) + "</span></p>";
+				else out += answerBox(c.id, c.answerKind === "numbers" ? "Numbers" : "One word") + hintRows(c.id, c.hints);
+				return out + "</div>";
+			}).join("") + "</div>";
+
+			// the whorl puzzle
+			html += '<div class="puzzle"><h3>Whorl puzzle</h3>';
+			if(w.solved){
+				html += w.square ? '<p class="note">Your square: <b>' + H.fmt(w.square.size) + "</b> blocks from X " + H.fmt(w.square.x) + ", Z " + H.fmt(w.square.z) + ' &middot; <a href="/world/#' + w.square.x + "," + w.square.z + "," + w.square.size + '">see it on the map</a></p>' : '<p class="note">Solved: you hold the key.</p>';
+			} else if(!w.puzzleOpen){
+				html += '<p class="muted lock">Solve all four chapters to put the fragments together.</p>';
+			} else {
+				if(w.puzzle) html += '<div class="clue">' + esc(w.puzzle) + "</div>";
+				html += '<ol class="small">' + w.chapters.map(function(c){ return '<li class="fragment">' + esc(c.fragment) + "</li>"; }).join("") + "</ol>";
+				if(w.answerKind === "square") html += '<p><a class="btn" href="/world/?hunt=1">Pick your ' + H.fmt(w.target ? w.target.size : 0) + '-block square on the map</a></p><p class="muted small">Three wrong picks a day at most.</p>';
+				else html += answerBox("w" + w.whorl, "The key's numbers") + '<p class="muted small" style="margin:0;">Three wrong tries a day at most.</p>';
+				if(w.nudge) html += hintRows("w" + w.whorl, [{ tier: 3, label: "Nudge", available: w.nudge.available, availableAt: w.nudge.availableAt, revealed: w.nudge.revealed, text: w.nudge.text }]);
+			}
+			html += "</div></section>";
+		});
+
+		if(state.apex){
+			var a = state.apex;
+			html += '<section class="card"><div class="whorl-head"><h2>' + esc(a.title) + "</h2>" + (a.solved ? '<span class="pill good">Solved</span>' : '<span class="pill on">The race</span>') + "</div>";
+			html += '<div class="clue">' + esc(a.riddle).replace(/\n/g, "<br>") + "</div>";
+			if(a.marks && a.marks.length) html += '<p><a href="/world/?hunt=1">See the marks on the world map</a></p>';
+			if(!a.solved) html += answerBox("apex", "x y z");
+			else {
+				html += '<p class="note">That\'s the block. The rest happens on Firefly.</p>';
+				html += a.vaultSolved ? '<p class="note">You reached the vault.</p>' : '<h3 style="margin-top:12px;">The lectern\'s word</h3>' + answerBox("vault", "The word in the vault");
+				if(!state.shell.found){
+					html += a.claimed ? '<p class="muted small">You told the ledger you took the shell. The Shellkeeper will confirm it.</p>'
+						: '<h3 style="margin-top:12px;">Took the shell?</h3><label class="small" style="display:flex;gap:6px;align-items:center;margin:0 0 8px;"><input type="checkbox" id="showName" checked> Announce my name</label><button type="button" class="btn" id="claimBtn">I took the Golden Shell</button>';
+				}
+			}
+			html += "</section>";
+		}
+
+		html += '<section class="card"><label class="small" style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="anon"' + (state.player.anonymous ? " checked" : "") + "> Show me as “Anonymous hunter” in the Hall of Fame</label></section>";
+		$("tabBody").innerHTML = html;
+		loadImages();
+	}
+
+	function renderFame(){
+		$("tabBody").innerHTML = '<p class="muted">Loading&hellip;</p>';
+		H.api("/hunt/leaderboard").then(function(lb){
+			var f = lb.funnel;
+			var html = '<section class="card"><div class="stats">' + [["Hunters", lb.hunters], ["Whorl I", f.w1], ["Whorl II", f.w2], ["Whorl III", f.w3], ["Whorl IV", f.w4], ["Apex", f.apex], ["Vault", f.vault]]
+				.map(function(x){ return '<div class="stat"><div class="n">' + x[1] + '</div><div class="l">' + x[0] + "</div></div>"; }).join("") + "</div></section>";
+			if(lb.shell.found) html += '<div class="banner"><b>The Golden Shell</b> was found' + (lb.shell.by ? " by " + esc(lb.shell.by) : "") + " on " + H.when(lb.shell.at) + ".</div>";
+			html += '<div class="lb-grid">';
+			html += '<section class="card"><h2>The Apex, in order</h2>' + (lb.apex.length ? '<ol>' + lb.apex.map(function(r){ return "<li>" + esc(r.name) + ' <span class="muted small">' + H.when(r.at) + "</span></li>"; }).join("") + "</ol>" : '<p class="muted">Nobody yet.</p>') + "</section>";
+			html += '<section class="card"><h2>First to solve</h2><div class="tbl-wrap"><table class="tbl"><tbody>' + lb.firsts.map(function(c){
+				return "<tr><td>" + ROMAN[c.whorl] + " &middot; " + esc(c.title) + "</td><td>" + (c.by ? esc(c.by) : '<span class="muted">nobody yet</span>') + "</td></tr>";
+			}).join("") + "</tbody></table></div></section>";
+			lb.fastest.forEach(function(w){
+				html += '<section class="card"><h2>Fastest through Whorl ' + ROMAN[w.whorl] + "</h2>" + (w.top.length ? "<ol>" + w.top.map(function(r){ return "<li>" + esc(r.name) + ' <span class="muted small">' + H.duration(r.ms) + "</span></li>"; }).join("") + "</ol>" : '<p class="muted">Nobody yet.</p>') + "</section>";
+			});
+			$("tabBody").innerHTML = html + "</div>";
+		}).catch(function(e){ $("tabBody").innerHTML = '<p class="err">' + esc(e.message) + "</p>"; });
+	}
+
+	function renderRules(){
+		$("tabBody").innerHTML = '<section class="card"><h2>Rules</h2><ol class="rules">' + [
+			"One hunter per Minecraft account. Your account must be verified on SCTP, and its name must match the mod.",
+			"Your puzzles are yours: nobody else has your answers. Talk about where to look as much as you like, but never post whorl answers, the final square, the key, or anything from the Apex.",
+			"No alts, scripts, or tampering with the mod or the website. Breaking this removes you from the hunt and its prizes.",
+			"The hunt only sends you to public places and the vault. Don't search, grief or bother anyone's builds. Normal server rules apply.",
+			"The Golden Shell goes to the first player to open the vault. Runner-up prizes go to the fastest correct Apex answers here.",
+			"The organiser, staff and testers can't win prizes.",
+			"If something breaks, the Shellkeeper decides how to fix it, and that decision is final.",
+		].map(function(r){ return "<li>" + esc(r) + "</li>"; }).join("") + "</ol></section>";
+	}
+
+	// ---- actions ----
+	function afterAnswer(ref, r){
+		state = r.state;
+		if(r.correct){ delete drafts[ref]; render(); }
+		else { render(); var e = document.querySelector('[data-err="' + ref + '"]'); if(e) e.textContent = "Not quite."; }
+	}
+	document.addEventListener("input", function(e){ var i = e.target.closest("input[data-answer]"); if(i) drafts[i.dataset.answer] = i.value; });
+	document.addEventListener("keydown", function(e){
+		var i = e.target.closest && e.target.closest("input[data-answer]");
+		if(i && e.key === "Enter"){ var b = document.querySelector('[data-submit="' + i.dataset.answer + '"]'); if(b) b.click(); }
+	});
+	document.addEventListener("click", function(e){
+		var t = e.target.closest("[data-tab]");
+		if(t){ tab = t.dataset.tab; render(); return; }
+		var s = e.target.closest("[data-submit]");
+		if(s){
+			var ref = s.dataset.submit, input = document.querySelector('[data-answer="' + ref + '"]');
+			s.disabled = true;
+			H.api("/hunt/answer", { json: { ref: ref, answer: input ? input.value : "" } }).then(function(r){ afterAnswer(ref, r); })
+				.catch(function(err){ s.disabled = false; var el = document.querySelector('[data-err="' + ref + '"]'); if(el) el.textContent = err.message + (err.data && err.data.retryAt ? " (" + H.until(err.data.retryAt) + ")" : ""); });
+			return;
+		}
+		var h = e.target.closest("[data-hint]");
+		if(h){ H.api("/hunt/hint", { json: { chapterId: h.dataset.hint, tier: Number(h.dataset.tier) } }).then(function(st){ state = st; render(); }).catch(function(err){ alert(err.message); }); return; }
+		if(e.target.id === "claimBtn"){
+			if(!confirm("Did you take the Golden Shell from the vault? The Shellkeeper will check.")) return;
+			H.api("/hunt/shell-claim", { json: { showName: $("showName").checked } }).then(function(st){ state = st; render(); }).catch(function(err){ alert(err.message); });
+		}
+	});
+	document.addEventListener("change", function(e){
+		if(e.target.id === "anon") H.api("/hunt/prefs", { json: { anonymous: e.target.checked } }).then(function(st){ state = st; });
+	});
+
+	window.sctpOnAccountChange = load;
+	load();
+})();
+</script>
+</body>
+</html>

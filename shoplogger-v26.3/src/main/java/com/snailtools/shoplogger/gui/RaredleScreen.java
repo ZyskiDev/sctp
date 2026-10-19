@@ -51,10 +51,22 @@ public class RaredleScreen extends UiScreen {
 	private int suggestX, suggestY, suggestW;
 	private int tableY;
 
+	/** 0 = today's daily rare; 1+ = a treasure-hunt board (the Golden Shell, chapter 4). */
+	private int huntBoard;
+
 	public RaredleScreen(Screen parent) {
-		super("Rare-dle", parent, Section.RAREDLE);
+		this(parent, 0);
+	}
+
+	public RaredleScreen(Screen parent, int huntBoard) {
+		super(huntBoard > 0 ? "Hunt boards" : "Rare-dle", parent, Section.RAREDLE);
+		this.huntBoard = huntBoard;
 		WebDataClient.fetchRareCatalog().thenAccept(list -> minecraft().execute(() -> { rares = list; updateSuggestions(); }));
-		RaredleClient.state().whenComplete((s, ex) -> minecraft().execute(() -> {
+		loadState();
+	}
+
+	private void loadState() {
+		RaredleClient.state(huntBoard).whenComplete((s, ex) -> minecraft().execute(() -> {
 			loading = false;
 			if (ex != null) error = RaredleClient.messageOf(ex);
 			else state = s;
@@ -73,6 +85,16 @@ public class RaredleScreen extends UiScreen {
 	@Override
 	protected void initContent() {
 		int x = contentX(), y = contentY() + 30, w = contentW();
+		if (huntBoard > 0 && state != null && state.boards != null) {
+			int bx = x + w - state.boards.size() * 22;
+			for (RaredleClient.Board b : state.boards) {
+				int n = b.board;
+				addRenderableWidget(new UiButton(bx, contentY() - 2, 20, 14, String.valueOf(n), n == huntBoard ? UiButton.Style.PRIMARY : UiButton.Style.SECONDARY,
+						() -> { huntBoard = n; state = null; loading = true; rebuild(); loadState(); })
+						.tooltip("Board " + n + ("won".equals(b.status) ? " (solved)" : "lost".equals(b.status) ? " (lost)" : "")));
+				bx += 22;
+			}
+		}
 		if (playing()) {
 			int btnW = 56;
 			search = new UiField(font, x, y, w - btnW - 6, 20, "Type a rare's name…", true);
@@ -86,11 +108,13 @@ public class RaredleScreen extends UiScreen {
 			suggestW = w - btnW - 6;
 			setInitialFocus(search.box);
 			y += 28;
-		} else {
+		} else if (huntBoard == 0) {
 			search = null;
 			int bw = 150;
 			addRenderableWidget(new UiButton(x + w - bw, contentY(), bw, 18, "Leaderboard on sctp.nl ↗", UiButton.Style.SECONDARY,
 					() -> UiLinks.open("https://sctp.nl/rare-dle/")));
+		} else {
+			search = null;
 		}
 		tableY = y;
 		updateSuggestions();
@@ -121,7 +145,7 @@ public class RaredleScreen extends UiScreen {
 		RareItem r = suggestions.get(index);
 		busy = true;
 		error = null;
-		RaredleClient.guess(r.id).whenComplete((s, ex) -> minecraft().execute(() -> {
+		RaredleClient.guess(r.id, huntBoard).whenComplete((s, ex) -> minecraft().execute(() -> {
 			busy = false;
 			if (ex != null) error = RaredleClient.messageOf(ex);
 			else { state = s; keepQuery = ""; }
@@ -160,11 +184,15 @@ public class RaredleScreen extends UiScreen {
 		String head;
 		int headColor = Theme.TEXT;
 		int used = state.guesses == null ? 0 : state.guesses.size();
-		if (playing()) head = "Guess today's secret rare · " + used + " of " + state.maxGuesses + " guesses";
+		if (huntBoard > 0) {
+			if (playing()) head = "Hunt board " + huntBoard + " · " + used + " of " + state.maxGuesses + " guesses";
+			else if ("won".equals(state.status)) { head = "Board " + huntBoard + " solved in " + used + ". The Shellkeeper notes it down."; headColor = com.snailtools.shoplogger.hunt.HuntClient.GOLD; }
+			else { head = "Board lost. It comes back with a new rare (same first letter) " + com.snailtools.shoplogger.hunt.HuntClient.until(state.resetAt) + "."; headColor = Theme.WARN; }
+		} else if (playing()) head = "Guess today's secret rare · " + used + " of " + state.maxGuesses + " guesses";
 		else if ("won".equals(state.status)) { head = "Solved in " + used + "! +" + state.score + " points"; headColor = Theme.ACCENT; }
 		else { head = "Out of guesses. Back tomorrow for a new one!"; headColor = Theme.WARN; }
-		Draw.textShadow(g, font, head, x, y + 2, headColor);
-		if (state.stats != null) {
+		Draw.textShadow(g, font, Draw.trim(font, head, w - (huntBoard > 0 ? 120 : 0)), x, y + 2, headColor);
+		if (state.stats != null && huntBoard == 0) {
 			String stats = "Streak " + state.stats.streak + " · Best " + state.stats.bestStreak + " · " + fmtNum(state.stats.points) + " points";
 			Draw.text(g, font, Draw.trim(font, stats, w - (playing() ? 60 : 160)), x, y + 14, Theme.MUTED);
 		}
@@ -220,7 +248,7 @@ public class RaredleScreen extends UiScreen {
 		// the answer, once the game is over
 		if (state.answer != null) {
 			ry += 6;
-			Draw.text(g, font, "today's rare", x, ry, Theme.FAINT);
+			Draw.text(g, font, huntBoard > 0 ? "this board's rare" : "today's rare", x, ry, Theme.FAINT);
 			Draw.remoteTexture(g, state.answer.texture, x, ry + 11, 16);
 			Draw.textShadow(g, font, state.answer.name, x + 20, ry + 15, Theme.ACCENT);
 			if (state.answer.effect != null && !state.answer.effect.isBlank()) {

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SCTP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/hunt/hunt.css">
+<style>
+	body{min-height:100vh;display:flex;align-items:center;justify-content:center;}
+	.door{max-width:560px;margin:40px 20px;text-align:center;}
+	.door .mark{width:56px;height:56px;margin:0 auto 18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFE59A,#E8B93A 45%,#8A6510);}
+	.door.closed .mark{filter:grayscale(1) brightness(.6);}
+	.door h1{font-family:var(--font-display);font-weight:600;font-size:26px;margin:0 0 12px;}
+	.door p{font-family:var(--font-display);font-style:italic;font-size:19px;line-height:1.55;white-space:pre-line;margin:0;}
+</style>
+</head>
+<body>
+<main class="door" id="door"><p class="muted">&hellip;</p></main>
+<script src="/hunt/hunt-common.js"></script>
+<script>
+// A hidden door of the treasure hunt (404.html sends sctp.nl/<slug> here when
+// the hunt says that name is a door). Shows the URL as it was typed.
+(function(){
+	"use strict";
+	var H = window.HUNT, esc = H.esc;
+	var slug = (new URLSearchParams(location.search).get("slug") || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+	if(slug) try { history.replaceState(null, "", "/" + slug); } catch(e){}
+	H.api("/hunt/door?slug=" + encodeURIComponent(slug)).then(function(d){
+		var el = H.$("door");
+		el.className = "door" + (d.open ? "" : " closed");
+		el.innerHTML = '<div class="mark" aria-hidden="true"></div>' + (d.title ? "<h1>" + esc(d.title) + "</h1>" : "") + "<p>" + esc(d.text) + "</p>";
+	}).catch(function(){ location.replace("/"); });
+})();
+</script>
+</body>
+</html>

@@ -26,6 +26,7 @@ public class QolHookManager {
         if(butterflyGarden != null) butterflyGarden.tick();
         if(creepyCrawlyExchange != null) creepyCrawlyExchange.tick();
         com.snailtools.shoplogger.auction.DutchClock.tick();
+        com.snailtools.shoplogger.hunt.HuntClient.tick(net.minecraft.client.Minecraft.getInstance());
     }
 
     /** Returns true if an addon used the click, so the game shouldn't also get it. */
@@ -64,6 +65,7 @@ public class QolHookManager {
         if(storageSwitcher != null) storageSwitcher.onScreenRender(screen, graphics, mouseX, mouseY, a);
         if(creepyCrawlyExchange != null) creepyCrawlyExchange.onScreenRender(screen, graphics, mouseX, mouseY, a);
         BuyConfirm.onScreenRender(screen, graphics, mouseX, mouseY, a);
+        com.snailtools.shoplogger.hunt.HuntNotes.onScreenRender(screen, graphics);
     }
 
     public static void onKeyEvent(){

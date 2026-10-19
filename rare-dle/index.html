@@ -76,6 +76,12 @@
 	.modebar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center;}
 	.mode{background:var(--panel-alt);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 16px;font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit;}
 	.mode.active{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+	#modeHunt.active{background:#E8B93A;color:#231A04;}
+	.boards{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:13px;color:var(--muted);}
+	.board{background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:4px 11px;font:600 13px inherit;cursor:pointer;font-family:inherit;}
+	.board.on{border-color:#E8B93A;color:#E8B93A;}
+	.board.won{background:rgba(79,163,79,.18);border-color:var(--good);}
+	.board.lost{opacity:.6;}
 	.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:10px;}
 	.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
 
@@ -131,8 +137,10 @@
 			<div class="modebar">
 				<button type="button" class="mode active" id="modeDaily">Daily rare</button>
 				<button type="button" class="mode" id="modePractice">Random practice</button>
+				<button type="button" class="mode" id="modeHunt" hidden>Hunt boards</button>
 				<button type="button" class="btn ghost" id="newPracticeBtn" hidden>New random round</button>
 			</div>
+			<div class="boards" id="huntBoards" hidden></div>
 		</div>
 		<div class="card">
 			<div class="status-row">
@@ -196,6 +204,8 @@
 	var API_BASE = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev";
 	var COLS = [["category","Category"],["released","Released"],["obtained","Obtained from"],["slot","Type / slot"],["dyeable","Dyeable"],["particles","Particles"]];
 	var catalog = [], state = null, busy = false, sel = -1, shown = [], mode = "daily";
+	// The Golden Shell: a hunter's personal boards (chapter 4), only while the hunt runs.
+	var huntBoard = 1;
 
 	function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 	function session(){ return window.sctpAccount ? window.sctpAccount.getSession() : null; }
@@ -220,7 +230,7 @@
 	function loadGame(){
 		var s = session();
 		// Practice plays without an account; the daily still needs one.
-		if(mode === "daily"){
+		if(mode === "daily" || mode === "hunt"){
 			$("loginCta").hidden = !!s;
 			$("game").hidden = !s;
 			if(!s) return;
@@ -229,13 +239,14 @@
 			$("game").hidden = false;
 		}
 		var path = "/raredle/state";
+		if(mode === "hunt") path += "?mode=hunt&board=" + huntBoard;
 		if(mode === "practice"){
 			path += "?mode=practice";
 			if(!s && getPracticeToken()) path += "&token=" + encodeURIComponent(getPracticeToken());
 		}
 		api(path).then(function(r){
 			if(!r.ok){
-				if(mode === "practice"){ mode = "daily"; setMode("daily"); loadGame(); return; }
+				if(mode === "practice" || mode === "hunt"){ mode = "daily"; setMode("daily"); loadGame(); return; }
 				$("gErr").textContent = r.data.error || "Couldn't load today's game."; return;
 			}
 			state = r.data;
@@ -247,7 +258,8 @@
 	function renderGame(){
 		var st = state, done = st.status !== "playing";
 		$("newPracticeBtn").hidden = mode !== "practice";
-		$("stats").parentNode.hidden = mode === "practice";
+		$("stats").parentNode.hidden = mode !== "daily";
+		renderBoards(st);
 		$("gCount").textContent = st.guesses.length; $("gMax").textContent = st.maxGuesses;
 		var pips = "";
 		for(var i = 0; i < st.maxGuesses; i++) pips += '<span class="pip' + (i < st.guesses.length ? (done && st.status === "won" && i === st.guesses.length - 1 ? " won" : " used") : "") + '"></span>';
@@ -291,7 +303,7 @@
 			$("pixelSub").textContent = ph.cells ? "The secret rare's icon, squashed down to " + ph.size * ph.size + " pixels." : "No picture available for this rare today.";
 		}
 		var next = (st.pixelSteps || []).filter(function(s){ return st.guesses.length < s[0]; })[0];
-		$("hintLocked").textContent = st.status !== "playing" ? "" : next
+		$("hintLocked").textContent = mode === "hunt" && st.status === "lost" && st.resetAt ? "This board comes back with a new rare (same first letter) at " + new Date(st.resetAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + "." : st.status !== "playing" ? "" : next
 			? "Pixel hint: " + next[1] + "\u00d7" + next[1] + " unlocks after " + next[0] + " guesses" + (ph ? " (a sharper picture)." : ".")
 			: "";
 	}
@@ -311,6 +323,10 @@
 		if(st.status === "playing" || !st.answer){ el.hidden = true; return; }
 		var won = st.status === "won", a = st.answer;
 		el.hidden = false;
+		if(mode === "hunt"){
+			el.innerHTML = '<div class="result"><img src="' + esc(a.texture) + '" alt=""><div style="flex:1;min-width:200px;"><div class="sub">Board ' + st.board + " solved in " + st.guesses.length + "</div><h3>" + esc(a.name) + '</h3><div class="sub">The Shellkeeper notes it down. Back to <a href="/hunt/">your hunt</a>.</div></div></div>';
+			return;
+		}
 		el.innerHTML = '<div class="result"><img src="' + esc(a.texture) + '" alt="">' +
 			'<div style="flex:1;min-width:200px;"><div class="sub">' + (won ? "You got it in " + st.guesses.length + (st.guesses.length === 1 ? " guess!" : " guesses!") : "Out of guesses — today's rare was:") + '</div>' +
 			'<h3>' + esc(a.name) + '</h3><div class="sub">' + esc(a.category || "") + (a.releaseDate ? " &middot; " + esc(a.releaseDate) : "") + (a.obtainedFrom ? " &middot; " + esc(a.obtainedFrom) : "") + '</div>' +
@@ -353,6 +369,30 @@
 		mode = m;
 		$("modeDaily").classList.toggle("active", m === "daily");
 		$("modePractice").classList.toggle("active", m === "practice");
+		$("modeHunt").classList.toggle("active", m === "hunt");
+	}
+	function renderBoards(st){
+		var el = $("huntBoards");
+		el.hidden = mode !== "hunt" || !st.boards;
+		if(el.hidden) return;
+		el.innerHTML = "Board " + st.boards.map(function(b){
+			return '<button type="button" class="board' + (b.board === st.board ? " on" : "") + (b.status === "won" ? " won" : b.status === "lost" ? " lost" : "") + '" data-board="' + b.board + '">' + b.board + "</button>";
+		}).join("");
+	}
+	$("huntBoards").addEventListener("click", function(e){
+		var b = e.target.closest("[data-board]");
+		if(!b) return;
+		huntBoard = Number(b.dataset.board);
+		loadGame();
+	});
+	$("modeHunt").addEventListener("click", function(){ if(mode === "hunt") return; setMode("hunt"); loadGame(); });
+	// Show the Hunt boards button only to a hunter whose boards are open.
+	function checkHunt(){
+		if(!session()) { $("modeHunt").hidden = true; return; }
+		api("/raredle/state?mode=hunt&board=1").then(function(r){
+			$("modeHunt").hidden = !r.ok;
+			if(r.ok && /[?&]mode=hunt\b/.test(location.search) && mode !== "hunt"){ setMode("hunt"); loadGame(); }
+		});
 	}
 	$("modeDaily").addEventListener("click", function(){ if(mode === "daily") return; setMode("daily"); loadGame(); });
 	$("modePractice").addEventListener("click", function(){ if(mode === "practice") return; setMode("practice"); loadGame(); });
@@ -399,6 +439,7 @@
 		busy = true; $("gErr").textContent = "";
 		$("guessInput").value = ""; $("suggest").hidden = true;
 		var body = { itemId: item.id, mode: mode, peeked: peekedToday() };
+		if(mode === "hunt") body.board = huntBoard;
 		if(mode === "practice") body.practiceToken = getPracticeToken();
 		api("/raredle/guess", { method: "POST", body: JSON.stringify(body) }).then(function(r){
 			busy = false;
@@ -472,8 +513,8 @@
 		catalog = items.map(function(i){ return { id: i.id, name: i.name, texture: i.texture, category: i.category }; })
 			.sort(function(a, b){ return a.name.localeCompare(b.name); });
 	});
-	window.sctpOnAccountChange = function(){ loadGame(); renderLb(); };
-	function boot(){ loadGame(); loadLeaderboard(); }
+	window.sctpOnAccountChange = function(){ loadGame(); renderLb(); checkHunt(); };
+	function boot(){ loadGame(); loadLeaderboard(); checkHunt(); }
 	if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();
 </script>

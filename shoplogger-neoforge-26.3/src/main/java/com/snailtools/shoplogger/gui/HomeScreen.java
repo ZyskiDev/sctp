@@ -62,10 +62,8 @@ public class HomeScreen extends UiScreen {
 		addRenderableWidget(new UiButton(x + w - btnW, y, btnW, 20, "Search", UiButton.Style.PRIMARY, this::doSearch));
 		y += 28;
 
-		// section tiles
-		Section[] tiles = com.snailtools.shoplogger.auction.AuctionHost.isShown()
-				? new Section[] { Section.LISTINGS, Section.VANILLA, Section.RARES, Section.RAREDLE, Section.WATCHLIST, Section.MARKET, Section.MAPART, Section.AUCTIONS, Section.SETTINGS }
-				: new Section[] { Section.LISTINGS, Section.VANILLA, Section.RARES, Section.RAREDLE, Section.WATCHLIST, Section.MARKET, Section.MAPART, Section.SETTINGS };
+		// section tiles (the same ones as the top bar, minus Home)
+		Section[] tiles = Section.nav().stream().filter(s -> s != Section.HOME).toArray(Section[]::new);
 		int cols = w >= 520 ? 4 : w >= 330 ? 3 : 2;
 		int rows = (tiles.length + cols - 1) / cols;
 		int footerH = 24;
@@ -109,6 +107,7 @@ public class HomeScreen extends UiScreen {
 			case MAPART -> "Mapart near you & uploads";
 			case AUCTIONS -> "Your auctions: lots & payouts";
 			case SETTINGS -> "Scanning, alerts & more";
+			case HUNT -> "The Shellkeeper's ledger";
 			default -> s.description;
 		};
 	}
@@ -163,7 +162,18 @@ public class HomeScreen extends UiScreen {
 	protected void extractPage(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		int maxW = Math.min(contentW(), 640);
 		int x = (width - maxW) / 2;
-		Draw.scaled(g, font, "Snailcraft Trading Post", x, heroY, Theme.TEXT, 1.5f, true);
+		if (com.snailtools.shoplogger.hunt.HuntClient.enabled()) {
+			// The Golden Shell's trailhead: a small gold spiral in the middle of the title
+			int first = (int) (font.width("Snailcraft") * 1.5f);
+			Draw.scaled(g, font, "Snailcraft", x, heroY, Theme.TEXT, 1.5f, true);
+			spiralX = x + first + 4;
+			spiralY = heroY + 2;
+			Draw.glyph(g, Draw.GLYPH_SPIRAL, spiralX, spiralY, com.snailtools.shoplogger.hunt.HuntClient.GOLD);
+			Draw.scaled(g, font, "Trading Post", spiralX + 9 + 5, heroY, Theme.TEXT, 1.5f, true);
+		} else {
+			spiralX = -100;
+			Draw.scaled(g, font, "Snailcraft Trading Post", x, heroY, Theme.TEXT, 1.5f, true);
+		}
 		Draw.text(g, font, Draw.trim(font, "Every shop on the server, in one list.", maxW), x, heroY + 16, Theme.MUTED);
 
 		if (showPills) {
@@ -180,6 +190,26 @@ public class HomeScreen extends UiScreen {
 			if (px + Draw.pillWidth(font, watch) + 7 < x + maxW)
 				Draw.dotPill(g, font, watch, px, pillsY, watched == 0 ? Theme.FAINT : Theme.TEAL, Theme.PANEL_ALT, Theme.TEXT);
 		}
+	}
+
+	// ---- the Golden Shell's trailhead: five clicks on the spiral ----
+	private int spiralX = -100, spiralY;
+	private int spiralClicks;
+	private long lastSpiralClick;
+
+	@Override
+	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+		if (com.snailtools.shoplogger.hunt.HuntClient.enabled() && event.x() >= spiralX - 2 && event.x() < spiralX + 11 && event.y() >= spiralY - 2 && event.y() < spiralY + 11) {
+			long now = System.currentTimeMillis();
+			spiralClicks = now - lastSpiralClick < 2500 ? spiralClicks + 1 : 1;
+			lastSpiralClick = now;
+			if (spiralClicks >= 5) {
+				spiralClicks = 0;
+				minecraft.setScreenAndShow(com.snailtools.shoplogger.hunt.HuntClient.paired() ? new HuntScreen(this) : new HuntPairScreen(this));
+			}
+			return true;
+		}
+		return super.mouseClicked(event, doubleClick);
 	}
 
 	@Override

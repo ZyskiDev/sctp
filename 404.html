@@ -8,15 +8,23 @@
 	// looked up first, with the page hidden so nothing flashes before the
 	// redirect. Unknown names fall through to this page's normal routing (see
 	// further down for /items, /mapart, /s, /collection).
+	// While the treasure hunt runs, a name can also be one of its hidden doors
+	// (the hunt answers "not found" otherwise, and the short link wins).
 	(function(){
 		var m = /^\/([A-Za-z0-9][A-Za-z0-9_-]{0,39})\/?$/.exec(location.pathname);
 		if (!m) return;
 		document.documentElement.style.visibility = "hidden";
 		var show = function(){ document.documentElement.style.visibility = ""; };
-		fetch("https://snailcraft-trading-post.snailcraft-trading-post.workers.dev/short-link?slug=" + encodeURIComponent(m[1].toLowerCase()))
-			.then(function(r){ return r.ok ? r.json() : null; })
-			.then(function(d){ if (d && d.target) location.replace(d.target); else show(); })
-			.catch(show);
+		var API = "https://snailcraft-trading-post.snailcraft-trading-post.workers.dev", slug = m[1].toLowerCase(), token = null;
+		try { var ss = JSON.parse(localStorage.getItem("sctp_session") || "null"); if (ss && ss.token && Date.parse(ss.expiresAt) >= Date.now()) token = ss.token; } catch (e) {}
+		var link = fetch(API + "/short-link?slug=" + encodeURIComponent(slug)).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+		fetch(API + "/hunt/door?slug=" + encodeURIComponent(slug), token ? { headers: { Authorization: "Bearer " + token } } : {})
+			.then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+			.then(function(door){
+				if (door && door.redirect) return location.replace(door.redirect);
+				if (door && door.door) return location.replace("/hunt/door/?slug=" + encodeURIComponent(slug));
+				return link.then(function(d){ if (d && d.target) location.replace(d.target); else show(); });
+			});
 		setTimeout(show, 4000);
 	})();
 	// /f/<slug> — a custom form (see admin-forms.html / f/index.html). Same

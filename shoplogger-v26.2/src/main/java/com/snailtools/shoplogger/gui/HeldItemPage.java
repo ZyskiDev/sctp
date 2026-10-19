@@ -76,9 +76,11 @@ public final class HeldItemPage {
 		WebDataClient.fetchRareCatalog().handle((rares, ex) -> {
 			mc.execute(() -> {
 				RareItem rare = findRare(rares, name);
-				mc.setScreenAndShow(rare != null
+				ItemDetailScreen page = rare != null
 						? new ItemDetailScreen(null, rare.name, null, rare.texture, true, rare)
-						: new ItemDetailScreen(null, name, baseItem, null, false, null));
+						: new ItemDetailScreen(null, name, baseItem, null, false, null);
+				page.huntNote(com.snailtools.shoplogger.hunt.HuntClient.note("item:" + baseItem));
+				mc.setScreenAndShow(page);
 			});
 			return null;
 		});

@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Golden Shell admin - SCTP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/hunt/hunt.css">
+<link rel="stylesheet" href="/site.css">
+<style>
+	.wrap{max-width:1180px;}
+	.switch{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
+	.switch .state{font:600 22px/1.2 var(--font-display);}
+	.checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:13.5px;}
+	.checks label{display:flex;gap:6px;align-items:center;}
+	.ready{list-style:none;padding:0;margin:12px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px;font-size:13.5px;}
+	.ready li::before{content:"\2715";color:var(--bad);font-weight:700;margin-right:8px;}
+	.ready li.yes::before{content:"\2713";color:var(--good);}
+	.squares{font-family:var(--font-mono);font-size:12.5px;margin:8px 0 0;}
+	.acts{display:flex;gap:6px;flex-wrap:wrap;}
+	.acts button{padding:5px 9px;font-size:12px;}
+	.refs{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);max-width:280px;overflow-wrap:anywhere;}
+	tr.removed td{opacity:.45;}
+	.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel-alt);border:1px solid var(--accent);color:var(--text);padding:10px 16px;border-radius:10px;z-index:50;font-size:14px;}
+</style>
+</head>
+<body>
+
+<header class="site">
+	<div class="wrap header-row">
+		<div class="brand-row">
+			<div class="brand-mark" aria-hidden="true">&#x1F41A;</div>
+			<div><h1>Golden Shell admin</h1><p class="tag">The treasure hunt: switch, answers, content and hunters</p></div>
+		</div>
+		<div id="siteNavMount"></div>
+	</div>
+</header>
+
+<main class="wrap">
+	<section class="card" id="gate"><p class="muted" style="margin:0;">Loading&hellip;</p></section>
+
+	<div id="app" hidden style="display:flex;flex-direction:column;gap:16px;">
+		<section class="card">
+			<div class="switch">
+				<div><div class="state" id="stateText"></div><div class="muted small" id="stateSub"></div></div>
+				<button type="button" class="btn" id="toggleBtn"></button>
+			</div>
+			<div class="checks">
+				<label><input type="checkbox" id="signupOpen"> Sign-up open</label>
+				<label><input type="checkbox" id="requirePriorModUse"> Only players who used the mod before the start</label>
+			</div>
+			<div class="row" style="margin-top:12px;"><div class="field" style="margin:0;"><label for="testers">Testers</label><input type="text" id="testers" placeholder="maxolotled, ZyskiDev"><p class="help">Minecraft names that see the whole hunt while it's off. Comma separated.</p></div><button type="button" class="btn-ghost" id="saveTesters" style="margin-bottom:20px;">Save testers</button></div>
+			<ul class="ready" id="ready"></ul>
+			<div class="stats" id="stats" style="margin-top:14px;"></div>
+		</section>
+
+		<section class="card">
+			<h2>The vault and the answers</h2>
+			<p class="muted small" style="margin:0 0 12px;">The vault's block decides the three map squares (whorls I&ndash;III) and the Apex answer. The key and the lectern word are stored hashed: type a new one to replace it.</p>
+			<div class="row">
+				<div class="field"><label for="vx">Vault X</label><input type="number" id="vx"></div>
+				<div class="field"><label for="vy">Vault Y</label><input type="number" id="vy"><p class="help">empty = any height counts</p></div>
+				<div class="field"><label for="vz">Vault Z</label><input type="number" id="vz"></div>
+				<div class="field"><label for="vtol">Tolerance (blocks)</label><input type="number" id="vtol" min="0" max="10"></div>
+			</div>
+			<div class="squares" id="squares"></div>
+			<div class="row" style="margin-top:12px;">
+				<div class="field"><label for="key">Whorl IV key</label><input type="text" id="key" class="code" autocomplete="off" placeholder="3 7 1 5"><p class="help" id="keyHelp"></p></div>
+				<div class="field"><label for="vword">Lectern word (in the vault)</label><input type="text" id="vword" class="code" autocomplete="off"><p class="help" id="vwordHelp"></p></div>
+			</div>
+			<button type="button" class="btn" id="saveVault">Save vault and answers</button>
+			<p class="err" id="vaultErr"></p>
+		</section>
+
+		<section class="card">
+			<h2>The Apex</h2>
+			<p class="muted small" style="margin:0 0 12px;">Shown to each hunter the moment they solve Whorl IV, so the shell must be in the vault from the start. Marks are drawn on the world map for them only.</p>
+			<div class="field"><label for="apexTitle">Title</label><input type="text" id="apexTitle"></div>
+			<div class="field"><label for="apexRiddle">Riddle</label><textarea id="apexRiddle" rows="5"></textarea></div>
+			<div class="field"><label for="apexMarks">Map marks</label><textarea id="apexMarks" class="code" rows="4" placeholder="1 1200 -350&#10;2 1410 -120"></textarea><p class="help">One per line: label x z</p></div>
+			<button type="button" class="btn" id="saveApex">Save the Apex</button>
+			<p class="err" id="apexErr"></p>
+		</section>
+
+		<section class="card">
+			<h2>Chapters</h2>
+			<p class="muted small" style="margin:0 0 10px;">Solves, wrong answers and hints taken per chapter. &ldquo;Release&rdquo; hands a hint tier to everyone early.</p>
+			<div class="tbl-wrap"><table class="tbl" id="chTable"></table></div>
+		</section>
+
+		<section class="card">
+			<h2>Broadcast</h2>
+			<p class="muted small" style="margin:0 0 10px;">A one-off message to every hunter: a toast in the mod and a banner on /hunt/.</p>
+			<div class="field"><textarea id="bcText" rows="2" maxlength="300" placeholder="Chapter 6 was broken for a few of you: it's fixed. The Shellkeeper apologises (a little)."></textarea></div>
+			<div class="row"><button type="button" class="btn" id="bcSend">Send</button><button type="button" class="btn-ghost" id="bcClear">Clear</button><span class="muted small" id="bcNow"></span></div>
+		</section>
+
+		<section class="card">
+			<h2>The Golden Shell</h2>
+			<div id="shell"></div>
+		</section>
+
+		<section class="card">
+			<h2>Hunters</h2>
+			<div class="tbl-wrap"><table class="tbl" id="pTable"></table></div>
+		</section>
+
+		<section class="card">
+			<h2>Shared content</h2>
+			<p class="muted small" style="margin:0 0 10px;">Chapters (id, whorl, ord, title, clue, hints [nudge, push, shove], fragment) and whorls (whorl, title, intro, puzzle, nudge), as JSON. The same for every hunter.</p>
+			<div class="field"><textarea id="contentJson" class="code" rows="14" spellcheck="false"></textarea></div>
+			<button type="button" class="btn" id="saveContent">Save content</button>
+			<p class="err" id="contentErr"></p>
+		</section>
+
+		<section class="card">
+			<h2>Doors</h2>
+			<p class="muted small" style="margin:0 0 10px;">Hidden pages on sctp.nl (sctp.nl/&lt;slug&gt;). Each hunter's door text comes from their puzzle set (note context <code>door:&lt;slug&gt;</code>). Times are UTC.</p>
+			<div class="field"><textarea id="doorsJson" class="code" rows="6" spellcheck="false" placeholder='[{"slug":"fireflies","title":"A door","from":"20:00","to":"23:00","closed":"Closed. Come back when the fireflies are out."}]'></textarea></div>
+			<button type="button" class="btn" id="saveDoors">Save doors</button>
+			<p class="err" id="doorsErr"></p>
+		</section>
+
+		<section class="card">
+			<h2>Puzzle sets</h2>
+			<p class="muted small" style="margin:0 0 10px;">Personal puzzles from <code>scripts/hunt/generate.js</code>: upload its <code>sets.json</code> (sent 25 at a time), then its pictures. Every hunter gets one set at sign-up.</p>
+			<div class="stats" id="setStats"></div>
+			<div class="row" style="margin-top:12px;">
+				<div class="field"><label for="setsFile">sets.json</label><input type="file" id="setsFile" accept=".json,application/json"></div>
+				<div class="field"><label for="imgFiles">Pictures (img folder)</label><input type="file" id="imgFiles" accept=".webp,.png" multiple></div>
+			</div>
+			<div class="row"><button type="button" class="btn" id="uploadSets">Upload</button><button type="button" class="btn-danger" id="clearSets">Delete sets nobody has yet</button></div>
+			<p class="muted small" id="uploadMsg"></p>
+		</section>
+	</div>
+</main>
+
+<script src="/site-nav.js" defer></script>
+<script src="/account-widget.js" defer></script>
+<script src="/hunt/hunt-common.js"></script>
+<script>
+(function(){
+	"use strict";
+	var H = window.HUNT, $ = H.$, esc = H.esc;
+	var WORLD_MIN = -32768, WORLD_SIZE = 65536;
+	var data = null;
+
+	function toast(msg){
+		var t = document.createElement("div");
+		t.className = "toast"; t.textContent = msg;
+		document.body.appendChild(t);
+		setTimeout(function(){ t.remove(); }, 3200);
+	}
+	function gate(html){ $("gate").hidden = false; $("gate").innerHTML = html; $("app").hidden = true; }
+	function setData(d){ data = d; render(); }
+	function post(path, body){ return H.api(path, { json: body }).then(setData); }
+
+	function load(){
+		if(!H.session()){
+			gate('<h2>Sign in</h2><p class="muted">Sign in with an account that has the hunt permission.</p><button type="button" class="btn" id="gateIn">Sign in</button>');
+			$("gateIn").onclick = function(){ if(window.sctpAccount) window.sctpAccount.openLogin(); };
+			return;
+		}
+		H.api("/admin/hunt").then(function(d){
+			$("gate").hidden = true; $("app").hidden = false;
+			setData(d);
+			fillForms();
+		}).catch(function(err){
+			gate('<h2>' + (err.status === 403 ? "No access" : "Couldn't load") + '</h2><p class="muted" style="margin:0;">' +
+				(err.status === 403 ? "Your account doesn't have the hunt permission. A head admin can give it in the admin panel." : esc(err.message)) + '</p>');
+		});
+	}
+
+	function squareAt(x, z, size){
+		return { x: WORLD_MIN + Math.floor((x - WORLD_MIN) / size) * size, z: WORLD_MIN + Math.floor((z - WORLD_MIN) / size) * size, size: size };
+	}
+
+	// ---- forms are filled once (so typing isn't overwritten by a refresh) ----
+	function fillForms(){
+		var s = data.settings;
+		$("vx").value = s.vault ? s.vault.x : ""; $("vy").value = s.vault && s.vault.y != null ? s.vault.y : ""; $("vz").value = s.vault ? s.vault.z : "";
+		$("vtol").value = s.vaultTolerance;
+		$("testers").value = (s.testers || []).join(", ");
+		$("apexTitle").value = s.apex.title || "";
+		$("apexRiddle").value = s.apex.riddle || "";
+		$("apexMarks").value = (s.apex.marks || []).map(function(m){ return m.n + " " + m.x + " " + m.z; }).join("\n");
+		$("doorsJson").value = s.doors && s.doors.length ? JSON.stringify(s.doors, null, 2) : "";
+		$("contentJson").value = JSON.stringify({
+			chapters: data.chapters.map(function(c){ return { id: c.id, whorl: c.whorl, ord: c.ord, title: c.title, clue: c.clue, hints: JSON.parse(c.hints || "[]"), fragment: c.fragment }; }),
+			whorls: data.whorls,
+		}, null, 2);
+		$("bcText").value = "";
+		renderSquares();
+	}
+
+	function renderSquares(){
+		var x = parseInt($("vx").value, 10), z = parseInt($("vz").value, 10);
+		if(isNaN(x) || isNaN(z)){ $("squares").textContent = "Set the vault to see the three squares hunters must pick."; return; }
+		$("squares").innerHTML = [1, 2, 3].map(function(k){
+			var size = WORLD_SIZE / Math.pow(4, k), q = squareAt(x, z, size);
+			return "Whorl " + ["I", "II", "III"][k - 1] + ": " + H.fmt(size) + "-block square at " + H.fmt(q.x) + ", " + H.fmt(q.z) +
+				' &middot; <a href="/world/#' + q.x + "," + q.z + "," + size + '" target="_blank" rel="noopener">see it</a>';
+		}).join("<br>");
+	}
+
+	function render(){
+		var s = data.settings, on = !!s.enabled;
+		$("stateText").textContent = on ? "The hunt is ON" : "The hunt is OFF";
+		$("stateText").style.color = on ? "var(--accent)" : "";
+		if(!on && (s.testers || []).length){ $("stateSub").textContent = "Off for everyone except the testers: " + s.testers.join(", ") + "."; } else
+		$("stateSub").textContent = on ? "Started " + H.when(s.enabledAt) + ". Players can sign up and play." : "Nothing about it is visible to players: the mod shows no spiral and every hunt page answers “not found”.";
+		$("toggleBtn").textContent = on ? "Turn the hunt off" : "Start the hunt";
+		$("toggleBtn").className = on ? "btn-danger" : "btn";
+		$("signupOpen").checked = !!s.signupOpen;
+		$("requirePriorModUse").checked = !!s.requirePriorModUse;
+		$("keyHelp").textContent = s.keySet ? "Set. Type a new one to replace it." : "Not set yet.";
+		$("vwordHelp").textContent = s.vaultWordSet ? "Set. Type a new one to replace it." : "Not set yet.";
+
+		var checks = [
+			[data.chapters.length >= 16, data.chapters.length + " of 16 chapters written"],
+			[data.whorls.length >= 4, data.whorls.length + " of 4 whorls written"],
+			[!!s.vault, s.vault ? "Vault placed" : "Vault not placed"],
+			[s.keySet, s.keySet ? "Whorl IV key set" : "Whorl IV key not set"],
+			[!!(s.apex && s.apex.riddle), s.apex && s.apex.riddle ? "Apex riddle written" : "Apex riddle not written"],
+			[s.vaultWordSet, s.vaultWordSet ? "Lectern word set" : "Lectern word not set"],
+			[data.sets.total - data.sets.assigned >= 20, (data.sets.total - data.sets.assigned) + " puzzle sets free"],
+		];
+		$("ready").innerHTML = checks.map(function(c){ return '<li class="' + (c[0] ? "yes" : "") + '">' + esc(c[1]) + "</li>"; }).join("");
+
+		var active = data.players.filter(function(p){ return !p.removed; });
+		var solves = data.solves || {};
+		$("stats").innerHTML = [["Hunters", active.length], ["Whorl I", solves.w1 || 0], ["Whorl II", solves.w2 || 0], ["Whorl III", solves.w3 || 0], ["Whorl IV", solves.w4 || 0], ["Apex", solves.apex || 0], ["Vault", solves.vault || 0]]
+			.map(function(x){ return '<div class="stat"><div class="n">' + x[1] + '</div><div class="l">' + x[0] + "</div></div>"; }).join("");
+		$("setStats").innerHTML = [["Sets", data.sets.total], ["Handed out", data.sets.assigned], ["Free", data.sets.total - data.sets.assigned]]
+			.map(function(x){ return '<div class="stat"><div class="n">' + x[1] + '</div><div class="l">' + x[0] + "</div></div>"; }).join("");
+
+		renderChapters(); renderPlayers(); renderShell();
+		$("bcNow").textContent = s.broadcast ? "Now showing: “" + s.broadcast.text + "” (" + H.when(s.broadcast.at) + ")" : "Nothing showing.";
+	}
+
+	function renderChapters(){
+		var hints = {};
+		(data.hints || []).forEach(function(h){ hints[h.chapterId + ":" + h.tier] = h.c; });
+		var rel = data.settings.hintRelease || {};
+		if(!data.chapters.length){ $("chTable").innerHTML = '<tr><td class="muted">No chapters yet: paste them into Shared content below.</td></tr>'; return; }
+		$("chTable").innerHTML = "<thead><tr><th>Chapter</th><th>Whorl</th><th class=num>Solved</th><th class=num>Wrong</th><th class=num>Nudge / push / shove taken</th><th>Release early</th></tr></thead><tbody>" +
+			data.chapters.map(function(c){
+				var r = rel[c.id] || 0;
+				return "<tr><td><b>" + esc(c.id) + "</b> " + esc(c.title) + "</td><td>" + c.whorl + '</td><td class="num">' + (data.solves[c.id] || 0) + '</td><td class="num">' + (data.wrong[c.id] || 0) +
+					'</td><td class="num">' + [0, 1, 2].map(function(t){ return hints[c.id + ":" + t] || 0; }).join(" / ") +
+					'</td><td><select data-release="' + esc(c.id) + '" style="width:auto;">' + ["Nothing", "Nudge", "Nudge + push", "All three"].map(function(l, i){ return '<option value="' + i + '"' + (i === r ? " selected" : "") + ">" + l + "</option>"; }).join("") + "</select></td></tr>";
+			}).join("") +
+			[1, 2, 3, 4].map(function(k){ return '<tr><td><b>w' + k + '</b> whorl puzzle</td><td>' + k + '</td><td class="num">' + (data.solves["w" + k] || 0) + '</td><td class="num">' + (data.wrong["w" + k] || 0) + '</td><td class="num">' + (hints["w" + k + ":3"] || 0) + " nudges</td><td></td></tr>"; }).join("") +
+			'<tr><td><b>apex</b></td><td></td><td class="num">' + (data.solves.apex || 0) + '</td><td class="num">' + (data.wrong.apex || 0) + "</td><td></td><td></td></tr>" +
+			'<tr><td><b>vault</b> lectern word</td><td></td><td class="num">' + (data.solves.vault || 0) + '</td><td class="num">' + (data.wrong.vault || 0) + "</td><td></td><td></td></tr></tbody>";
+	}
+
+	function renderPlayers(){
+		if(!data.players.length){ $("pTable").innerHTML = '<tr><td class="muted">Nobody has signed up yet.</td></tr>'; return; }
+		$("pTable").innerHTML = "<thead><tr><th>Ledger</th><th>Player</th><th>Signed up</th><th class=num>Solved</th><th>Progress</th><th></th></tr></thead><tbody>" +
+			data.players.map(function(p){
+				return '<tr class="' + (p.removed ? "removed" : "") + '"><td class="ledger">L-' + String(p.ledgerNo).padStart(4, "0") + "</td><td>" + esc(p.mcUsername) + (p.anonymous ? ' <span class="pill">anonymous</span>' : "") + (p.via === "spiral" ? ' <span class="pill on">spiral</span>' : "") +
+					'<div class="muted small">set ' + (p.setNo || "&ndash;") + "</div></td><td>" + H.when(p.signedUpAt) + '</td><td class="num">' + p.solved + '</td><td class="refs">' + esc((p.refs || "").split(",").sort().join(" ")) +
+					'</td><td><div class="acts">' +
+					(p.removed ? '<button type="button" class="btn-ghost" data-act="restore" data-id="' + esc(p.accountId) + '">Restore</button>' : '<button type="button" class="btn-danger" data-act="remove" data-id="' + esc(p.accountId) + '">Remove</button>') +
+					'<button type="button" class="btn-ghost" data-act="solve" data-id="' + esc(p.accountId) + '">Mark solved</button>' +
+					'<button type="button" class="btn-ghost" data-act="unsolve" data-id="' + esc(p.accountId) + '">Undo solve</button>' +
+					'<button type="button" class="btn-ghost" data-act="reassign" data-id="' + esc(p.accountId) + '">New puzzles</button>' +
+					'<button type="button" class="btn-danger" data-act="delete" data-id="' + esc(p.accountId) + '">Wipe (tests)</button>' +
+					'<button type="button" class="btn-ghost" data-act="reset-raredle" data-id="' + esc(p.accountId) + '">Reset a Rare-dle board</button>' +
+					"</div></td></tr>";
+			}).join("") + "</tbody>";
+	}
+
+	function renderShell(){
+		var sh = data.settings.shell || {}, html = "";
+		if(sh.found) html += '<p><span class="pill good">Found</span> by <b>' + esc(sh.found.name) + "</b> on " + H.when(sh.found.at) + (sh.found.showName ? " (name shown publicly)" : " (name kept private)") + "</p>";
+		else html += '<p class="muted">Not found yet. When a hunter presses &ldquo;I took the shell&rdquo;, they show up here: check the vault is empty and they really have it, then confirm.</p>';
+		var claims = sh.claims || [];
+		if(claims.length) html += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Claimed by</th><th>When</th><th>Name public?</th><th></th></tr></thead><tbody>' +
+			claims.map(function(c){ return "<tr><td>" + esc(c.name) + "</td><td>" + H.when(c.at) + "</td><td>" + (c.showName ? "yes" : "no") + '</td><td><button type="button" class="btn" data-confirm="' + esc(c.accountId) + '">Confirm the win</button></td></tr>'; }).join("") + "</tbody></table></div>";
+		html += '<p style="margin-top:10px;"><button type="button" class="btn-danger" id="shellReset">Reset the shell (claims and win)</button></p>';
+		$("shell").innerHTML = html;
+	}
+
+	// ---- actions ----
+
+	$("toggleBtn").onclick = function(){
+		var on = !data.settings.enabled;
+		if(on && !confirm("Start the hunt? Players will see the spiral in the mod and can sign up straight away.")) return;
+		if(!on && !confirm("Turn the hunt off? Everything disappears for players until you turn it back on (their progress is kept).")) return;
+		post("/admin/hunt/settings", { enabled: on }).then(function(){ toast(on ? "The hunt is on" : "The hunt is off"); }).catch(function(e){ toast(e.message); });
+	};
+	["signupOpen", "requirePriorModUse"].forEach(function(id){
+		$(id).onchange = function(){ var b = {}; b[id] = $(id).checked; post("/admin/hunt/settings", b).then(function(){ toast("Saved"); }).catch(function(e){ toast(e.message); }); };
+	});
+	$("saveTesters").onclick = function(){
+		var names = $("testers").value.split(/[,\s]+/).filter(Boolean);
+		post("/admin/hunt/settings", { testers: names }).then(function(){ toast("Testers saved"); }).catch(function(e){ toast(e.message); });
+	};
+	["vx", "vz"].forEach(function(id){ $(id).oninput = renderSquares; });
+
+	$("saveVault").onclick = function(){
+		$("vaultErr").textContent = "";
+		var b = { vaultTolerance: Number($("vtol").value) || 0 };
+		if($("vx").value !== "" || $("vz").value !== "") b.vault = { x: Number($("vx").value), y: $("vy").value === "" ? null : Number($("vy").value), z: Number($("vz").value) };
+		if($("key").value.trim()) b.key = $("key").value;
+		if($("vword").value.trim()) b.vaultWord = $("vword").value;
+		post("/admin/hunt/settings", b).then(function(){ $("key").value = ""; $("vword").value = ""; toast("Saved"); }).catch(function(e){ $("vaultErr").textContent = e.message; });
+	};
+	$("saveApex").onclick = function(){
+		$("apexErr").textContent = "";
+		var marks = $("apexMarks").value.split("\n").map(function(l){ return l.trim().split(/\s+/); }).filter(function(p){ return p.length >= 3; })
+			.map(function(p){ return { n: p[0], x: Number(p[1]), z: Number(p[2]) }; });
+		post("/admin/hunt/settings", { apex: { title: $("apexTitle").value, riddle: $("apexRiddle").value, marks: marks } }).then(function(){ toast("Saved"); }).catch(function(e){ $("apexErr").textContent = e.message; });
+	};
+	$("saveDoors").onclick = function(){
+		$("doorsErr").textContent = "";
+		var doors;
+		try { doors = $("doorsJson").value.trim() ? JSON.parse($("doorsJson").value) : []; } catch(e){ $("doorsErr").textContent = "That isn't valid JSON: " + e.message; return; }
+		post("/admin/hunt/settings", { doors: doors }).then(function(){ toast("Saved"); }).catch(function(e){ $("doorsErr").textContent = e.message; });
+	};
+	$("saveContent").onclick = function(){
+		$("contentErr").textContent = "";
+		var c;
+		try { c = JSON.parse($("contentJson").value); } catch(e){ $("contentErr").textContent = "That isn't valid JSON: " + e.message; return; }
+		post("/admin/hunt/content", c).then(function(){ toast("Saved"); }).catch(function(e){ $("contentErr").textContent = e.message; });
+	};
+	$("chTable").addEventListener("change", function(e){
+		var sel = e.target.closest("select[data-release]");
+		if(!sel) return;
+		var rel = Object.assign({}, data.settings.hintRelease || {});
+		rel[sel.dataset.release] = Number(sel.value);
+		post("/admin/hunt/settings", { hintRelease: rel }).then(function(){ toast("Hints released"); }).catch(function(e){ toast(e.message); });
+	});
+	$("bcSend").onclick = function(){
+		if(!$("bcText").value.trim()) return;
+		post("/admin/hunt/broadcast", { text: $("bcText").value }).then(function(){ $("bcText").value = ""; toast("Sent"); }).catch(function(e){ toast(e.message); });
+	};
+	$("bcClear").onclick = function(){ post("/admin/hunt/broadcast", { text: "" }).then(function(){ toast("Cleared"); }); };
+
+	$("pTable").addEventListener("click", function(e){
+		var b = e.target.closest("button[data-act]");
+		if(!b) return;
+		var body = { accountId: b.dataset.id, action: b.dataset.act };
+		if(body.action === "solve" || body.action === "unsolve"){
+			var ref = prompt(body.action === "solve" ? "Mark which puzzle solved? (c1..c16, w1..w4, apex, vault)" : "Undo which solve? (c1..c16, w1..w4, apex, vault)");
+			if(!ref) return;
+			body.ref = ref.trim().toLowerCase();
+		}
+		if(body.action === "reset-raredle"){
+			var n = prompt("Reset which Rare-dle board? (1-5)");
+			if(!n) return;
+			body.board = Number(n);
+		}
+		if(body.action === "delete" && !confirm("Wipe this hunter completely? Their progress and puzzle set are deleted. Meant for test runs.")) return;
+		if(body.action === "remove" && !confirm("Remove this hunter? They lose access straight away (their progress is kept).")) return;
+		if(body.action === "reassign" && !confirm("Give this hunter a fresh puzzle set? Their solves stay, but every unsolved chapter changes.")) return;
+		post("/admin/hunt/player", body).then(function(){ toast("Done"); }).catch(function(err){ toast(err.message); });
+	});
+	$("shell").addEventListener("click", function(e){
+		var c = e.target.closest("button[data-confirm]");
+		if(c){ if(confirm("Confirm this hunter took the Golden Shell? It's announced to everyone.")) post("/admin/hunt/shell", { action: "confirm", accountId: c.dataset.confirm }).then(function(){ toast("Confirmed"); }).catch(function(err){ toast(err.message); }); return; }
+		if(e.target.id === "shellReset" && confirm("Reset the shell? Claims and the confirmed win are cleared.")) post("/admin/hunt/shell", { action: "reset" }).then(function(){ toast("Reset"); });
+	});
+
+	$("uploadSets").onclick = async function(){
+		var msg = $("uploadMsg");
+		var setsFile = $("setsFile").files[0], imgs = Array.prototype.slice.call($("imgFiles").files);
+		if(!setsFile && !imgs.length){ msg.textContent = "Pick sets.json and/or the pictures first."; return; }
+		try {
+			if(setsFile){
+				var parsed = JSON.parse(await setsFile.text());
+				var sets = Array.isArray(parsed) ? parsed : parsed.sets;
+				if(!Array.isArray(sets) || !sets.length) throw new Error("sets.json has no sets.");
+				for(var i = 0; i < sets.length; i += 25){
+					msg.textContent = "Uploading sets " + (i + 1) + "–" + Math.min(i + 25, sets.length) + " of " + sets.length + "…";
+					await H.api("/admin/hunt/sets", { json: { sets: sets.slice(i, i + 25) } });
+				}
+			}
+			for(var j = 0; j < imgs.length; j++){
+				msg.textContent = "Uploading picture " + (j + 1) + " of " + imgs.length + "…";
+				await H.api("/admin/hunt/image?key=" + encodeURIComponent("img/" + imgs[j].name), { method: "POST", body: imgs[j], headers: { "Content-Type": imgs[j].type || "image/webp" } });
+			}
+			msg.textContent = "Uploaded.";
+			load();
+		} catch(err){ msg.textContent = "Stopped: " + err.message; }
+	};
+	$("clearSets").onclick = function(){
+		if(!confirm("Delete every puzzle set nobody has yet? Hunters keep theirs.")) return;
+		post("/admin/hunt/sets/clear", {}).then(function(){ toast("Deleted"); });
+	};
+
+	window.sctpOnAccountChange = load;
+	load();
+})();
+</script>
+</body>
+</html>

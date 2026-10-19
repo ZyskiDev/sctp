@@ -296,6 +296,22 @@ public class ItemDetailScreen extends UiScreen {
 					"Nobody is selling this " + (ALL_WORLDS.equals(worldFilter) ? "right now" : "on " + worldFilter),
 					ALL_WORLDS.equals(worldFilter) ? "Add it to your watchlist to hear when it shows up." : "Try All worlds with the World filter.");
 		}
+		if (huntNote != null && !huntNote.isBlank()) {
+			// The Golden Shell: a margin note for the item in hand (opened with X+I)
+			java.util.List<String> lines = com.snailtools.shoplogger.hunt.HuntNotes.wrap(font, huntNote, Math.min(260, contentW() - 20));
+			int w = 0;
+			for (String l : lines) w = Math.max(w, font.width(l));
+			int h = lines.size() * 10 + 8, x = contentX() + contentW() - w - 14, y = contentBottom() - h;
+			Draw.card(g, x, y, w + 14, h, Theme.PANEL, com.snailtools.shoplogger.hunt.HuntClient.GOLD);
+			for (int i = 0; i < lines.size(); i++) Draw.text(g, font, lines.get(i), x + 7, y + 5 + i * 10, com.snailtools.shoplogger.hunt.HuntClient.GOLD);
+		}
+	}
+
+	private String huntNote;
+
+	/** A hunt note to show in the corner (only set when opened from the item in hand). */
+	public void huntNote(String note) {
+		this.huntNote = note;
 	}
 
 	private static boolean isBlank(String s) {

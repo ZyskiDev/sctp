@@ -103,6 +103,12 @@ public final class StockHolograms {
 					0xF000F0, empty ? EMPTY_COLOR : COLOR, 0, 0);
 			collector.submitText(poseStack, -font.width(line2) / 2f, 10, line2, false, Font.DisplayMode.POLYGON_OFFSET,
 					0xF000F0, empty ? EMPTY_COLOR : AGE_COLOR, 0, 0);
+			String huntNote = com.snailtools.shoplogger.hunt.HuntClient.note("chest:" + world.label() + ":" + pos.getX() + "," + pos.getY() + "," + pos.getZ());
+			if (huntNote != null) {
+				FormattedCharSequence line3 = Component.literal(huntNote).getVisualOrderText();
+				collector.submitText(poseStack, -font.width(line3) / 2f, 20, line3, false, Font.DisplayMode.POLYGON_OFFSET,
+						0xF000F0, com.snailtools.shoplogger.hunt.HuntClient.GOLD, 0, 0);
+			}
 			poseStack.popPose();
 		}
 	}

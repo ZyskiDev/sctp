@@ -1,3 +1,5 @@
+import { makeHunt } from "./hunt.js";
+
 // Snailcraft Trading Post API — backed by Cloudflare D1. Both writes AND
 // public reads go through this Worker (reads are edge-cached for
 // CACHE_TTL_SECONDS so most requests never touch D1 at all).
@@ -572,7 +574,7 @@ async function firstBannedItem(env, seller, itemNames) {
 // accounts existed — see requireAnyAdmin.
 const ADMIN_PERMISSION_BUCKETS = new Set([
 	"reports", "sharedShopRequests", "faq", "manualListings", "blockedSellers", "marketplaceListings", "updateNotice",
-	"suggestions", "bugReports", "playerReports", "manageMapart", "manageForms", "auctions", "siteNotice", "secretSanta", "shortLinks",
+	"suggestions", "bugReports", "playerReports", "manageMapart", "manageForms", "auctions", "siteNotice", "secretSanta", "shortLinks", "hunt",
 ]);
 
 // Ranks bids for a seller's convenience using the shared CURRENCY_VALUE
@@ -5999,6 +6001,12 @@ async function raredleStatePayload(env, admin) {
 
 async function handleRaredleState(request, env) {
 	const url = new URL(request.url);
+	if (url.searchParams.get("mode") === "hunt") {
+		const auth = await requireAnyAdmin(request, env);
+		if (!auth.ok) return auth.response;
+		try { return await hunt.raredleHuntState(env, auth.admin.id, Number(url.searchParams.get("board")) || 1, await getRareCatalog()); }
+		catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
+	}
 	const isPractice = url.searchParams.get("mode") === "practice";
 	if (!isPractice) {
 		// Daily stays login-only.
@@ -6178,6 +6186,12 @@ async function handleRaredleGuess(request, env) {
 	const itemId = String(body.itemId || "");
 	let cat;
 	try { cat = await getRareCatalog(); } catch (e) { return json({ error: "Rare-dle isn't available right now, try again in a minute." }, 502); }
+
+	if (body.mode === "hunt") {
+		const auth = await requireAnyAdmin(request, env);
+		if (!auth.ok) return auth.response;
+		return hunt.raredleHuntGuess(env, auth.admin.id, Number(body.board) || 1, itemId, cat);
+	}
 
 	if (body.mode === "practice") {
 		if (!RAREDLE_PRACTICE_ENABLED) return json({ error: "Practice rounds aren't available right now." }, 403);
@@ -8435,7 +8449,14 @@ async function handleSantaAdminGiftStatus(request, env) {
 	return json({ ok: true, status, statusUpdatedAt: now });
 }
 
+// The Golden Shell treasure hunt lives in hunt.js; it gets the helpers it needs from here.
+const hunt = makeHunt({
+	json, requireAnyAdmin, requireAdminAuth, newToken, bufToHex, modUserPingHash, MC_USERNAME,
+	raredleCompare, raredleTwinNote, raredlePixelHint, raredlePracticePool, RAREDLE_MAX_GUESSES, RAREDLE_PIXEL_STEPS,
+});
+
 const ROUTES = [
+	...hunt.routes,
 	["POST", "/listings", handleUploadListings],
 	["GET", "/listings", handleGetListings],
 	["POST", "/reports", handleSubmitReport],

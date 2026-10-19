@@ -64,6 +64,13 @@
 	.credit{font-size:13px;color:var(--muted);}
 	.credit b{color:var(--text);}
 	button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+	/* the Golden Shell: only for signed-up hunters while the hunt runs */
+	.huntbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 10px;padding:9px 12px;border:1px solid rgba(232,185,58,.55);background:rgba(232,185,58,.08);border-radius:10px;font-size:13.5px;}
+	.huntbar b{color:#E8B93A;}
+	.huntbar .hb-btn{background:#E8B93A;color:#231A04;border:none;border-radius:8px;padding:7px 13px;font:700 13px/1.2 var(--font-body);cursor:pointer;}
+	.huntbar .hb-btn:disabled{opacity:.5;cursor:default;}
+	.huntbar .hb-msg{flex-basis:100%;margin:0;font-size:12.5px;}
+	.huntbar .hb-msg:empty{display:none;}
 </style>
 <link rel="stylesheet" href="/theme.css">
 <script src="/theme.js" defer></script>
@@ -92,6 +99,7 @@
 					<button type="button" class="btn-ghost" id="copyBtn" title="Copy a link to this exact view">Copy link</button>
 				</span>
 			</div>
+			<div class="huntbar" id="huntBar" hidden></div>
 			<div class="stage" id="stage">
 				<canvas id="map" aria-label="Map of the Firefly world. Click a square to zoom in."></canvas>
 				<div class="loading" id="loading" hidden>Loading map&hellip;</div>
@@ -233,6 +241,7 @@
 		var pending = drawLevel(L, scale);
 		$("loading").hidden = !pending;
 		drawGrid(scale, dpr, W, H);
+		if(hunt) drawHunt(scale, dpr);
 	}
 
 	function drawGrid(scale, dpr, W, H){
@@ -280,6 +289,7 @@
 			: "Click a square to zoom in. " + (depth(s.size) === MAX_DEPTH - 1 ? "One more click is as close as the map goes." : "Three clicks take you from the whole world down to 1,024 blocks.");
 		$("area").textContent = "X " + fmt(r.x) + " to " + fmt(r.x + r.w - 1) + " · Z " + fmt(r.z) + " to " + fmt(r.z + r.h - 1);
 		renderCrumbs();
+		renderHuntBar();
 		var hash = s.size >= WORLD_SIZE ? "" : "#" + s.x + "," + s.z + "," + s.size;
 		if(location.hash !== hash) history[push ? "pushState" : "replaceState"](null, "", location.pathname + location.search + hash);
 		schedule();
@@ -381,7 +391,82 @@
 		schedule();
 	}).catch(function(){ $("loading").hidden = false; $("loading").textContent = "Couldn't load the map. Try again in a minute."; });
 
+	// ---------------- the Golden Shell (treasure hunt) ----------------
+	// For a signed-up hunter while the hunt runs (the state call 404s otherwise):
+	// their solved squares in gold, the square they're picking now, and the Apex
+	// marks once they reach it. Nothing about it is in this page's data.
+	var hunt = null, huntMsg = "";
+	function huntToken(){
+		try { var x = JSON.parse(localStorage.getItem("sctp_session") || "null"); return x && x.token && Date.parse(x.expiresAt) >= Date.now() ? x.token : null; } catch(e){ return null; }
+	}
+	function huntInit(first){
+		var token = huntToken();
+		if(!token) return;
+		fetch(API + "/hunt/state", { headers: { Authorization: "Bearer " + token } }).then(function(r){ return r.ok ? r.json() : null; }).then(function(st){
+			if(!st || !st.player) return;
+			hunt = { squares: [], target: null, marks: st.apex && st.apex.marks ? st.apex.marks : [] };
+			st.whorls.forEach(function(w){
+				if(w.square) hunt.squares.push(w.square);
+				if(!hunt.target && w.puzzleOpen && !w.solved && w.target) hunt.target = { whorl: w.whorl, size: w.target.size, parent: w.target.parent };
+			});
+			if(first && /[?&]hunt=1\b/.test(location.search) && !location.hash && hunt.target) setView(hunt.target.parent, false);
+			renderHuntBar();
+			schedule();
+		}).catch(function(){});
+	}
+	function renderHuntBar(){
+		var bar = $("huntBar");
+		if(!bar) return;
+		if(!hunt || !square){ bar.hidden = true; return; }
+		var roman = ["", "I", "II", "III", "IV"], html = "";
+		if(hunt.target){
+			var t = hunt.target;
+			if(square.size === t.size) html = "<span><b>Whorl " + roman[t.whorl] + ":</b> is this your square?</span><button type=\"button\" class=\"hb-btn\" id=\"hbLock\">Lock it in</button>";
+			else if(square.size > t.size) html = "<span><b>Whorl " + roman[t.whorl] + ":</b> zoom in to the " + fmt(t.size) + "-block square you think it is, then lock it in. Three wrong picks a day at most.</span>";
+			else html = "<span><b>Whorl " + roman[t.whorl] + ":</b> zoom out to a " + fmt(t.size) + "-block square to pick it.</span>";
+		} else if(hunt.marks.length) html = "<span><b>The Apex:</b> the Shellkeeper's marks are drawn in gold.</span>";
+		else if(hunt.squares.length) html = "<span><b>The Golden Shell:</b> your squares are outlined in gold.</span>";
+		if(!html){ bar.hidden = true; return; }
+		bar.innerHTML = html + '<p class="hb-msg" id="hbMsg">' + huntMsg + "</p>";
+		bar.hidden = false;
+		var lock = $("hbLock");
+		if(lock) lock.onclick = function(){
+			var t = hunt.target, token = huntToken();
+			if(!token) return;
+			lock.disabled = true;
+			fetch(API + "/hunt/answer", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ ref: "w" + t.whorl, answer: { x: square.x, z: square.z, size: square.size } }) })
+				.then(function(r){ return r.json(); }).then(function(d){
+					if(d.error) huntMsg = d.error;
+					else if(d.correct) huntMsg = t.whorl < 3 ? "That's it. Whorl " + roman[t.whorl + 1] + " is open on your hunt page." : "That's it: the last square. Whorl IV is open on your hunt page.";
+					else huntMsg = "Not this one.";
+					huntInit(false);
+					renderHuntBar();
+				}).catch(function(){ huntMsg = "Couldn't reach sctp.nl. Try again."; renderHuntBar(); });
+		};
+	}
+	function drawHunt(scale, dpr){
+		ctx.save();
+		ctx.strokeStyle = "#E8B93A";
+		ctx.lineWidth = 2.5 * dpr;
+		hunt.squares.forEach(function(q){
+			var x0 = Math.max(q.x, rect.x), z0 = Math.max(q.z, rect.z), x1 = Math.min(q.x + q.size, rect.x + rect.w), z1 = Math.min(q.z + q.size, rect.z + rect.h);
+			if(x1 <= x0 || z1 <= z0 || q.size >= square.size * 4) return;
+			ctx.strokeRect((x0 - rect.x) * scale + dpr, (z0 - rect.z) * scale + dpr, (x1 - x0) * scale - 2 * dpr, (z1 - z0) * scale - 2 * dpr);
+		});
+		hunt.marks.forEach(function(m){
+			if(m.x < rect.x || m.z < rect.z || m.x >= rect.x + rect.w || m.z >= rect.z + rect.h) return;
+			var px = (m.x - rect.x + 0.5) * scale, pz = (m.z - rect.z + 0.5) * scale, r = 10 * dpr;
+			ctx.beginPath(); ctx.arc(px, pz, r, 0, Math.PI * 2);
+			ctx.fillStyle = "#E8B93A"; ctx.fill();
+			ctx.lineWidth = 2 * dpr; ctx.strokeStyle = "#231A04"; ctx.stroke();
+			ctx.fillStyle = "#231A04"; ctx.font = "700 " + (11 * dpr) + "px Inter, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+			ctx.fillText(String(m.n), px, pz + 0.5 * dpr);
+		});
+		ctx.restore();
+	}
+
 	fromHash();
+	huntInit(true);
 })();
 </script>
 </body>
