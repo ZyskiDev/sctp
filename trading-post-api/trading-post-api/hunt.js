@@ -81,6 +81,23 @@ export function makeHunt(d) {
 		}
 		return new URL(request.url).searchParams.get("mc") || null;
 	}
+	/**
+	 * Null when this request may see the hunt. Otherwise 404 (as if it didn't exist),
+	 * except for a bearer token we don't know at all: that's a mod holding a stale
+	 * hunt token (after a wipe), and 401 makes it forget the token and pair again.
+	 */
+	async function gate(request, env, s) {
+		if (await canSee(request, env, s)) return null;
+		const auth = request.headers.get("Authorization") || "";
+		const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+		if (token) {
+			const known = await env.DB.prepare("SELECT 1 AS x FROM huntTokens WHERE token = ?").bind(token).first()
+				|| await env.DB.prepare("SELECT 1 AS x FROM adminSessions WHERE token = ?").bind(token).first();
+			if (!known) return json({ error: "This game isn't paired with the hunt any more.", code: "pair" }, 401);
+		}
+		return hidden();
+	}
+
 	async function canSee(request, env, s) {
 		if (s.enabled) return true;
 		if (!(s.testers || []).length) return false;
@@ -371,7 +388,7 @@ export function makeHunt(d) {
 
 	async function handleState(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const auth = await huntAuth(request, env);
 		if (auth.response) return auth.response;
 		const player = await playerOf(env, auth.accountId);
@@ -382,7 +399,7 @@ export function makeHunt(d) {
 	/** POST /hunt/answer {ref, answer} — ref: a chapter id, 'w1'..'w4', 'apex' or 'vault'. Squares: answer {x, z, size}. */
 	async function handleAnswer(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const auth = await huntAuth(request, env);
 		if (auth.response) return auth.response;
 		const player = await playerOf(env, auth.accountId);
@@ -461,7 +478,7 @@ export function makeHunt(d) {
 	/** POST /hunt/hint {chapterId, tier} — reveals a hint that's available (tier 3 + 'wN' = the whorl puzzle nudge). */
 	async function handleHint(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const auth = await huntAuth(request, env);
 		if (auth.response) return auth.response;
 		const player = await playerOf(env, auth.accountId);
@@ -482,7 +499,7 @@ export function makeHunt(d) {
 	/** GET /hunt/notes (mod only): the notes the mod shows on its screens, for whorls that are open. */
 	async function handleNotes(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const auth = await huntAuth(request, env, { modOnly: true });
 		if (auth.response) return auth.response;
 		const player = await playerOf(env, auth.accountId);
@@ -506,7 +523,7 @@ export function makeHunt(d) {
 	/** GET /hunt/door?slug= — a hidden page on sctp.nl (404.html asks before its short-link lookup). */
 	async function handleDoor(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const slug = String(new URL(request.url).searchParams.get("slug") || "").toLowerCase().replace(/^\/+|\/+$/g, "");
 		// the second way in: the What's new page spells SPIRAL
 		if (slug === "spiral") return json({ redirect: "/hunt/?via=spiral" });
@@ -539,7 +556,7 @@ export function makeHunt(d) {
 	/** GET /hunt/image?key=img/<name> — personal pictures (R2, under hunt/), only for the hunter whose puzzles use them. */
 	async function handleImage(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const auth = await huntAuth(request, env);
 		if (auth.response) return auth.response;
 		const player = await playerOf(env, auth.accountId);
@@ -555,7 +572,7 @@ export function makeHunt(d) {
 	/** POST /hunt/shell-claim {showName} — "I took the shell": you confirm it in admin. */
 	async function handleShellClaim(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const auth = await huntAuth(request, env);
 		if (auth.response) return auth.response;
 		const player = await playerOf(env, auth.accountId);
@@ -572,7 +589,7 @@ export function makeHunt(d) {
 
 	async function handlePrefs(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const auth = await huntAuth(request, env);
 		if (auth.response) return auth.response;
 		const player = await playerOf(env, auth.accountId);
@@ -586,7 +603,7 @@ export function makeHunt(d) {
 
 	async function handleLeaderboard(request, env) {
 		const s = await getSettings(env);
-		if (!(await canSee(request, env, s))) return hidden();
+		{ const deny = await gate(request, env, s); if (deny) return deny; }
 		const [{ results: players }, { results: solves }, content] = await Promise.all([
 			env.DB.prepare("SELECT accountId, mcUsername, ledgerNo, signedUpAt, anonymous FROM huntPlayers WHERE removed = 0").all(),
 			env.DB.prepare("SELECT accountId, ref, solvedAt FROM huntSolves").all(),

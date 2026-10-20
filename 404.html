@@ -1342,10 +1342,25 @@
 				{ label: "Type/Slot", value: entry.typeSlot },
 				{ label: "Dyeable", value: entry.dyeable },
 			].filter(function(f){ return f.value; });
-			if(fields.length === 0) return "";
+			// the vanilla item it's made from, filled in once the scan data arrives (see fillRareBaseItem)
+			fields.push({ label: "Base item", value: "…", id: "rareBaseItem" });
 			return '<div class="rare-info">' + fields.map(function(f){
-				return '<div class="f"><span class="f-label">'+esc(f.label)+'</span><span class="f-value">'+esc(f.value)+'</span></div>';
+				return '<div class="f"><span class="f-label">'+esc(f.label)+'</span><span class="f-value"'+(f.id ? ' id="'+f.id+'"' : '')+'>'+esc(f.value)+'</span></div>';
 			}).join("") + '</div>';
+		}
+
+		// Which vanilla item a rare is made from: the same scan-based data the item
+		// library searches by. Unknown (never seen in a shop) hides the row.
+		function fillRareBaseItem(entry){
+			fetch(API_BASE + "/rares/base-items").then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; }).then(function(map){
+				var el = document.getElementById("rareBaseItem");
+				if(!el) return;
+				var base = map && map[entry.id];
+				if(!base){ el.parentNode.remove(); return; }
+				var id = String(base).replace(/^minecraft:/, "");
+				var name = id.replace(/_/g, " ").replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+				el.innerHTML = '<a href="/items/'+encodeURIComponent(id)+'">'+esc(name)+'</a>';
+			});
 		}
 
 		function renderSkeleton(entry){
@@ -1399,6 +1414,7 @@
 			document.getElementById("app").insertAdjacentHTML("beforeend", html);
 			if(isRare){
 				mountRareCollect(entry.id);
+				fillRareBaseItem(entry);
 				var rareImgBtn = document.getElementById("rareImgBtn");
 				if(rareImgBtn) rareImgBtn.addEventListener("click", function(){
 					if(!window.sctpShare) return;
