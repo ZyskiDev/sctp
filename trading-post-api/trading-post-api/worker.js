@@ -7784,10 +7784,32 @@ async function handleRareBaseItems(request, env, ctx) {
 			const t = tally.get(id);
 			t.set(row.baseItem, (t.get(row.baseItem) || 0) + row.n);
 		}
+		const current = {};
+		for (const [id, t] of tally) current[id] = [...t].sort((x, y) => y[1] - x[1])[0][0];
+		// Sticky: a rare keeps its last known base item while nobody has it listed, so the
+		// library's Base item filter (and the treasure hunt's "Same Bones") doesn't shift daily
+		const now = new Date().toISOString();
+		const stmts = Object.entries(current).map(([id, base]) => env.DB.prepare(
+			"INSERT INTO rareBaseKnown (rareId, baseItem, firstSeenAt, seenAt) VALUES (?, ?, ?, ?) ON CONFLICT(rareId) DO UPDATE SET baseItem = excluded.baseItem, seenAt = excluded.seenAt"
+		).bind(id, base, now, now));
+		for (let i = 0; i < stmts.length; i += 100) await env.DB.batch(stmts.slice(i, i + 100));
 		const out = {};
-		for (const [id, t] of tally) out[id] = [...t].sort((x, y) => y[1] - x[1])[0][0];
+		const known = await env.DB.prepare("SELECT rareId, baseItem FROM rareBaseKnown").all();
+		for (const row of known.results) if (catalog.byId.has(row.rareId)) out[row.rareId] = row.baseItem;
 		return out;
 	});
+}
+
+/**
+ * The rares on one base item, A to Z, as the library lists them: now, and as they were
+ * `hoursAgo` hours back (the library's list is cached for up to 6 hours).
+ */
+async function rareBaseNames(env, base, hoursAgo) {
+	const catalog = await getRareCatalog();
+	const { results } = await env.DB.prepare("SELECT rareId, firstSeenAt FROM rareBaseKnown WHERE baseItem = ?").bind(base).all();
+	const cutoff = new Date(Date.now() - hoursAgo * 3600 * 1000).toISOString();
+	const names = (rows) => rows.map((r) => catalog.byId.get(r.rareId)).filter(Boolean).map((r) => r.name).sort((a, b) => a.localeCompare(b));
+	return { now: names(results), before: names(results.filter((r) => r.firstSeenAt <= cutoff)) };
 }
 
 // ---------------- Secret Santa (Firefly only) ----------------
@@ -8516,7 +8538,7 @@ async function handleSantaAdminGiftStatus(request, env) {
 // The Golden Shell treasure hunt lives in hunt.js; it gets the helpers it needs from here.
 const hunt = makeHunt({
 	json, requireAnyAdmin, requireAdminAuth, newToken, bufToHex, modUserPingHash, MC_USERNAME,
-	raredleCompare, raredleTwinNote, raredlePixelHint, raredlePracticePool, RAREDLE_MAX_GUESSES, RAREDLE_PIXEL_STEPS, notifyAccount,
+	raredleCompare, raredleTwinNote, raredlePixelHint, raredlePracticePool, RAREDLE_MAX_GUESSES, RAREDLE_PIXEL_STEPS, notifyAccount, rareBaseNames,
 });
 
 const ROUTES = [

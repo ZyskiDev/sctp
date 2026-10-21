@@ -22,7 +22,7 @@ public final class ChatStacker {
 
 	private ChatStacker() {}
 
-	private static final String CONFIG_ENABLED = "chat/stackRepeats";
+	private static final String CONFIG_ENABLED = "chat/stackRepeatsOn"; // off by default (a new key, so early 2.6 installs start off too)
 	private static final long WINDOW_MS = 60_000L;
 	private static final double MIN_SIMILARITY = 0.8;
 	private static final int MAX_COMPARE = 300;
@@ -33,7 +33,7 @@ public final class ChatStacker {
 	private static long lastAt;
 
 	public static boolean isEnabled() {
-		return Config.getOrCreate(CONFIG_ENABLED, Boolean.class, true);
+		return Config.getOrCreate(CONFIG_ENABLED, Boolean.class, false);
 	}
 
 	public static void setEnabled(boolean value) {

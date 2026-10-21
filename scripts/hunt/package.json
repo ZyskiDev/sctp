@@ -1,0 +1,8 @@
+{
+	"name": "golden-shell-scripts",
+	"private": true,
+	"description": "Puzzle set generator for the Golden Shell (sharp draws the torn map pieces)",
+	"dependencies": {
+		"sharp": "0.34.5"
+	}
+}

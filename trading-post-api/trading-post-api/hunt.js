@@ -197,13 +197,33 @@ export function makeHunt(d) {
 		await env.DB.prepare("INSERT OR IGNORE INTO huntSolves (accountId, ref, solvedAt) VALUES (?, ?, ?)").bind(accountId, ref, nowIso()).run();
 	}
 
+	/**
+	 * "Same Bones" reads first letters at positions in the library's A-Z list of rares on
+	 * one base item. That list grows when a new rare gets listed, so the answer is also
+	 * worked out from the list as it is now (and as the site may still show it, cached).
+	 * The set keeps {base, positions} in a secret note: secret:bones.
+	 */
+	async function sameBonesLive(env, setNo, chapterId, shown) {
+		const note = await env.DB.prepare("SELECT text FROM huntSetNotes WHERE setNo = ? AND context = 'secret:bones' AND chapterId = ?").bind(setNo, chapterId).first();
+		if (!note) return false;
+		let spec;
+		try { spec = JSON.parse(note.text); } catch (e) { return false; }
+		if (!spec || !spec.base || !Array.isArray(spec.positions)) return false;
+		const lists = await d.rareBaseNames(env, spec.base, 7);
+		for (const names of [lists.now, lists.before]) {
+			const word = spec.positions.map((p) => (names[p - 1] || "").charAt(0)).join("");
+			if (word.length === spec.positions.length && normAnswer("word", word) === shown) return true;
+		}
+		return false;
+	}
+
 	/** Everything a hunter sees: the same payload for the site and the mod. */
 	async function statePayload(env, settings, player) {
 		const [content, solves, shares, setRows, hintRows, wrongRows] = await Promise.all([
 			loadContent(env),
 			solvesOf(env, player.accountId),
 			communityShares(env),
-			env.DB.prepare("SELECT chapterId, content, answerKind FROM huntSetChapters WHERE setNo = ?").bind(player.setNo).all(),
+			env.DB.prepare("SELECT chapterId, content, answerKind, hints FROM huntSetChapters WHERE setNo = ?").bind(player.setNo).all(),
 			env.DB.prepare("SELECT chapterId, tier FROM huntHints WHERE accountId = ?").bind(player.accountId).all(),
 			// squares this hunter already picked wrong (the map shows them red)
 			env.DB.prepare("SELECT DISTINCT ref, guess FROM huntGuesses WHERE accountId = ? AND correct = 0 AND ref IN ('w1', 'w2', 'w3')").bind(player.accountId).all(),
@@ -219,6 +239,10 @@ export function makeHunt(d) {
 				const mine = personal.get(c.id);
 				let hints = [];
 				try { hints = JSON.parse(c.hints || "[]"); } catch (e) { /* none */ }
+				// a personal set may replace single hints (e.g. which junk item to watch); null keeps the shared one
+				if (mine && mine.hints) {
+					try { JSON.parse(mine.hints).forEach((h, tier) => { if (typeof h === "string" && h && tier < hints.length) hints[tier] = h; }); } catch (e) { /* keep shared */ }
+				}
 				return {
 					id: c.id, ord: c.ord, title: c.title,
 					clue: unlocked ? c.clue : null,
@@ -428,6 +452,7 @@ export function makeHunt(d) {
 			const wait = await tooManyWrong(env, player.accountId, ref, kind);
 			if (wait) return json({ error: "Too many wrong answers. Try again later.", retryAt: wait }, 429);
 			correct = (await huntHash(env, player.setNo + ":" + ref, shown)) === mine.answerHash;
+			if (!correct) correct = await sameBonesLive(env, player.setNo, ref, shown);
 		} else if (/^w[1-4]$/.test(ref)) {
 			kind = "whorl";
 			const k = Number(ref.slice(1));
@@ -820,7 +845,8 @@ export function makeHunt(d) {
 	}
 
 	/**
-	 * POST /admin/hunt/sets {sets:[{chapters:{c1:{content, answer, kind}}, notes:[{context, chapterId, text}]}]}
+	 * POST /admin/hunt/sets {sets:[{chapters:{c1:{content, answer, kind, hints?}}, notes:[{context, chapterId, text}]}]}
+	 * (hints: up to 3, null = keep the shared hint for that tier)
 	 * — appends personal sets from the generator (at most 25 per call). Answers are hashed here.
 	 */
 	async function handleAdminSets(request, env) {
@@ -838,8 +864,9 @@ export function makeHunt(d) {
 				const kind = c.kind === "numbers" ? "numbers" : "word";
 				const norm = normAnswer(kind, c.answer);
 				if (!norm) return json({ error: "Set " + (added.length + 1) + ", " + chapterId + ": empty answer." }, 400);
-				stmts.push(env.DB.prepare("INSERT INTO huntSetChapters (setNo, chapterId, content, answerKind, answerHash) VALUES (?, ?, ?, ?, ?)")
-					.bind(setNo, chapterId, JSON.stringify(c.content || []), kind, await huntHash(env, setNo + ":" + chapterId, norm)));
+				const hints = Array.isArray(c.hints) ? JSON.stringify(c.hints.slice(0, 3).map((h) => (typeof h === "string" && h ? h : null))) : null;
+				stmts.push(env.DB.prepare("INSERT INTO huntSetChapters (setNo, chapterId, content, answerKind, answerHash, hints) VALUES (?, ?, ?, ?, ?, ?)")
+					.bind(setNo, chapterId, JSON.stringify(c.content || []), kind, await huntHash(env, setNo + ":" + chapterId, norm), hints));
 			}
 			for (const n of set.notes || []) {
 				stmts.push(env.DB.prepare("INSERT INTO huntSetNotes (setNo, context, chapterId, text) VALUES (?, ?, ?, ?)").bind(setNo, String(n.context), String(n.chapterId), String(n.text)));

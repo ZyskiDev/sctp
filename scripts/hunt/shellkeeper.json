@@ -90,6 +90,54 @@
 		{
 			"name": "Twinkling Golden Coins",
 			"id": "rare-twinkling-golden-coins"
+		},
+		{
+			"name": "Eggscargot",
+			"id": "rare-eggscargot-collectibles"
+		},
+		{
+			"name": "Easter Snegg",
+			"id": "rare-easter-snegg-collectibles"
+		},
+		{
+			"name": "Electric Eel",
+			"id": "rare-electric-eel"
+		},
+		{
+			"name": "Uncle Snam",
+			"id": "rare-uncle-snam-collectibles"
+		},
+		{
+			"name": "Under 'da Sea",
+			"id": "rare-under-da-sea"
+		},
+		{
+			"name": "Little Crab",
+			"id": "rare-little-crab"
+		},
+		{
+			"name": "Luxury Display Case",
+			"id": "rare-luxury-display-case"
+		},
+		{
+			"name": "Lotus Candle",
+			"id": "rare-lotus-candle"
+		},
+		{
+			"name": "Ice Arowana",
+			"id": "rare-ice-arowana"
+		},
+		{
+			"name": "Icicle Row",
+			"id": "rare-icicle-row"
+		},
+		{
+			"name": "Yellow Starfish",
+			"id": "rare-yellow-starfish"
+		},
+		{
+			"name": "Jar of Fireflies",
+			"id": "rare-jar-of-fireflies"
 		}
 	],
 	"wishlist": [
