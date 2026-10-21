@@ -25,7 +25,9 @@ async function post(p, body) {
 }
 
 // One test set with known answers: built (and checked) by make-test-set.js.
-const TEST_SET = JSON.parse(fs.readFileSync(path.join(__dirname, "test-set.json"), "utf8"));
+// --set=b uploads test-set-b.json instead
+const SET_ARG = (process.argv.find((x) => x.startsWith("--set=")) || "--set=a").slice(6);
+const TEST_SET = JSON.parse(fs.readFileSync(path.join(__dirname, SET_ARG === "a" ? "test-set.json" : "test-set-" + SET_ARG + ".json"), "utf8"));
 
 // The real hunt's settings: the vault at 26380, 66, -23633 (see content.json for the squares).
 const TEST_SETTINGS = {

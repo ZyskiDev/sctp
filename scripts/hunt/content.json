@@ -21,9 +21,9 @@
 			"title": "Same Bones",
 			"clue": "Beneath every treasure is something ordinary. Four of mine share the same bones. Ask the library what else is built on them.",
 			"hints": [
-				"The library can find rares by what they're made from.",
-				"The four share one vanilla base item. Search for it.",
-				"Sort A to Z. The numbers are positions. Take first letters."
+				"The library can show every rare made from the same thing.",
+				"The four share one vanilla base item. Use the rare library's Base item filter.",
+				"Filter by that base item and sort A to Z. The numbers are positions; take first letters."
 			],
 			"fragment": "Toward the sunrise."
 		},
@@ -113,8 +113,8 @@
 			"clue": "I tore a corner off my map and turned it in my hands. Put it back, and tell me its region.",
 			"hints": [
 				"My map is the one of Firefly.",
-				"It's turned and tinted. Match coastlines and roads, not colours.",
-				"Hover its centre and give me the Region the map shows."
+				"It's turned in my hands. Match coastlines and rivers, and use the arrows to look around.",
+				"Find where it fits, hover its very middle and give me the Region the map shows."
 			],
 			"fragment": "Along the northern edge."
 		},
@@ -200,12 +200,12 @@
 			"id": "c16",
 			"whorl": 4,
 			"ord": 4,
-			"title": "Two Pockets",
-			"clue": "Half your pocket hangs where fireflies glow. The other half sleeps in the void's box where the bees hum.",
+			"title": "Two Worlds",
+			"clue": "Half my word waits where the fireflies glow, the other half where the bees hum. Ask your own front page in each.",
 			"hints": [
 				"Fireflies and bees are worlds, not insects.",
-				"Your pocket is your backpack. The void's box is your ender chest.",
-				"Backpack on Firefly, ender chest on Honeybee."
+				"Open the mod's home screen (X) on Firefly, then again on Honeybee.",
+				"My note sits in the corner of the home screen. Firefly holds the first half."
 			],
 			"fragment": "The fourth arrow points down and to the right."
 		}

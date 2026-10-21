@@ -970,6 +970,7 @@
 		if(tab === "notifications") loadNotifications();
 	}
 	if(location.hash === "#mine") activateTab("mine");
+	if(location.hash === "#notifications") activateTab("notifications");
 
 	// ---------------- my marketplace ----------------
 	function loadMine(){
@@ -1099,7 +1100,7 @@
 					return '<div class="notif-row' + (n.readAt ? '' : ' unread') + '"><div>' + esc(n.message) + '</div><div class="notif-time">' + esc(new Date(n.createdAt).toLocaleString()) + '</div></div>';
 				}).join("") + '</div>';
 			document.getElementById("markAllRead").addEventListener("click", function(){
-				authFetch("/marketplace/notifications/mark-read", { method: "POST", body: JSON.stringify({}) }).then(function(){ loadNotifications(); });
+				authFetch("/marketplace/notifications/mark-read", { method: "POST", body: JSON.stringify({}) }).then(function(){ loadNotifications(); if(window.sctpRefreshUnread) window.sctpRefreshUnread(); });
 			});
 		});
 	}

@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The hunt's notes on game screens: a gold line above the Butterfly Exchange and
- * your backpack and ender chest (per world). Only for a paired hunter whose
- * puzzle set has a note for that screen. (The mod's own screens draw theirs
- * with card(): the watchlist, the listings search, the item page.)
+ * The hunt's notes on game screens: a gold line above the Butterfly Exchange.
+ * Only for a paired hunter whose puzzle set has a note for that screen. (The
+ * mod's own screens draw theirs with card(): the home screen per world, the
+ * watchlist, the listings search, the item page.)
  */
 public final class HuntNotes {
 
@@ -30,10 +30,6 @@ public final class HuntNotes {
 		String title = screen.getTitle().getString();
 		String lower = title.toLowerCase(Locale.ROOT);
 		if (title.contains("Butterfly Exchange")) return "butterfly";
-		ShopWorld world = WorldSelection.get();
-		if (world == null) return null;
-		if (lower.contains("backpack")) return "bp:" + world.label();
-		if (lower.contains("ender chest")) return "ec:" + world.label();
 		return null;
 	}
 

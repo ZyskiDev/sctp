@@ -102,6 +102,9 @@
 	.empty-state h3{font-family:var(--font-display);color:var(--text);font-size:19px;margin:0 0 8px;}
 
 	footer.site{padding:20px 0 40px;color:var(--muted);font-size:12.5px;text-align:center;}
+	.lib-search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+	.lib-search-row .item-search{flex:1;min-width:200px;}
+	.lib-sort{background:var(--panel-alt);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;}
 </style>
 <link rel="stylesheet" href="/theme.css">
 <script src="/theme.js" defer></script>
@@ -132,7 +135,8 @@
 	</div>
 
 	<div id="vanillaPane">
-		<input type="text" class="item-search" id="itemSearch" placeholder="Search items…">
+		<div class="lib-search-row"><input type="text" class="item-search" id="itemSearch" placeholder="Search items…">
+			<select id="vanillaSort" class="lib-sort" aria-label="Sort"><option value="az">A to Z</option><option value="za">Z to A</option></select></div>
 		<p class="item-count" id="itemCount"></p>
 		<div class="item-grid" id="vanillaGrid"></div>
 	</div>
@@ -149,6 +153,8 @@
 			<select id="fTypeSlot"><option value="">Type/Slot: any</option></select>
 			<select id="fDyeable"><option value="">Dyeable: any</option></select>
 			<select id="fParticles"><option value="">Particles: any</option><option value="__has">Has particles (any)</option><option value="__none">No particles</option></select>
+			<select id="fBaseItem"><option value="">Base item: any</option></select>
+			<select id="rareSort" aria-label="Sort"><option value="az">A to Z</option><option value="za">Z to A</option><option value="new">Newest first</option><option value="old">Oldest first</option></select>
 			<button type="button" class="rare-filters-reset" id="fRareReset">Reset filters</button>
 		</div>
 		<div id="rareWorldPicker"></div>
@@ -184,6 +190,25 @@
 
 	var allItems = [];
 
+	// Sorting, remembered per tab (a convenience only: works without storage too)
+	function savedSort(key, fallback){ try { return localStorage.getItem("sctp_lib_sort_" + key) || fallback; } catch(e){ return fallback; } }
+	function saveSort(key, v){ try { localStorage.setItem("sctp_lib_sort_" + key, v); } catch(e){} }
+	function byName(a, b){ return a.name.localeCompare(b.name); }
+	function sortItems(list, mode){
+		var out = list.slice();
+		if(mode === "za") out.sort(function(a, b){ return byName(b, a); });
+		else if(mode === "new" || mode === "old"){
+			// by release month; unknown dates always last, A to Z among equals
+			out.sort(function(a, b){
+				var ka = releaseSortKey(a.releaseDate), kb = releaseSortKey(b.releaseDate);
+				if(!ka !== !kb) return ka ? -1 : 1;
+				return (mode === "new" ? kb - ka : ka - kb) || byName(a, b);
+			});
+		}
+		else out.sort(byName);
+		return out;
+	}
+
 	function renderGrid(items){
 		document.getElementById("itemCount").textContent = items.length + " item" + (items.length === 1 ? "" : "s");
 		document.getElementById("vanillaGrid").innerHTML = items.map(function(it){
@@ -197,7 +222,7 @@
 	function applySearch(){
 		var q = document.getElementById("itemSearch").value.trim().toLowerCase();
 		var filtered = q ? allItems.filter(function(it){ return it.name.toLowerCase().indexOf(q) !== -1; }) : allItems;
-		renderGrid(filtered);
+		renderGrid(sortItems(filtered, document.getElementById("vanillaSort").value));
 	}
 
 	async function loadVanillaItems(){
@@ -207,10 +232,12 @@
 		} catch(e){
 			allItems = [];
 		}
-		renderGrid(allItems);
+		applySearch();
 	}
 
 	document.getElementById("itemSearch").addEventListener("input", applySearch);
+	document.getElementById("vanillaSort").value = savedSort("vanilla", "az");
+	document.getElementById("vanillaSort").addEventListener("change", function(){ saveSort("vanilla", this.value); applySearch(); });
 
 	// ---------------- rare items ----------------
 	var allRareItems = [];
@@ -269,10 +296,13 @@
 
 	function applyRareFilters(){
 		var q = document.getElementById("rareSearch").value.trim().toLowerCase();
+		var baseSel = document.getElementById("fBaseItem").value;
 		var active = {};
 		RARE_FILTER_FIELDS.forEach(function(f){ active[f.key] = document.getElementById(f.id).value; });
 
 		var filtered = allRareItems.filter(function(it){
+			// exact base item (the dropdown), unlike the search box which matches any part
+			if(baseSel && rareBaseItems[it.id] !== baseSel) return false;
 			if(q){
 				// the base item too ("elytra", "minecraft:netherite_sword", "netherite sword")
 				var base = rareBaseItems[it.id] || "";
@@ -292,7 +322,7 @@
 			}
 			return true;
 		});
-		renderRareGrid(filtered);
+		renderRareGrid(sortItems(filtered, document.getElementById("rareSort").value));
 	}
 
 	// rare id -> the Minecraft item it's usually listed as in shops (from the API), for searching by base item
@@ -300,8 +330,20 @@
 	function loadRareBaseItems(){
 		fetch("https://snailcraft-trading-post.snailcraft-trading-post.workers.dev/rares/base-items")
 			.then(function(r){ return r.ok ? r.json() : {}; })
-			.then(function(d){ rareBaseItems = d || {}; if(document.getElementById("rareSearch").value.trim()) applyRareFilters(); })
+			.then(function(d){ rareBaseItems = d || {}; populateBaseFilter(); applyRareFilters(); })
 			.catch(function(){});
+	}
+
+	// "Base item" dropdown: every base item rares are made from, with how many
+	var wantedBase = new URLSearchParams(location.search).get("base"); // ?base=minecraft:bow opens it filtered
+	function populateBaseFilter(){
+		var counts = {};
+		Object.keys(rareBaseItems).forEach(function(id){ var b = rareBaseItems[id]; counts[b] = (counts[b] || 0) + 1; });
+		var pretty = function(b){ return b.replace(/^minecraft:/, "").replace(/_/g, " ").replace(/\b\w/g, function(c){ return c.toUpperCase(); }); };
+		var sel = document.getElementById("fBaseItem");
+		sel.innerHTML = '<option value="">Base item: any</option>' + Object.keys(counts).sort(function(a, b){ return pretty(a).localeCompare(pretty(b)); })
+			.map(function(b){ return '<option value="' + esc(b) + '">' + esc(pretty(b)) + ' (' + counts[b] + ')</option>'; }).join("");
+		if(wantedBase && counts[wantedBase]){ sel.value = wantedBase; wantedBase = null; }
 	}
 
 	async function loadRareItems(){
@@ -334,8 +376,12 @@
 	RARE_FILTER_FIELDS.forEach(function(f){
 		document.getElementById(f.id).addEventListener("change", applyRareFilters);
 	});
+	document.getElementById("fBaseItem").addEventListener("change", applyRareFilters);
+	document.getElementById("rareSort").value = savedSort("rare", "az");
+	document.getElementById("rareSort").addEventListener("change", function(){ saveSort("rare", this.value); applyRareFilters(); });
 	document.getElementById("fRareReset").addEventListener("click", function(){
 		document.getElementById("rareSearch").value = "";
+		document.getElementById("fBaseItem").value = "";
 		RARE_FILTER_FIELDS.forEach(function(f){ document.getElementById(f.id).value = ""; });
 		applyRareFilters();
 	});
@@ -354,7 +400,7 @@
 	}
 	document.getElementById("tabVanilla").addEventListener("click", function(){ switchTab("vanilla"); });
 	document.getElementById("tabRare").addEventListener("click", function(){ switchTab("rare"); });
-	if(location.hash === "#rare") switchTab("rare");
+	if(location.hash === "#rare" || wantedBase) switchTab("rare");
 
 	loadVanillaItems();
 })();

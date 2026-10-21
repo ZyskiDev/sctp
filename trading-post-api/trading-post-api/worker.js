@@ -4004,7 +4004,7 @@ function mapartPublic(m) {
 		// admin assigned it) or set something on it. A bare name-match auto-claim
 		// by an unverified account isn't enough.
 		verified: !!m.claimedByAccountId && !!(m.claimantVerified || m.claimedManually || m.ownerEdited || m.category || m.whereToBuy || m.notForSale),
-		updatedAt: m.updatedAt, lastSeen: m.lastSeen,
+		createdAt: m.createdAt, updatedAt: m.updatedAt, lastSeen: m.lastSeen,
 		likes: m.likes || 0,
 	};
 }

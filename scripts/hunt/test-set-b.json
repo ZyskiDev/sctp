@@ -1,0 +1,364 @@
+{
+	"chapters": {
+		"c1": {
+			"kind": "word",
+			"answer": "PELICANS",
+			"content": [
+				{
+					"t": "text",
+					"v": "Nine treasures, in my own hand."
+				},
+				{
+					"t": "list",
+					"items": [
+						"[9] Useable Rares, from Welcome Crate, released Jan 2025, Pickaxe.",
+						"[6] Collectibles, from Garden Crate, released Apr 2025, Postcard.",
+						"[9] Wearables, from Archangel Armor Set, released Sep 2025, Chest.",
+						"[4] Collectibles, from Demonic Wishing Eye, released Dec 2025, Postcard.",
+						"[9] Collectibles, from Wldcard Crate, released Jun 2026, Postcard.",
+						"[8] Collectibles, from Demonic Wishing Eye, released Dec 2025, Consumeable.",
+						"[1] Collectibles, from Adventure Crate, released Feb 2025, Postcard.",
+						"[5] Wearables, from Adventure Crate, released Feb 2025, Elytra.",
+						"[7] Useable Rares, from Spirit of Oar's Rest, released Oct 2025, Sword."
+					],
+					"ordered": true
+				}
+			]
+		},
+		"c2": {
+			"kind": "word",
+			"answer": "SNUB",
+			"content": [
+				{
+					"t": "text",
+					"v": "Four of mine: Abduction Bow, Fish Flinger, Stargaze's Echo, Web Weaver."
+				},
+				{
+					"t": "text",
+					"v": "Numbers: 5 · 4 · 7 · 2"
+				}
+			]
+		},
+		"c3": {
+			"kind": "word",
+			"answer": "MARINE",
+			"content": [
+				{
+					"t": "text",
+					"v": "Six letters, six things to hold. The first is the hour."
+				}
+			]
+		},
+		"c4": {
+			"kind": "word",
+			"answer": "SHOAL",
+			"content": [
+				{
+					"t": "text",
+					"v": "Five boards. Their secret rares' first letters, board by board."
+				},
+				{
+					"t": "link",
+					"href": "/rare-dle/?mode=hunt",
+					"v": "Play your boards"
+				}
+			]
+		},
+		"c5": {
+			"kind": "word",
+			"answer": "HARBOR",
+			"content": [
+				{
+					"t": "text",
+					"v": "What nobody wants, in the order I want it:"
+				},
+				{
+					"t": "list",
+					"items": [
+						"Dirt",
+						"Dead Bush",
+						"Ink Sac",
+						"Poisonous Potato",
+						"Clay Ball",
+						"Ink Sac"
+					],
+					"ordered": true
+				}
+			]
+		},
+		"c6": {
+			"kind": "word",
+			"answer": "SEAFARER",
+			"content": [
+				{
+					"t": "text",
+					"v": "Eight ghosts on Firefly. Eight letters, if you ask them in the right order."
+				}
+			]
+		},
+		"c7": {
+			"kind": "word",
+			"answer": "STORM",
+			"content": [
+				{
+					"t": "text",
+					"v": "Five questions, five days, five letters."
+				},
+				{
+					"t": "list",
+					"items": [
+						"5 October: which was cheapest: Acacia Leaves, Acacia Log, Acacia Sapling, Stone? [1]",
+						"12 October: which was cheapest: Ancient Debris, Anvil, Armor Stand, Dirt? [4]",
+						"5 October: which was cheapest: Bedrock, Big Dripleaf, Birch Leaves, Carrot? [5]",
+						"12 October: which was cheapest: Arrow, Bell, Birch Planks, Birch Sapling? [2]",
+						"5 October: which was cheapest: Diamond Helmet, Diamond Horse Armor, Diamond Shovel, Pale Moss Block? [5]"
+					],
+					"ordered": true
+				}
+			]
+		},
+		"c8": {
+			"kind": "word",
+			"answer": "MAINSAIL",
+			"content": [
+				{
+					"t": "text",
+					"v": "Somebody is hiring on the marketplace. Apply, and read what comes back."
+				}
+			]
+		},
+		"c9": {
+			"kind": "numbers",
+			"answer": "14, 22",
+			"content": [
+				{
+					"t": "image",
+					"key": "img/torn-fe29fc817f35f09f8e.webp",
+					"alt": "A torn piece of the Firefly map"
+				},
+				{
+					"t": "text",
+					"v": "Where does this belong? The region at its centre, please: two numbers."
+				}
+			]
+		},
+		"c10": {
+			"kind": "word",
+			"answer": "WAVES",
+			"content": [
+				{
+					"t": "text",
+					"v": "Five pieces I remember, and one letter from each name."
+				},
+				{
+					"t": "list",
+					"items": [
+						"[7] A 2×1 anime piece by God404, on Firefly.",
+						"[1] A 3×4 seasonal piece by EarthHQ & charmolyqi, on Honeybee.",
+						"[5] A 2×2 memes piece by Tomahna, on Firefly.",
+						"[4] A 1×1 tv/animation piece by memelordmars, on Honeybee.",
+						"[5] A 4×5 anime piece by v_Smiley_v, on Honeybee."
+					],
+					"ordered": true
+				}
+			]
+		},
+		"c11": {
+			"kind": "word",
+			"answer": "BOATS",
+			"content": [
+				{
+					"t": "text",
+					"v": "H3 · W7 · H1 · W12 · H12"
+				}
+			]
+		},
+		"c12": {
+			"kind": "word",
+			"answer": "MOONRISE",
+			"content": [
+				{
+					"t": "text",
+					"v": "Not every page is signposted."
+				}
+			]
+		},
+		"c13": {
+			"kind": "word",
+			"answer": "REEDS",
+			"content": [
+				{
+					"t": "text",
+					"v": "Where wings are sold, I left you something to read."
+				}
+			]
+		},
+		"c14": {
+			"kind": "word",
+			"answer": "STARS",
+			"content": [
+				{
+					"t": "text",
+					"v": "I sell what nobody wants. Keep an eye on the first of it."
+				}
+			]
+		},
+		"c15": {
+			"kind": "word",
+			"answer": "PEARL",
+			"content": [
+				{
+					"t": "text",
+					"v": "Ask the ledger in your game for me."
+				}
+			]
+		},
+		"c16": {
+			"kind": "word",
+			"answer": "LIGHTHOUSE",
+			"content": [
+				{
+					"t": "text",
+					"v": "Two worlds, one word."
+				}
+			]
+		}
+	},
+	"notes": [
+		{
+			"context": "item:minecraft:clock",
+			"chapterId": "c3",
+			"text": "First: M. Next, hold what always points home."
+		},
+		{
+			"context": "item:minecraft:compass",
+			"chapterId": "c3",
+			"text": "Second: A. Next, hold what a chicken leaves behind when it flies."
+		},
+		{
+			"context": "item:minecraft:feather",
+			"chapterId": "c3",
+			"text": "Third: R. Next, hold what a skeleton is made of."
+		},
+		{
+			"context": "item:minecraft:bone",
+			"chapterId": "c3",
+			"text": "Fourth: I. Next, hold what you write on but never sign."
+		},
+		{
+			"context": "item:minecraft:paper",
+			"chapterId": "c3",
+			"text": "Fifth: N. Next, hold what a spider spins."
+		},
+		{
+			"context": "item:minecraft:string",
+			"chapterId": "c3",
+			"text": "Sixth: E. That was the last."
+		},
+		{
+			"context": "secret:raredle:1",
+			"chapterId": "c4",
+			"text": "rare-safety-vest"
+		},
+		{
+			"context": "secret:raredle:2",
+			"chapterId": "c4",
+			"text": "rare-hades-crown"
+		},
+		{
+			"context": "secret:raredle:3",
+			"chapterId": "c4",
+			"text": "rare-obelisk-builders-totem"
+		},
+		{
+			"context": "secret:raredle:4",
+			"chapterId": "c4",
+			"text": "rare-a-garden-in-bloom"
+		},
+		{
+			"context": "secret:raredle:5",
+			"chapterId": "c4",
+			"text": "rare-lab-shelf"
+		},
+		{
+			"context": "chest:Firefly:-3879,104,-795",
+			"chapterId": "c6",
+			"text": "S"
+		},
+		{
+			"context": "chest:Firefly:-3879,103,-797",
+			"chapterId": "c6",
+			"text": "E"
+		},
+		{
+			"context": "chest:Firefly:-3879,104,-798",
+			"chapterId": "c6",
+			"text": "A"
+		},
+		{
+			"context": "chest:Firefly:-3879,104,-797",
+			"chapterId": "c6",
+			"text": "F"
+		},
+		{
+			"context": "chest:Firefly:-3879,103,-798",
+			"chapterId": "c6",
+			"text": "A"
+		},
+		{
+			"context": "chest:Firefly:-3879,103,-795",
+			"chapterId": "c6",
+			"text": "R"
+		},
+		{
+			"context": "chest:Firefly:-3877,103,-799",
+			"chapterId": "c6",
+			"text": "E"
+		},
+		{
+			"context": "chest:Firefly:-3877,104,-799",
+			"chapterId": "c6",
+			"text": "R"
+		},
+		{
+			"context": "secret:job",
+			"chapterId": "c8",
+			"text": "Thank you for applying. Shift each letter of my description back by: 2 24 22 21 24 25 11 19"
+		},
+		{
+			"context": "door:fireflies",
+			"chapterId": "c12",
+			"text": "You found a door with no sign. Behind it, scattered letters: E I M N O O R S"
+		},
+		{
+			"context": "butterfly",
+			"chapterId": "c13",
+			"text": "RPHOZ RNWXE BZFFZ BJAEB RYVTB QMDFX BUDAS TSWVV TAIDR"
+		},
+		{
+			"context": "watch:dead bush",
+			"chapterId": "c14",
+			"text": "They come out at night without being called, and are lost by day without being stolen. Five letters."
+		},
+		{
+			"context": "search:shellkeeper",
+			"chapterId": "c15",
+			"text": "Born of a grain of sand inside a shell, worn round a neck. Five letters."
+		},
+		{
+			"context": "search:theshellkeeper",
+			"chapterId": "c15",
+			"text": "Born of a grain of sand inside a shell, worn round a neck. Five letters."
+		},
+		{
+			"context": "home:Firefly",
+			"chapterId": "c16",
+			"text": "Before the house: LIGHT"
+		},
+		{
+			"context": "home:Honeybee",
+			"chapterId": "c16",
+			"text": "The house itself: HOUSE"
+		}
+	]
+}

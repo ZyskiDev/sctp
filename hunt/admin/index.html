@@ -270,6 +270,7 @@
 					'<button type="button" class="btn-ghost" data-act="solve" data-id="' + esc(p.accountId) + '">Mark solved</button>' +
 					'<button type="button" class="btn-ghost" data-act="unsolve" data-id="' + esc(p.accountId) + '">Undo solve</button>' +
 					'<button type="button" class="btn-ghost" data-act="reassign" data-id="' + esc(p.accountId) + '">New puzzles</button>' +
+					'<button type="button" class="btn-ghost" data-act="reset" data-id="' + esc(p.accountId) + '">Reset</button>' +
 					'<button type="button" class="btn-danger" data-act="delete" data-id="' + esc(p.accountId) + '">Wipe (tests)</button>' +
 					'<button type="button" class="btn-ghost" data-act="reset-raredle" data-id="' + esc(p.accountId) + '">Reset a Rare-dle board</button>' +
 					"</div></td></tr>";
@@ -357,6 +358,7 @@
 			if(!n) return;
 			body.board = Number(n);
 		}
+		if(body.action === "reset" && !confirm("Start this hunter over? Their progress, guesses and hints are cleared and they get a fresh puzzle set. They stay signed up.")) return;
 		if(body.action === "delete" && !confirm("Wipe this hunter completely? Their progress and puzzle set are deleted. Meant for test runs.")) return;
 		if(body.action === "remove" && !confirm("Remove this hunter? They lose access straight away (their progress is kept).")) return;
 		if(body.action === "reassign" && !confirm("Give this hunter a fresh puzzle set? Their solves stay, but every unsolved chapter changes.")) return;

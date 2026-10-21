@@ -32,7 +32,7 @@ const WHORL_NUDGE_DELAY = 120 * HOUR;
 const LIMITS = { chapter: [10, HOUR], whorl: [3, 24 * HOUR], apex: [10, HOUR], vault: [10, HOUR] };
 const RAREDLE_RESET_MS = HOUR;
 // Notes the mod may see (everything else, like door and Rare-dle answers, stays on the server).
-const MOD_NOTE_PREFIXES = ["item:", "chest:", "butterfly", "watch:", "search:", "bp:", "ec:"];
+const MOD_NOTE_PREFIXES = ["item:", "chest:", "butterfly", "watch:", "search:", "home:"];
 const PAIR_ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const IMAGE_KEY = /^img\/[A-Za-z0-9_-]{8,80}\.(webp|png)$/;
 
@@ -122,6 +122,8 @@ export function makeHunt(d) {
 			size,
 		};
 	}
+	/** The vault key as digits, one per frame: "2573" and "2 5 7 3" both give "2,5,7,3". */
+	const keyDigits = (v) => (String(v == null ? "" : v).match(/\d/g) || []).join(",");
 	const whorlSize = (k) => HUNT_WORLD_SIZE / Math.pow(4, k); // whorl 1 -> 16,384
 	const ledger = (n) => "L-" + String(n).padStart(4, "0");
 	const mcKey = (n) => String(n || "").toLowerCase().replace(/^\.+/, "");
@@ -197,12 +199,14 @@ export function makeHunt(d) {
 
 	/** Everything a hunter sees: the same payload for the site and the mod. */
 	async function statePayload(env, settings, player) {
-		const [content, solves, shares, setRows, hintRows] = await Promise.all([
+		const [content, solves, shares, setRows, hintRows, wrongRows] = await Promise.all([
 			loadContent(env),
 			solvesOf(env, player.accountId),
 			communityShares(env),
 			env.DB.prepare("SELECT chapterId, content, answerKind FROM huntSetChapters WHERE setNo = ?").bind(player.setNo).all(),
 			env.DB.prepare("SELECT chapterId, tier FROM huntHints WHERE accountId = ?").bind(player.accountId).all(),
+			// squares this hunter already picked wrong (the map shows them red)
+			env.DB.prepare("SELECT DISTINCT ref, guess FROM huntGuesses WHERE accountId = ? AND correct = 0 AND ref IN ('w1', 'w2', 'w3')").bind(player.accountId).all(),
 		]);
 		const personal = new Map(setRows.results.map((r) => [r.chapterId, r]));
 		const revealed = new Set(hintRows.results.map((r) => r.chapterId + ":" + r.tier));
@@ -245,6 +249,7 @@ export function makeHunt(d) {
 			}
 			if (k <= 3 && settings.vault) {
 				const size = whorlSize(k);
+				out.wrong = wrongRows.results.filter((r) => r.ref === "w" + k).map((r) => { const [x, z, sz] = r.guess.split(",").map(Number); return { x, z, size: sz }; }).filter((q) => Number.isFinite(q.x) && Number.isFinite(q.z));
 				if (out.solved) out.square = squareAt(settings.vault.x, settings.vault.z, size);
 				else if (unlocked) out.target = { size, parent: k === 1 ? { x: HUNT_WORLD_MIN, z: HUNT_WORLD_MIN, size: HUNT_WORLD_SIZE } : squareAt(settings.vault.x, settings.vault.z, whorlSize(k - 1)) };
 			}
@@ -441,8 +446,11 @@ export function makeHunt(d) {
 				shown = got.x + "," + got.z + "," + size;
 				correct = want.x === got.x && want.z === got.z;
 			} else {
-				shown = normAnswer("numbers", answer);
-				if (!shown) return json({ error: "Type the key's numbers." }, 400);
+				// one digit per frame, so "2573", "2 5 7 3" and "2-5-7-3" are all the same answer;
+				// the wrong number of digits is a typo, not a guess, and doesn't count
+				shown = keyDigits(answer);
+				const len = s.keyLength || 4;
+				if (shown.split(",").filter(Boolean).length !== len) return json({ error: "The key is " + len + " numbers, one for each frame (0 to 7)." }, 400);
 				correct = (await huntHash(env, "key", shown)) === s.keyHash;
 			}
 		} else if (ref === "apex") {
@@ -781,7 +789,7 @@ export function makeHunt(d) {
 		}
 		if ("readerJobId" in b) s.readerJobId = b.readerJobId ? String(b.readerJobId).trim() : null;
 		if ("vaultTolerance" in b) s.vaultTolerance = Math.max(0, Math.min(10, Number(b.vaultTolerance) || 0));
-		if (typeof b.key === "string" && b.key.trim()) s.keyHash = await huntHash(env, "key", normAnswer("numbers", b.key));
+		if (typeof b.key === "string" && b.key.trim()) { s.keyHash = await huntHash(env, "key", keyDigits(b.key)); s.keyLength = keyDigits(b.key).split(",").length; }
 		if (typeof b.vaultWord === "string" && b.vaultWord.trim()) s.vaultWordHash = await huntHash(env, "vault", normAnswer("word", b.vaultWord));
 		if (b.apex) s.apex = { title: String(b.apex.title || "The Apex"), riddle: String(b.apex.riddle || ""), marks: Array.isArray(b.apex.marks) ? b.apex.marks.map((m) => ({ n: String(m.n || ""), x: Number(m.x), z: Number(m.z) })).filter((m) => Number.isFinite(m.x) && Number.isFinite(m.z)) : [] };
 		if (Array.isArray(b.doors)) s.doors = b.doors.map((x) => ({ slug: String(x.slug || "").toLowerCase().replace(/[^a-z0-9-]/g, ""), title: String(x.title || ""), from: x.from || null, to: x.to || null, closed: String(x.closed || "Closed."), loggedOut: x.loggedOut ? String(x.loggedOut) : null })).filter((x) => x.slug);
@@ -886,6 +894,30 @@ export function makeHunt(d) {
 					env.DB.prepare("UPDATE huntPlayers SET setNo = ? WHERE accountId = ?").bind(set.setNo, p.accountId),
 					env.DB.prepare("DELETE FROM huntRaredle WHERE accountId = ?").bind(p.accountId),
 				]);
+				break;
+			}
+			case "reset": {
+				// starts them over: progress, guesses, hints and boards cleared, a fresh puzzle set;
+				// they stay signed up and their mod stays paired
+				const set = await env.DB.prepare("SELECT setNo FROM huntSets WHERE accountId IS NULL ORDER BY setNo LIMIT 1").first();
+				if (!set) return json({ error: "No spare sets left. Upload more first." }, 409);
+				await env.DB.batch([
+					env.DB.prepare("DELETE FROM huntSolves WHERE accountId = ?").bind(p.accountId),
+					env.DB.prepare("DELETE FROM huntGuesses WHERE accountId = ?").bind(p.accountId),
+					env.DB.prepare("DELETE FROM huntHints WHERE accountId = ?").bind(p.accountId),
+					env.DB.prepare("DELETE FROM huntRaredle WHERE accountId = ?").bind(p.accountId),
+					env.DB.prepare("DELETE FROM huntSetChapters WHERE setNo IN (SELECT setNo FROM huntSets WHERE accountId = ?)").bind(p.accountId),
+					env.DB.prepare("DELETE FROM huntSetNotes WHERE setNo IN (SELECT setNo FROM huntSets WHERE accountId = ?)").bind(p.accountId),
+					env.DB.prepare("DELETE FROM huntSets WHERE accountId = ?").bind(p.accountId),
+					env.DB.prepare("UPDATE huntSets SET accountId = ?, assignedAt = ? WHERE setNo = ?").bind(p.accountId, now, set.setNo),
+					env.DB.prepare("UPDATE huntPlayers SET setNo = ?, signedUpAt = ? WHERE accountId = ?").bind(set.setNo, now, p.accountId),
+				]);
+				// a shell claim of theirs goes too
+				const st = await getSettings(env);
+				if ((st.shell.claims || []).some((c) => c.accountId === p.accountId)) {
+					st.shell.claims = st.shell.claims.filter((c) => c.accountId !== p.accountId);
+					await saveSettings(env, st);
+				}
 				break;
 			}
 			case "delete":

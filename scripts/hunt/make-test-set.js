@@ -74,10 +74,35 @@ function sameBones(base, word) {
 }
 
 // ---- c4 Daily Bread: board rares, first letters ----
+// Same rule as Rare-dle (raredleDerivedIds in worker.js): never a rare that comes from
+// another rare (its "obtained from" names a rare) or from a hand-picked chance box.
+const RAREDLE_EXCLUDED_SOURCES = ["Pocket Pals Claw Machine", "Gills' Fishing Rod", "May the 4th Plushie Chance Box", "Easter 2025 Event", "D6",
+	"Menagerie Sword", "White Cat & Associates Chance Box", "May the 4th Chance Box", "Archangel Armor Set"];
+function derivedIds(items) {
+	const norm = (s) => String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+	const names = new Map();
+	for (const i of items) { const n = norm(i.name); if (n.length < 4) continue; if (!names.has(n)) names.set(n, []); names.get(n).push(i.id); }
+	const out = new Set();
+	for (const i of items) {
+		const src = norm(i.obtainedFrom);
+		if (!src || src === "null") continue;
+		const words = src.split(" ");
+		let found = false;
+		for (let a = 0; a < words.length && !found; a++) for (let b = a; b < Math.min(words.length, a + 8) && !found; b++) {
+			const ids = names.get(words.slice(a, b + 1).join(" "));
+			if (ids && ids.some((id) => id !== i.id)) found = true;
+		}
+		if (found) out.add(i.id);
+	}
+	const excluded = new Set(RAREDLE_EXCLUDED_SOURCES.map(norm));
+	for (const i of items) if (String(i.obtainedFrom == null ? "" : i.obtainedFrom).split(/s*[/,]s*/).some((p) => excluded.has(norm(p)))) out.add(i.id);
+	return out;
+}
 function boards(word) {
+	const derived = derivedIds(rares);
 	const used = new Set();
 	const picks = [...word.toLowerCase()].map((ch) => {
-		const r = rares.find((x) => !used.has(x.id) && ok(x.texture) && ok(x.category) && ok(x.releaseDate) && ok(x.obtainedFrom) && ok(x.typeSlot) && x.name.toLowerCase().startsWith(ch) && !/plush|token|key/i.test(x.name));
+		const r = rares.find((x) => !used.has(x.id) && ok(x.texture) && ok(x.category) && ok(x.releaseDate) && ok(x.obtainedFrom) && ok(x.typeSlot) && !derived.has(x.id) && x.name.toLowerCase().startsWith(ch) && !/plush|token|key/i.test(x.name));
 		assert(r, "c4 " + ch);
 		used.add(r.id);
 		return r;
@@ -187,14 +212,39 @@ function wings(word, step = 9) {
 }
 
 // ---- build ----
-const W = { c1: "NAUTILUS", c2: "SWAN", c3: "ANCHOR", c4: "CREEK", c5: "BEACON", c6: "CASTAWAY", c7: "OTTER", c8: "SEASHORE",
-	c10: "INLET", c11: "COAST", c12: "TWILIGHT", c13: "GLADE", c14: "FROST", c15: "SNAIL", c16: "LANTERN" };
-const C9_REGION = [-20, 13];
-const C9_IMAGE = "img/torn-3c7298987fcdcfaaa3.webp";
+// Two hand-made sets so testers can start over with different answers:
+//   node scripts/hunt/make-test-set.js     -> set "a", test-set.json
+//   node scripts/hunt/make-test-set.js b   -> set "b", test-set-b.json
+const VARIANTS = {
+	a: {
+		W: { c1: "NAUTILUS", c2: "SWAN", c3: "ANCHOR", c4: "CREEK", c5: "BEACON", c6: "CASTAWAY", c7: "OTTER", c8: "SEASHORE",
+			c10: "INLET", c11: "COAST", c12: "TWILIGHT", c13: "GLADE", c14: "FROST", c15: "SNAIL", c16: "LANTERN" },
+		c9: { region: [-20, 13], image: "img/torn-30e48936d7b8d031c5.webp" }, // 3x3 regions, turned a quarter and mirrored
+		c14: "It comes after dusk and before the dew, and paints your windows white. Five letters.",
+		c15: "Always home, never still. It carries its house and leaves a silver trail. Five letters.",
+		c16: ["The first half of a light you carry: LAN", "The second half: TERN"],
+	},
+	b: {
+		W: { c1: "PELICANS", c2: "SNUB", c3: "MARINE", c4: "SHOAL", c5: "HARBOR", c6: "SEAFARER", c7: "STORM", c8: "MAINSAIL",
+			c10: "WAVES", c11: "BOATS", c12: "MOONRISE", c13: "REEDS", c14: "STARS", c15: "PEARL", c16: "LIGHTHOUSE" },
+		c9: { region: [14, 22], image: "img/torn-fe29fc817f35f09f8e.webp" }, // 3x3 regions, turned three quarters and flipped
+		c14: "They come out at night without being called, and are lost by day without being stolen. Five letters.",
+		c15: "Born of a grain of sand inside a shell, worn round a neck. Five letters.",
+		c16: ["Before the house: LIGHT", "The house itself: HOUSE"],
+	},
+};
+const VARIANT = (process.argv[2] || "a").toLowerCase();
+const V = VARIANTS[VARIANT];
+assert(V, "unknown set " + VARIANT);
+const W = V.W;
+const C9_REGION = V.c9.region;
+const C9_IMAGE = V.c9.image;
 
 const c1 = impostor(W.c1);
 const c2 = sameBones("minecraft:bow", W.c2);
-sheet.push("c3 " + W.c3 + ": clock A, compass N, feather C, bone H, paper O, string R (X+I while holding each)");
+const C3_ITEMS = ["clock", "compass", "feather", "bone", "paper", "string"];
+assert(W.c3.length === C3_ITEMS.length, "c3 length");
+sheet.push("c3 " + W.c3 + ": " + C3_ITEMS.map((it, i) => it + " " + W.c3[i]).join(", ") + " (X+I while holding each)");
 const c4 = boards(W.c4);
 const c5 = strangePrices(W.c5);
 const BARRELS = shelf.ghostBarrels.barrels.slice().sort((a, b) => a.stock - b.stock);
@@ -202,7 +252,7 @@ assert(BARRELS.length === W.c6.length && new Set(BARRELS.map((b) => b.stock)).si
 sheet.push(`c6 ${W.c6}: barrels by stock ` + BARRELS.map((b, i) => `${b.stock}=${W.c6[i]}`).join(" "));
 const c7 = daysGoneBy(W.c7);
 const c8 = readerKey(W.c8);
-sheet.push(`c9 ${C9_REGION.join(", ")}: the torn piece is region ${C9_REGION.join(", ")}, turned a quarter, mirrored and tinted`);
+sheet.push(`c9 ${C9_REGION.join(", ")}: the torn piece is the 3x3 regions around ${C9_REGION.join(", ")} (its centre), turned and mirrored`);
 const c10 = gallery(W.c10);
 const c11 = theShelf(W.c11);
 const c12 = [...W.c12].sort().join(" ");
@@ -210,7 +260,7 @@ sheet.push(`c12 ${W.c12}: sctp.nl/fireflies (20:00-23:00 the hunter's own time, 
 const c13 = wings(W.c13);
 sheet.push(`c14 ${W.c14}: watch the Dead Bush, the riddle sits in the Watchlist screen`);
 sheet.push(`c15 ${W.c15}: search "Shellkeeper" in the mod, the riddle sits in the corner`);
-sheet.push(`c16 ${W.c16}: LAN on the backpack (Firefly), TERN on the ender chest (Honeybee)`);
+sheet.push(`c16 ${W.c16}: the mod's home screen: "${V.c16[0]}" on Firefly, "${V.c16[1]}" on Honeybee`);
 
 const set = {
 	chapters: {
@@ -222,35 +272,32 @@ const set = {
 		c6: { kind: "word", answer: W.c6, content: [text("Eight ghosts on Firefly. Eight letters, if you ask them in the right order.")] },
 		c7: { kind: "word", answer: W.c7, content: [text("Five questions, five days, five letters."), list(c7.map((q) => `${fmtDate(q.date)}: which was cheapest: ${q.group.join(", ")}? [${q.n}]`))] },
 		c8: { kind: "word", answer: W.c8, content: [text("Somebody is hiring on the marketplace. Apply, and read what comes back.")] },
-		c9: { kind: "numbers", answer: C9_REGION.join(", "), content: [{ t: "image", key: C9_IMAGE, alt: "A torn piece of the Firefly map" }, text("Where does this belong? Its region, please: two numbers.")] },
+		c9: { kind: "numbers", answer: C9_REGION.join(", "), content: [{ t: "image", key: C9_IMAGE, alt: "A torn piece of the Firefly map" }, text("Where does this belong? The region at its centre, please: two numbers.")] },
 		c10: { kind: "word", answer: W.c10, content: [text("Five pieces I remember, and one letter from each name."), list(c10)] },
 		c11: { kind: "word", answer: W.c11, content: [text(c11.join(" · "))] },
 		c12: { kind: "word", answer: W.c12, content: [text("Not every page is signposted.")] },
 		c13: { kind: "word", answer: W.c13, content: [text("Where wings are sold, I left you something to read.")] },
 		c14: { kind: "word", answer: W.c14, content: [text("I sell what nobody wants. Keep an eye on the first of it.")] },
 		c15: { kind: "word", answer: W.c15, content: [text("Ask the ledger in your game for me.")] },
-		c16: { kind: "word", answer: W.c16, content: [text("Two pockets, two worlds, one word.")] },
+		c16: { kind: "word", answer: W.c16, content: [text("Two worlds, one word.")] },
 	},
 	notes: [
-		{ context: "item:minecraft:clock", chapterId: "c3", text: "First: A. Next, hold what always points home." },
-		{ context: "item:minecraft:compass", chapterId: "c3", text: "Second: N. Next, hold what a chicken leaves behind when it flies." },
-		{ context: "item:minecraft:feather", chapterId: "c3", text: "Third: C. Next, hold what a skeleton is made of." },
-		{ context: "item:minecraft:bone", chapterId: "c3", text: "Fourth: H. Next, hold what you write on but never sign." },
-		{ context: "item:minecraft:paper", chapterId: "c3", text: "Fifth: O. Next, hold what a spider spins." },
-		{ context: "item:minecraft:string", chapterId: "c3", text: "Sixth: R. That was the last." },
+		...C3_ITEMS.map((it, i) => ({ context: "item:minecraft:" + it, chapterId: "c3", text: ["First", "Second", "Third", "Fourth", "Fifth", "Sixth"][i] + ": " + W.c3[i] + ". " +
+			["Next, hold what always points home.", "Next, hold what a chicken leaves behind when it flies.", "Next, hold what a skeleton is made of.",
+				"Next, hold what you write on but never sign.", "Next, hold what a spider spins.", "That was the last."][i] })),
 		...c4.map((r, i) => ({ context: "secret:raredle:" + (i + 1), chapterId: "c4", text: r.id })),
 		...BARRELS.map((b, i) => ({ context: "chest:Firefly:" + b.pos.replace(/ /g, ""), chapterId: "c6", text: W.c6[i] })),
 		{ context: "secret:job", chapterId: "c8", text: "Thank you for applying. Shift each letter of my description back by: " + c8.join(" ") },
 		{ context: "door:fireflies", chapterId: "c12", text: "You found a door with no sign. Behind it, scattered letters: " + c12 },
 		{ context: "butterfly", chapterId: "c13", text: c13 },
-		{ context: "watch:dead bush", chapterId: "c14", text: "It comes after dusk and before the dew, and paints your windows white. Five letters." },
-		{ context: "search:shellkeeper", chapterId: "c15", text: "Always home, never still. It carries its house and leaves a silver trail. Five letters." },
-		{ context: "search:theshellkeeper", chapterId: "c15", text: "Always home, never still. It carries its house and leaves a silver trail. Five letters." },
-		{ context: "bp:Firefly", chapterId: "c16", text: "The first half of a light you carry: LAN" },
-		{ context: "ec:Honeybee", chapterId: "c16", text: "The second half: TERN" },
+		{ context: "watch:dead bush", chapterId: "c14", text: V.c14 },
+		{ context: "search:shellkeeper", chapterId: "c15", text: V.c15 },
+		{ context: "search:theshellkeeper", chapterId: "c15", text: V.c15 },
+		{ context: "home:Firefly", chapterId: "c16", text: V.c16[0] },
+		{ context: "home:Honeybee", chapterId: "c16", text: V.c16[1] },
 	],
 };
 
-fs.writeFileSync(path.join(__dirname, "test-set.json"), JSON.stringify(set, null, "\t") + "\n");
-console.log("test-set.json written.\n");
+fs.writeFileSync(path.join(__dirname, VARIANT === "a" ? "test-set.json" : "test-set-" + VARIANT + ".json"), JSON.stringify(set, null, "\t") + "\n");
+console.log((VARIANT === "a" ? "test-set.json" : "test-set-" + VARIANT + ".json") + " written.\n");
 for (const l of sheet.sort((a, b) => Number(a.split(" ")[0].slice(1)) - Number(b.split(" ")[0].slice(1)))) console.log(l);

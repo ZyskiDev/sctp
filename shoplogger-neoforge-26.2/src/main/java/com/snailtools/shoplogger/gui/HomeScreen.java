@@ -190,6 +190,13 @@ public class HomeScreen extends UiScreen {
 			if (px + Draw.pillWidth(font, watch) + 7 < x + maxW)
 				Draw.dotPill(g, font, watch, px, pillsY, watched == 0 ? Theme.FAINT : Theme.TEAL, Theme.PANEL_ALT, Theme.TEXT);
 		}
+
+		// The Golden Shell: a note for this world, in the corner above the footer
+		ShopWorld here = WorldSelection.get();
+		if (here != null && com.snailtools.shoplogger.hunt.HuntClient.paired()) {
+			com.snailtools.shoplogger.hunt.HuntNotes.card(g, font, com.snailtools.shoplogger.hunt.HuntClient.note("home:" + here.label()),
+					x + maxW, height - 8 - 18 - 6, Math.min(240, maxW - 20));
+		}
 	}
 
 	// ---- the Golden Shell's trailhead: five clicks on the spiral ----

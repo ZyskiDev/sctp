@@ -1359,7 +1359,7 @@
 				if(!base){ el.parentNode.remove(); return; }
 				var id = String(base).replace(/^minecraft:/, "");
 				var name = id.replace(/_/g, " ").replace(/\b\w/g, function(c){ return c.toUpperCase(); });
-				el.innerHTML = '<a href="/items/'+encodeURIComponent(id)+'">'+esc(name)+'</a>';
+				el.innerHTML = '<a href="/items/'+encodeURIComponent(id)+'">'+esc(name)+'</a> &middot; <a href="/items/?base='+encodeURIComponent(base)+'#rare">every rare made from it</a>';
 			});
 		}
 

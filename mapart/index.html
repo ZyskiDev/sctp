@@ -138,9 +138,15 @@
 			<option value="Firefly">Firefly</option>
 			<option value="Honeybee">Honeybee</option>
 		</select>
+		<select id="fSize" aria-label="Size"><option value="">Any size</option></select>
 		<select id="fSort" aria-label="Sort">
 			<option value="">A–Z</option>
+			<option value="za">Z–A</option>
+			<option value="new">Newest first</option>
+			<option value="old">Oldest first</option>
 			<option value="liked">Most liked</option>
+			<option value="big">Biggest first</option>
+			<option value="small">Smallest first</option>
 		</select>
 	</div>
 	<p class="count" id="count"></p>
@@ -197,17 +203,28 @@
 		var cat = catSel.value;
 		var world = document.getElementById("fWorld").value;
 		var mapType = document.getElementById("fType").value;
+		var size = document.getElementById("fSize").value; // "3x2" = 3 wide, 2 tall
 		var rows = all.filter(function(m){
 			if(world && m.world !== world) return false;
+			if(size && (m.width + "x" + m.height) !== size) return false;
 			if(mapType && m.mapType !== mapType) return false;
 			if(cat === "__none"){ if(m.category) return false; }
 			else if(cat && m.category !== cat) return false;
 			if(q && (m.title || "").toLowerCase().indexOf(q) === -1 && (m.artist || "").toLowerCase().indexOf(q) === -1 && (m.keywords || []).join(" ").toLowerCase().indexOf(q) === -1) return false;
 			return true;
 		});
-		if(document.getElementById("fSort").value === "liked"){
+		var sort = document.getElementById("fSort").value;
+		var byTitle = function(a, b){ return (a.title || "").localeCompare(b.title || ""); };
+		if(sort === "liked"){
 			var likes = function(m){ return window.sctpLike ? window.sctpLike.count(m.id, m.likes || 0) : (m.likes || 0); };
-			rows = rows.slice().sort(function(a, b){ return likes(b) - likes(a) || (a.title || "").localeCompare(b.title || ""); });
+			rows = rows.slice().sort(function(a, b){ return likes(b) - likes(a) || byTitle(a, b); });
+		} else if(sort === "za") rows = rows.slice().sort(function(a, b){ return byTitle(b, a); });
+		else if(sort === "new" || sort === "old"){
+			var t = function(m){ return Date.parse(m.createdAt || m.lastSeen || "") || 0; };
+			rows = rows.slice().sort(function(a, b){ return (sort === "new" ? t(b) - t(a) : t(a) - t(b)) || byTitle(a, b); });
+		} else if(sort === "big" || sort === "small"){
+			var area = function(m){ return (m.width || 1) * (m.height || 1); };
+			rows = rows.slice().sort(function(a, b){ return (sort === "big" ? area(b) - area(a) : area(a) - area(b)) || byTitle(a, b); });
 		}
 		document.getElementById("count").textContent = rows.length + " mapart" + (rows.length === 1 ? "" : "s");
 		document.getElementById("empty").hidden = rows.length > 0;
@@ -276,13 +293,25 @@
 	catSel.addEventListener("change", render);
 	document.getElementById("fWorld").addEventListener("change", render);
 	document.getElementById("fType").addEventListener("change", render);
-	document.getElementById("fSort").addEventListener("change", render);
+	document.getElementById("fSort").addEventListener("change", function(){ try { localStorage.setItem("sctp_mapart_sort", this.value); } catch(e){} render(); });
+	document.getElementById("fSize").addEventListener("change", render);
+	try { var savedMapartSort = localStorage.getItem("sctp_mapart_sort"); if(savedMapartSort !== null) document.getElementById("fSort").value = savedMapartSort; } catch(e){}
+	// Size filter: every size in the catalog, smallest first ("3×2" = 3 maps wide, 2 tall)
+	function populateSizes(){
+		var seen = {}, sizes = [];
+		all.forEach(function(m){ var k = m.width + "x" + m.height; if(!seen[k]){ seen[k] = 0; sizes.push({ k: k, w: m.width, h: m.height }); } seen[k]++; });
+		sizes.sort(function(a, b){ return a.w * a.h - b.w * b.h || a.w - b.w; });
+		var sel = document.getElementById("fSize"), cur = sel.value;
+		sel.innerHTML = '<option value="">Any size</option>' + sizes.map(function(s){ return '<option value="' + s.k + '">' + s.w + '\u00d7' + s.h + ' (' + seen[s.k] + ')</option>'; }).join("");
+		sel.value = cur;
+	}
 	// /mapart/?q=<keyword> (keyword chips on mapart pages link here)
 	var initialQ = new URLSearchParams(location.search).get("q");
 	if(initialQ) document.getElementById("search").value = initialQ;
 
 	fetch(API_BASE + "/mapart").then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; }).then(function(rows){
 		all = rows;
+		populateSizes();
 		var go = function(){ if(window.sctpCol){ window.sctpCol.bind(document.getElementById("grid")); window.sctpCol.ready(render); } else render(); };
 		if(window.sctpLike) window.sctpLike.ready(go); else go();
 	});

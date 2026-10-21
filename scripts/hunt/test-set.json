@@ -133,12 +133,12 @@
 			"content": [
 				{
 					"t": "image",
-					"key": "img/torn-3c7298987fcdcfaaa3.webp",
+					"key": "img/torn-30e48936d7b8d031c5.webp",
 					"alt": "A torn piece of the Firefly map"
 				},
 				{
 					"t": "text",
-					"v": "Where does this belong? Its region, please: two numbers."
+					"v": "Where does this belong? The region at its centre, please: two numbers."
 				}
 			]
 		},
@@ -219,7 +219,7 @@
 			"content": [
 				{
 					"t": "text",
-					"v": "Two pockets, two worlds, one word."
+					"v": "Two worlds, one word."
 				}
 			]
 		}
@@ -258,7 +258,7 @@
 		{
 			"context": "secret:raredle:1",
 			"chapterId": "c4",
-			"text": "rare-cactus-frog"
+			"text": "rare-candelabra"
 		},
 		{
 			"context": "secret:raredle:2",
@@ -273,7 +273,7 @@
 		{
 			"context": "secret:raredle:4",
 			"chapterId": "c4",
-			"text": "rare-earth"
+			"text": "rare-earths-shadow"
 		},
 		{
 			"context": "secret:raredle:5",
@@ -351,12 +351,12 @@
 			"text": "Always home, never still. It carries its house and leaves a silver trail. Five letters."
 		},
 		{
-			"context": "bp:Firefly",
+			"context": "home:Firefly",
 			"chapterId": "c16",
 			"text": "The first half of a light you carry: LAN"
 		},
 		{
-			"context": "ec:Honeybee",
+			"context": "home:Honeybee",
 			"chapterId": "c16",
 			"text": "The second half: TERN"
 		}

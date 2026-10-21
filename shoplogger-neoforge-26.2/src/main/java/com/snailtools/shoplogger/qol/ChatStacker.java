@@ -11,9 +11,12 @@ import net.minecraft.network.chat.Component;
  * "×2", "×3"... after it, instead of filling chat with near-copies (selling
  * butterflies shows one line per butterfly, each with a different name).
  *
- * Similar means: the same first two words (so two different players never stack,
- * and "You sold ..." only stacks with "You sold ..."), the rest at least half the
- * same (edit distance), and within a minute. ChatComponentMixin calls this.
+ * Similar means: the same "head", and the rest of the message at least 80% the
+ * same (edit distance), within a minute. The head is the speaker of a player
+ * message ("[Member] Steve:" or "<Steve>": rank and name), so two different
+ * players never stack and the name isn't part of the 80%; for anything else
+ * it's the first two words ("You sold ..." only stacks with "You sold ...").
+ * ChatComponentMixin calls this.
  */
 public final class ChatStacker {
 
@@ -21,7 +24,7 @@ public final class ChatStacker {
 
 	private static final String CONFIG_ENABLED = "chat/stackRepeats";
 	private static final long WINDOW_MS = 60_000L;
-	private static final double MIN_SIMILARITY = 0.5;
+	private static final double MIN_SIMILARITY = 0.8;
 	private static final int MAX_COMPARE = 300;
 
 	private static GuiMessage last;    // the chat line we stacked onto (or may stack onto next)
@@ -64,11 +67,31 @@ public final class ChatStacker {
 	static boolean similar(String a, String b) {
 		if (a == null || b == null) return false;
 		if (a.equals(b)) return true;
-		String[] wa = a.trim().split("\\s+"), wb = b.trim().split("\\s+");
-		if (wa.length < 2 || wb.length < 2 || !wa[0].equals(wb[0]) || !wa[1].equals(wb[1])) return false;
-		if (a.length() > MAX_COMPARE || b.length() > MAX_COMPARE) return false;
-		int max = Math.max(a.length(), b.length());
-		return 1.0 - (double) distance(a, b) / max >= MIN_SIMILARITY;
+		String[] ha = headAndRest(a), hb = headAndRest(b);
+		if (!ha[0].equals(hb[0])) return false;
+		String ra = ha[1], rb = hb[1];
+		if (ra.equals(rb)) return true;
+		if (ra.length() > MAX_COMPARE || rb.length() > MAX_COMPARE) return false;
+		int max = Math.max(ra.length(), rb.length());
+		return 1.0 - (double) distance(ra, rb) / max >= MIN_SIMILARITY;
+	}
+
+	/**
+	 * Splits off the part that must match exactly: a player message's speaker (everything
+	 * up to the first ": " or "> " when that comes early, rank and name included), or
+	 * otherwise the first two words. Returns {head, rest}.
+	 */
+	private static String[] headAndRest(String s) {
+		s = s.trim();
+		int cut = -1;
+		for (String d : new String[] { ": ", "> " }) {
+			int i = s.indexOf(d);
+			if (i > 0 && i < 48 && s.substring(0, i).split("\\s+").length <= 5 && (cut < 0 || i < cut)) cut = i;
+		}
+		if (cut > 0) return new String[] { s.substring(0, cut + 1), s.substring(cut + 2).trim() };
+		String[] w = s.split("\\s+");
+		if (w.length < 2) return new String[] { s, "" };
+		return new String[] { w[0] + " " + w[1], String.join(" ", java.util.Arrays.copyOfRange(w, 2, w.length)) };
 	}
 
 	/** Levenshtein edit distance. */

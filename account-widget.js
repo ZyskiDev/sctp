@@ -18,6 +18,8 @@
 		".acct-menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel,#1B2A20);border:1px solid var(--line,#33453A);border-radius:10px;padding:6px;min-width:170px;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,0.35);}" +
 		".acct-menu a,.acct-menu button{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--text,#EAEFE7);padding:8px 10px;border-radius:6px;font-size:13px;cursor:pointer;text-decoration:none;font-family:inherit;box-sizing:border-box;}" +
 		".acct-menu a:hover,.acct-menu button:hover{background:var(--panel-alt,#22332A);}" +
+		".acct-badge{display:inline-block;min-width:18px;height:18px;line-height:18px;margin-left:7px;padding:0 5px;border-radius:9px;background:#E2463D;color:#fff;font-size:11px;font-weight:800;text-align:center;vertical-align:1px;box-sizing:border-box;}" +
+		".acct-menu .acct-badge{margin-left:6px;}" +
 		".acct-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;box-sizing:border-box;}" +
 		".acct-modal{background:var(--panel,#1B2A20);border:1px solid var(--line,#33453A);border-radius:14px;padding:22px;width:100%;max-width:300px;box-sizing:border-box;font-family:inherit;}" +
 		".acct-modal h2{margin:0 0 14px;font-size:17px;color:var(--text,#EAEFE7);font-family:inherit;}" +
@@ -79,12 +81,13 @@
 			menu.hidden = true;
 			return;
 		}
-		btn.textContent = session.username;
+		btn.innerHTML = esc(session.username) + '<span class="acct-badge" id="acctBadge" hidden></span>';
 		btn.onclick = function () { menu.hidden = !menu.hidden; };
 		var isAdmin = session.isHeadAdmin || (session.permissions && session.permissions.length > 0);
 		var canManageForms = session.isHeadAdmin || (session.permissions && session.permissions.indexOf("manageForms") !== -1);
 		var canRunAuctions = session.isHeadAdmin || (session.permissions && session.permissions.indexOf("auctions") !== -1);
 		var html = '<a href="/s/' + encodeURIComponent((session.mcUsername || session.username || "").replace(/^\./, "")) + '">My Profile</a>';
+		html += '<a href="/marketplace/#notifications">Notifications<span class="acct-badge" id="acctMenuBadge" hidden></span></a>';
 		html += '<a href="/marketplace/#mine">My Marketplace</a>';
 		html += '<a href="/stats/mine/">My Shop Statistics</a>';
 		html += '<a href="/mapart/manage/">Mapart Management</a>';
@@ -97,12 +100,43 @@
 		if (canRunAuctions) html += '<a href="/auction/admin/">Auction Admin</a>';
 		html += '<button type="button" id="acctLogout">Log out</button>';
 		menu.innerHTML = html;
+		refreshBadge(session);
 		document.getElementById("acctLogout").onclick = function () {
 			clearSession();
 			render();
 			if (window.sctpOnAccountChange) window.sctpOnAccountChange();
 		};
 	}
+
+	// Unread notifications next to your name (job replies, bids, ...). Checked at most
+	// once a minute per tab; opening the Notifications tab and marking them read clears it.
+	function refreshBadge(session) {
+		var show = function (n) {
+			["acctBadge", "acctMenuBadge"].forEach(function (id) {
+				var el = document.getElementById(id);
+				if (!el) return;
+				el.hidden = !n;
+				el.textContent = n > 99 ? "99+" : String(n);
+			});
+		};
+		try {
+			var cached = JSON.parse(sessionStorage.getItem("sctp_unread") || "null");
+			if (cached && cached.token === session.token && Date.now() - cached.at < 60000) { show(cached.n); return; }
+		} catch (e) {}
+		fetch(API_BASE + "/marketplace/notifications", { headers: { Authorization: "Bearer " + session.token } })
+			.then(function (r) { return r.ok ? r.json() : []; })
+			.then(function (list) {
+				var n = (Array.isArray(list) ? list : []).filter(function (x) { return !x.readAt; }).length;
+				try { sessionStorage.setItem("sctp_unread", JSON.stringify({ token: session.token, at: Date.now(), n: n })); } catch (e) {}
+				show(n);
+			})
+			.catch(function () {});
+	}
+	window.sctpRefreshUnread = function () {
+		try { sessionStorage.removeItem("sctp_unread"); } catch (e) {}
+		var s = getSession();
+		if (s) refreshBadge(s);
+	};
 
 	function openLogin() {
 		var wrap = document.createElement("div");

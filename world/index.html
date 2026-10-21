@@ -65,6 +65,8 @@
 	.credit b{color:var(--text);}
 	button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 	/* the Golden Shell: only for signed-up hunters while the hunt runs */
+	.pan{display:inline-flex;gap:3px;margin-right:6px;}
+	.pan .btn-ghost{padding:6px 9px;min-width:30px;}
 	.huntbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 10px;padding:9px 12px;border:1px solid rgba(232,185,58,.55);background:rgba(232,185,58,.08);border-radius:10px;font-size:13.5px;}
 	.huntbar b{color:#E8B93A;}
 	.huntbar .hb-btn{background:#E8B93A;color:#231A04;border:none;border-radius:8px;padding:7px 13px;font:700 13px/1.2 var(--font-body);cursor:pointer;}
@@ -95,6 +97,9 @@
 			<div class="mapbar">
 				<span class="area" id="area"></span>
 				<span>
+					<span class="pan" id="panBtns" aria-label="Move one square">
+						<button type="button" class="btn-ghost" data-pan="0,-1" title="One square north (arrow up)" aria-label="North">&uarr;</button><button type="button" class="btn-ghost" data-pan="-1,0" title="One square west (arrow left)" aria-label="West">&larr;</button><button type="button" class="btn-ghost" data-pan="1,0" title="One square east (arrow right)" aria-label="East">&rarr;</button><button type="button" class="btn-ghost" data-pan="0,1" title="One square south (arrow down)" aria-label="South">&darr;</button>
+					</span>
 					<button type="button" class="btn-ghost" id="backBtn" title="Zoom out (Esc)">&larr; Zoom out</button>
 					<button type="button" class="btn-ghost" id="copyBtn" title="Copy a link to this exact view">Copy link</button>
 				</span>
@@ -289,6 +294,7 @@
 			: "Click a square to zoom in. " + (depth(s.size) === MAX_DEPTH - 1 ? "One more click is as close as the map goes." : "Three clicks take you from the whole world down to 1,024 blocks.");
 		$("area").textContent = "X " + fmt(r.x) + " to " + fmt(r.x + r.w - 1) + " · Z " + fmt(r.z) + " to " + fmt(r.z + r.h - 1);
 		renderCrumbs();
+		updatePanButtons();
 		renderHuntBar();
 		var hash = s.size >= WORLD_SIZE ? "" : "#" + s.x + "," + s.z + "," + s.size;
 		if(location.hash !== hash) history[push ? "pushState" : "replaceState"](null, "", location.pathname + location.search + hash);
@@ -310,13 +316,40 @@
 		setView(squareAt(square.x, square.z, WORLD_SIZE / Math.pow(GRID, +b.getAttribute("data-depth"))), true);
 	});
 
+	/** The square next to this one (dx, dz in squares), or null when it's off the mapped area. */
+	function neighbour(dx, dz){
+		if(square.size >= WORLD_SIZE) return null;
+		var n = { x: square.x + dx * square.size, z: square.z + dz * square.size, size: square.size };
+		return clip(n) ? n : null;
+	}
+	function pan(dx, dz){
+		var n = neighbour(dx, dz);
+		if(n) setView(n, true);
+	}
+	function updatePanButtons(){
+		document.querySelectorAll("#panBtns [data-pan]").forEach(function(b){
+			var d = b.getAttribute("data-pan").split(",").map(Number);
+			b.disabled = !neighbour(d[0], d[1]);
+		});
+		$("panBtns").style.display = square.size >= WORLD_SIZE ? "none" : "";
+	}
+	$("panBtns").addEventListener("click", function(e){
+		var b = e.target.closest("[data-pan]");
+		if(!b) return;
+		var d = b.getAttribute("data-pan").split(",").map(Number);
+		pan(d[0], d[1]);
+	});
+
 	function zoomOut(){
 		if(square.size >= WORLD_SIZE) return;
 		setView(squareAt(square.x, square.z, square.size * GRID), true);
 	}
 	$("backBtn").addEventListener("click", zoomOut);
 	document.addEventListener("keydown", function(e){
-		if(e.key === "Escape" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) zoomOut();
+		if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+		if(e.key === "Escape") zoomOut();
+		var arrows = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+		if(arrows[e.key] && square.size < WORLD_SIZE){ e.preventDefault(); pan(arrows[e.key][0], arrows[e.key][1]); }
 	});
 
 	function blockAt(e){
@@ -404,9 +437,10 @@
 		if(!token) return;
 		fetch(API + "/hunt/state", { headers: { Authorization: "Bearer " + token } }).then(function(r){ return r.ok ? r.json() : null; }).then(function(st){
 			if(!st || !st.player) return;
-			hunt = { squares: [], target: null, marks: st.apex && st.apex.marks ? st.apex.marks : [] };
+			hunt = { squares: [], wrong: [], target: null, marks: st.apex && st.apex.marks ? st.apex.marks : [] };
 			st.whorls.forEach(function(w){
 				if(w.square) hunt.squares.push(w.square);
+				(w.wrong || []).forEach(function(q){ hunt.wrong.push(q); });
 				if(!hunt.target && w.puzzleOpen && !w.solved && w.target) hunt.target = { whorl: w.whorl, size: w.target.size, parent: w.target.parent };
 			});
 			if(first && /[?&]hunt=1\b/.test(location.search) && !location.hash && hunt.target) setView(hunt.target.parent, false);
@@ -421,7 +455,9 @@
 		var roman = ["", "I", "II", "III", "IV"], html = "";
 		if(hunt.target){
 			var t = hunt.target;
-			if(square.size === t.size) html = "<span><b>Whorl " + roman[t.whorl] + ":</b> is this your square?</span><button type=\"button\" class=\"hb-btn\" id=\"hbLock\">Lock it in</button>";
+			var tried = hunt.wrong.some(function(q){ return q.x === square.x && q.z === square.z && q.size === square.size; });
+			if(square.size === t.size && tried) html = "<span><b>Whorl " + roman[t.whorl] + ":</b> you already tried this square: it isn't the one.</span>";
+			else if(square.size === t.size) html = "<span><b>Whorl " + roman[t.whorl] + ":</b> is this your square?</span><button type=\"button\" class=\"hb-btn\" id=\"hbLock\">Lock it in</button>";
 			else if(square.size > t.size) html = "<span><b>Whorl " + roman[t.whorl] + ":</b> zoom in to the " + fmt(t.size) + "-block square you think it is, then lock it in. Three wrong picks a day at most.</span>";
 			else html = "<span><b>Whorl " + roman[t.whorl] + ":</b> zoom out to a " + fmt(t.size) + "-block square to pick it.</span>";
 		} else if(hunt.marks.length) html = "<span><b>The Apex:</b> the Shellkeeper's marks are drawn in gold.</span>";
@@ -446,6 +482,19 @@
 	}
 	function drawHunt(scale, dpr){
 		ctx.save();
+		ctx.strokeStyle = "#E8B93A";
+		ctx.lineWidth = 2.5 * dpr;
+		// squares already tried and wrong: red
+		hunt.wrong.forEach(function(q){
+			var x0 = Math.max(q.x, rect.x), z0 = Math.max(q.z, rect.z), x1 = Math.min(q.x + q.size, rect.x + rect.w), z1 = Math.min(q.z + q.size, rect.z + rect.h);
+			if(x1 <= x0 || z1 <= z0 || q.size >= square.size * 4) return;
+			var rx = (x0 - rect.x) * scale, rz = (z0 - rect.z) * scale, rw = (x1 - x0) * scale, rh = (z1 - z0) * scale;
+			ctx.fillStyle = "rgba(226,70,61,0.22)";
+			ctx.fillRect(rx, rz, rw, rh);
+			ctx.strokeStyle = "#E2463D";
+			ctx.lineWidth = 2 * dpr;
+			ctx.strokeRect(rx + dpr, rz + dpr, rw - 2 * dpr, rh - 2 * dpr);
+		});
 		ctx.strokeStyle = "#E8B93A";
 		ctx.lineWidth = 2.5 * dpr;
 		hunt.squares.forEach(function(q){

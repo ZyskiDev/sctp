@@ -110,10 +110,21 @@
 		return catalogPromise;
 	}
 
+	// Sorting (remembered per browser; a convenience only)
+	var SORTS = [["az", "A to Z"], ["za", "Z to A"], ["added", "Recently added"], ["addedOld", "First added"], ["new", "Newest release"], ["old", "Oldest release"]];
+	function savedSort() { try { return localStorage.getItem("sctp_col_sort") || "az"; } catch (e) { return "az"; } }
+	var MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+	function releaseKey(v) {
+		var m = /^([a-z]{3})\w*\s+(\d{4})$/i.exec(String(v || "").trim());
+		if (!m) return 0;
+		var mi = MONTHS.indexOf(m[1].toLowerCase());
+		return parseInt(m[2], 10) * 100 + (mi === -1 ? 0 : mi);
+	}
+
 	function mount(host, opts) {
 		var editable = !!opts.editable;
 		var st = {
-			world: "Firefly", kind: "rare", status: "all", cat: "", q: "", shown: PAGE,
+			world: "Firefly", kind: "rare", status: "all", cat: "", q: "", shown: PAGE, sort: savedSort(),
 			owned: {},       // "kind|world|id" -> addedAt
 			wished: {},      // same keys: starred (wishlist)
 			private: false, username: opts.username || "", cat_: null,
@@ -214,10 +225,35 @@
 				(artistRows.length ? '<div class="col-h">Mapart by artist <span style="font-size:12px;color:var(--muted,#8FA593);font-family:inherit;">(top 12 by pieces)</span></div>' + breakHtml(artistRows) : "");
 		}
 
+		function sorted(list) {
+			var name = function (x) { return String(st.kind === "rare" ? x.name : x.title); };
+			var byName = function (a, b) { return name(a).localeCompare(name(b)); };
+			var added = function (x) { var k = key(st.kind, st.world, x.id); return st.owned[k] || st.wished[k] || ""; };
+			var out = list.slice();
+			if (st.sort === "za") out.sort(function (a, b) { return byName(b, a); });
+			else if (st.sort === "added" || st.sort === "addedOld") {
+				// never-added items always last
+				out.sort(function (a, b) {
+					var x = added(a), y = added(b);
+					if (!x !== !y) return x ? -1 : 1;
+					return (st.sort === "added" ? (y < x ? -1 : y > x ? 1 : 0) : (x < y ? -1 : x > y ? 1 : 0)) || byName(a, b);
+				});
+			} else if (st.sort === "new" || st.sort === "old") {
+				// rares by release month, mapart by when it was first seen; unknown last
+				var t = function (x) { return st.kind === "rare" ? releaseKey(x.releaseDate) : (Date.parse(x.createdAt || x.lastSeen || "") || 0); };
+				out.sort(function (a, b) {
+					var x = t(a), y = t(b);
+					if (!x !== !y) return x ? -1 : 1;
+					return (st.sort === "new" ? y - x : x - y) || byName(a, b);
+				});
+			} else out.sort(byName);
+			return out;
+		}
+
 		function filtered() {
 			var list = st.kind === "rare" ? rareList() : mapartList();
 			var q = st.q.trim().toLowerCase();
-			return list.filter(function (x) {
+			return sorted(list.filter(function (x) {
 				var own = isOwned(st.kind, x.id);
 				if (st.status === "owned" && !own) return false;
 				if (st.status === "missing" && own) return false;
@@ -229,7 +265,7 @@
 					if (hay.toLowerCase().indexOf(q) === -1) return false;
 				}
 				return true;
-			});
+			}));
 		}
 
 		function itemHtml(x) {
@@ -269,6 +305,7 @@
 				'<div class="col-tools"><input type="search" id="colQ" placeholder="Search…" value="' + esc(st.q) + '">' +
 					'<select id="colCat"><option value="">All categories</option>' + cats.map(function (c) { return '<option value="' + esc(c) + '"' + (st.cat === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select>" +
 					'<select id="colStatus">' + [["all", "All"], ["owned", "Have"], ["missing", "Need"], ["wish", "Wishlist \u2605"]].map(function (o) { return '<option value="' + o[0] + '"' + (st.status === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
+					'<select id="colSort" aria-label="Sort">' + SORTS.map(function (o) { return '<option value="' + o[0] + '"' + (st.sort === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
 					(editable ? '<button type="button" id="colAll">Mark all matching as owned</button><button type="button" id="colNone">Unmark all matching</button><button type="button" id="colShare" title="Make a picture of what you still need, to share on Discord">&#128444; Share what I still need</button>' : "") +
 				"</div>" +
 				'<div class="col-msg" id="colCount"></div>' +
@@ -376,6 +413,7 @@
 			host.querySelector("#colQ").oninput = function (e) { st.q = e.target.value; st.shown = PAGE; paintGrid(); };
 			host.querySelector("#colCat").onchange = function (e) { st.cat = e.target.value; st.shown = PAGE; paintGrid(); };
 			host.querySelector("#colStatus").onchange = function (e) { st.status = e.target.value; st.shown = PAGE; paintGrid(); };
+			host.querySelector("#colSort").onchange = function (e) { st.sort = e.target.value; try { localStorage.setItem("sctp_col_sort", st.sort); } catch (x) {} st.shown = PAGE; paintGrid(); };
 			host.querySelector("#colStats").onclick = function (e) {
 				if (e.target.id === "colWishShow") { e.preventDefault(); st.status = "wish"; st.shown = PAGE; render(); host.querySelector("#colGrid").scrollIntoView({ behavior: "smooth", block: "start" }); }
 				if (e.target.id === "colWishCopy") {
